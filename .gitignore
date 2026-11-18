@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.egg-info/
+.coverage
+coverage.xml
+htmlcov/
+
+# Node
+node_modules/
+dist/
+coverage/
+.eslintcache
+*.log
+
+# Configuration: only the template is versioned
+.env
+.env.*
+!.env.template
+
+# Data
+backend/uploads/
+*.db
+*.sqlite*
+questionnaires/
+*.xlsx
+!examples/**/*.xlsx
+
+# Local brand charter (never published; see BRAND_BANNER_PATH)
+branding/
+
+# Local tooling
+.claude/
+PLAN-MIGRATION.md
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

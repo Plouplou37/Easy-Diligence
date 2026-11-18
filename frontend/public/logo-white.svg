@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 100">
+  <title>Easy Diligence</title>
+  <circle cx="50" cy="50" r="42" fill="none" stroke="#ffffff" stroke-width="8"/>
+  <path d="M30 52 L44 66 L71 36" fill="none" stroke="#ffffff" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="120" y="68" fill="#ffffff" font-family="Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="56" font-weight="500" textLength="510" lengthAdjust="spacingAndGlyphs">Easy Diligence</text>
+</svg>

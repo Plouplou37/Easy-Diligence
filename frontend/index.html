@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Easy Diligence</title>
+    <!-- Apply the saved theme before first paint (no light flash in dark mode).
+         Same resolution order as src/contexts/ThemeContext.jsx. -->
+    <script>
+      (function () {
+        try {
+          var mode = localStorage.getItem('DD_THEME');
+          if (mode !== 'light' && mode !== 'dark' && mode !== 'system') {
+            var legacy = localStorage.getItem('darkMode');
+            mode = legacy === 'true' ? 'dark' : legacy === 'false' ? 'light' : 'system';
+          }
+          var theme = mode === 'system'
+            ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+            : mode;
+          document.documentElement.setAttribute('data-theme', theme);
+          document.documentElement.style.colorScheme = theme;
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

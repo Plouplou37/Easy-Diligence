@@ -1,0 +1,787 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================================
+   Easy Diligence — look & feel. Colours are CSS variables switched by
+   `data-theme` on <html> (set by index.html before first paint);
+   tailwind.config.js exposes them as classes: bg-surface, text-content,
+   border-border, theme-success, accent-blue…
+   ----------------------------------------------------------------------------
+    1. THEME TOKENS      5. FORMS             9. NAVIGATION
+    2. BASE              6. INDICATORS       10. MARKDOWN TABLES
+    3. BACKGROUNDS       7. GRADIENTS        11. SCROLLBARS
+    4. TYPOGRAPHY        8. EFFECTS
+   ========================================================================== */
+
+/* ============================================================================
+   1. THEME TOKENS
+   ========================================================================== */
+
+:root,
+[data-theme='light'] {
+  color-scheme: light;
+
+  /* ── Surfaces & text ── */
+  --color-bg: #f5f5f5;
+  --color-surface: #ffffff;
+  --color-surface-hover: #ededed;
+  --color-surface-elevated: #ffffff;
+
+  --color-text: #2a4869;
+  --color-text-secondary: #808080;
+  --color-text-muted: #a0a0a0;
+  --color-text-inverse: #ffffff;
+
+  /* ── Brand ── */
+  --color-primary: #1e69aa;
+  --color-primary-light: #85acc1;
+  --color-primary-dark: #2a4869;
+  --color-secondary: #3ea0d9;
+  --color-success: #76bb6b;
+  --color-warning: #ba9950;
+  --color-error: #ef4444;
+
+  /* ── Muted state backgrounds (banners, badges) ── */
+  --color-success-bg: rgba(118, 187, 107, 0.12);
+  --color-success-border: rgba(118, 187, 107, 0.35);
+  --color-warning-bg: rgba(186, 153, 80, 0.12);
+  --color-warning-border: rgba(186, 153, 80, 0.35);
+  --color-error-bg: rgba(239, 68, 68, 0.1);
+  --color-error-border: rgba(239, 68, 68, 0.3);
+
+  /* ── Borders ── */
+  --color-border: #e0e0e0;
+  --color-border-hover: #bbcddd;
+
+  /* ── Charter accents (gradient stops) ── */
+  --color-gris: #c4c4c4;
+  --color-bleu: #1e69aa;
+  --color-accent-blue: #3ea0d9;
+  --color-accent-green: #76bb6b;
+  --color-accent-deep: #2a4869;
+  --color-accent-gold: #b49b78;
+
+  /* ── Scrollbars ── */
+  --color-scrollbar-thumb: #a8c4d4;
+  --color-scrollbar-thumb-hover: #2a4869;
+  --color-scrollbar-track: #f5f5f5;
+
+  /* ── Overlays ── */
+  --color-overlay: rgba(255, 255, 255, 0.5);
+  --color-modal-backdrop: rgba(0, 0, 0, 0.5);
+
+  /* ── Shadows ── */
+  --shadow-input-soft: 0 2px 4px rgba(0, 0, 0, 0.1);
+  --shadow-table-sticky: 2px 0 5px -2px rgba(0, 0, 0, 0.1);
+
+  /* ── Fluid typography ── */
+  --font-size-fluid-4xs: clamp(0.45rem, 0.42rem + 0.15vw, 0.6rem);
+  --font-size-fluid-3xs: clamp(0.6rem, 0.55rem + 0.25vw, 0.75rem);
+  --font-size-fluid-2xs: clamp(0.7rem, 0.65rem + 0.15vw, 0.8rem);
+  --font-size-fluid-xs: clamp(0.75rem, 0.72rem + 0.18vw, 0.875rem);
+  --font-size-fluid-sm: clamp(0.875rem, 0.84rem + 0.26vw, 1rem);
+  --font-size-fluid-md: clamp(1rem, 0.96rem + 0.32vw, 1.125rem);
+  --font-size-fluid-lg: clamp(1.25rem, 1.16rem + 0.5vw, 1.5rem);
+  --font-size-fluid-xl: clamp(1.5rem, 1.32rem + 0.9vw, 2.125rem);
+  --font-size-fluid-2xl: clamp(1.875rem, 1.62rem + 1.2vw, 2.75rem);
+  --font-size-fluid-3xl: clamp(2.25rem, 1.9rem + 1.8vw, 3.25rem);
+
+  /* ── Layout: floating navbar, and the space the content keeps under it ── */
+  --navbar-height: clamp(44px, 3vw, 56px);
+  --navbar-spacing: calc(var(--navbar-height) + 1.5rem);
+}
+
+[data-theme='dark'] {
+  color-scheme: dark;
+
+  --color-bg: #0a1420;
+  --color-surface: #16283a;
+  --color-surface-hover: #1f3851;
+  --color-surface-elevated: #1f3851;
+
+  --color-text: #d1e0ec;
+  --color-text-secondary: #b0c4d8;
+  --color-text-muted: #8a9aad;
+  --color-text-inverse: #171717;
+
+  --color-primary: #1e69aa;
+  --color-primary-light: #85acc1;
+  --color-primary-dark: #2a4869;
+  --color-secondary: #5bb8e8;
+  --color-success: #8fd584;
+  --color-warning: #d4b366;
+  --color-error: #f87171;
+
+  --color-success-bg: rgba(143, 213, 132, 0.15);
+  --color-success-border: rgba(143, 213, 132, 0.35);
+  --color-warning-bg: rgba(212, 179, 102, 0.15);
+  --color-warning-border: rgba(212, 179, 102, 0.35);
+  --color-error-bg: rgba(248, 113, 113, 0.15);
+  --color-error-border: rgba(248, 113, 113, 0.35);
+
+  --color-border: #2a4060;
+  --color-border-hover: #426591;
+
+  --color-gris: #3a4a5a;
+  --color-bleu: #5b9bd5;
+  --color-accent-blue: #5bb8e8;
+  --color-accent-green: #8fd584;
+  --color-accent-deep: #2a4869;
+  --color-accent-gold: #b49b78;
+
+  --color-scrollbar-thumb: #3a4a5a;
+  --color-scrollbar-thumb-hover: #5b9bd5;
+  --color-scrollbar-track: #1a1b23;
+
+  --color-overlay: rgba(0, 0, 0, 0.5);
+  --color-modal-backdrop: rgba(0, 0, 0, 0.7);
+
+  --shadow-input-soft: 0 2px 4px rgba(0, 0, 0, 0.3);
+  --shadow-table-sticky: 2px 0 5px -2px rgba(0, 0, 0, 0.4);
+}
+
+/* ============================================================================
+   2. BASE
+   ========================================================================== */
+
+@layer base {
+  /* Bare `border` classes use the theme border colour. */
+  *,
+  ::before,
+  ::after {
+    border-color: var(--color-border);
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-scrollbar-thumb) transparent;
+  }
+
+  html {
+    background-color: var(--color-bg);
+  }
+
+  /* Transparent so the fixed background layer (section 3) shows through. */
+  body {
+    min-height: 100vh;
+    color: var(--color-text);
+    background: transparent;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--color-text-muted);
+  }
+
+  /* Native checkboxes/radios: @tailwindcss/forms is not installed, so
+     text-* colour classes have no effect on them. */
+  input[type='checkbox'],
+  input[type='radio'] {
+    accent-color: var(--color-accent-blue);
+  }
+}
+
+/* ============================================================================
+   3. BACKGROUNDS
+   ========================================================================== */
+
+/* Pages sit on the plain theme background (html, section 2). Never put a
+   filter/transform on a page wrapper: it would trap the hand-rolled
+   `fixed z-50` modals under the navbar. */
+
+@layer utilities {
+  /* Brand gradient behind the login / register screens. */
+  .bg-auth {
+    background: linear-gradient(
+      135deg,
+      var(--color-accent-deep) 0%,
+      var(--color-bleu) 50%,
+      var(--color-accent-green) 100%
+    );
+  }
+}
+
+/* ============================================================================
+   4. TYPOGRAPHY — eyebrows, micro-actions
+   Component classes live in @layer components so Tailwind utilities win over
+   them (`form-input border-theme-error` works).
+   ========================================================================== */
+
+@layer components {
+  /* Small-caps section label */
+  .eyebrow {
+    font-size: var(--font-size-fluid-3xs);
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+    color: var(--color-text-muted);
+    font-weight: 500;
+  }
+
+  .eyebrow-content {
+    font-size: var(--font-size-fluid-3xs);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--color-text);
+    font-weight: 500;
+  }
+
+  .eyebrow-light {
+    font-size: var(--font-size-fluid-3xs);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--color-text-muted);
+    font-weight: 400;
+  }
+
+  /* Uppercase text button (clear, invert…) */
+  .micro-action {
+    font-size: var(--font-size-fluid-3xs);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    font-weight: 500;
+    transition: color 150ms ease;
+    cursor: pointer;
+  }
+  .micro-action:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .text-link {
+    color: var(--color-accent-blue);
+    font-weight: 500;
+    transition: color 150ms ease;
+  }
+  .text-link:hover {
+    color: color-mix(in srgb, var(--color-accent-blue) 80%, var(--color-text));
+  }
+}
+
+/* ============================================================================
+   5. FORMS — inputs, surfaces, pills, alerts
+   ========================================================================== */
+
+@layer components {
+  /* Field: sits one step darker than the card it lives in */
+  .form-input {
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    padding: 0.375rem 0.625rem;
+    font-size: var(--font-size-fluid-xs);
+    transition:
+      border-color 150ms ease,
+      background-color 150ms ease;
+    outline: none;
+  }
+  .form-input::placeholder {
+    color: var(--color-text-muted);
+  }
+  .form-input:hover:not(:disabled) {
+    border-color: var(--color-border-hover);
+  }
+  .form-input:focus-visible,
+  .form-input:focus {
+    border-color: var(--color-accent-blue);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent-blue) 18%, transparent);
+  }
+  .form-input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* Bordered inset block, slightly darker than the parent card */
+  .form-surface {
+    background-color: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+  }
+
+  /* Bordered mini button, uppercase tracking */
+  .pill-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.2rem 0.55rem;
+    font-size: var(--font-size-fluid-3xs);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-weight: 500;
+    border: 1px solid var(--color-border);
+    border-radius: 3px;
+    background: var(--color-surface);
+    color: var(--color-text-secondary);
+    transition:
+      border-color 150ms ease,
+      color 150ms ease,
+      background-color 150ms ease;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .pill-action:hover:not(:disabled) {
+    border-color: var(--color-border-hover);
+    color: var(--color-text);
+  }
+  .pill-action:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  .pill-action[data-active='true'],
+  .pill-action[data-variant='primary']:hover:not(:disabled) {
+    border-color: var(--color-accent-blue);
+    color: var(--color-accent-blue);
+  }
+  .pill-action[data-variant='danger']:hover:not(:disabled) {
+    border-color: var(--color-error);
+    color: var(--color-error);
+  }
+
+  /* Banners (form feedback, notices) */
+  .alert {
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
+    border: 1px solid;
+    font-size: var(--font-size-fluid-xs);
+  }
+  .alert-success {
+    background-color: var(--color-success-bg);
+    border-color: var(--color-success-border);
+    color: var(--color-success);
+  }
+  .alert-error {
+    background-color: var(--color-error-bg);
+    border-color: var(--color-error-border);
+    color: var(--color-error);
+  }
+  .alert-warning {
+    background-color: var(--color-warning-bg);
+    border-color: var(--color-warning-border);
+    color: var(--color-warning);
+  }
+  .alert-info {
+    background-color: color-mix(in srgb, var(--color-accent-blue) 10%, transparent);
+    border-color: color-mix(in srgb, var(--color-accent-blue) 30%, transparent);
+    color: var(--color-accent-blue);
+  }
+}
+
+/* ============================================================================
+   6. INDICATORS
+   ========================================================================== */
+
+@layer components {
+  /* Green dot with a halo (running, live) */
+  .live-indicator {
+    display: inline-block;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 9999px;
+    background-color: var(--color-success);
+    box-shadow: 0 0 6px color-mix(in srgb, var(--color-success) 50%, transparent);
+  }
+
+  /* Outlined destructive action */
+  .action-destructive {
+    color: var(--color-error);
+    background: transparent;
+    border: 1px solid var(--color-error-border);
+    transition:
+      background-color 150ms ease,
+      border-color 150ms ease;
+  }
+  .action-destructive:hover:not(:disabled) {
+    background-color: var(--color-error-bg);
+    border-color: var(--color-error);
+  }
+  .action-destructive:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}
+
+/* ============================================================================
+   7. GRADIENTS — brand identity (blue → green)
+   ========================================================================== */
+
+@layer components {
+  .bg-main-gradient {
+    background: linear-gradient(
+      to bottom right,
+      color-mix(in srgb, var(--color-primary-light) 6%, transparent),
+      color-mix(in srgb, var(--color-primary-light) 16%, transparent) 50%,
+      color-mix(in srgb, var(--color-primary-light) 6%, transparent)
+    );
+  }
+
+  /* Translucent navbar */
+  .nav-bg {
+    background: linear-gradient(
+      to bottom right,
+      color-mix(in srgb, var(--color-surface) 30%, transparent),
+      color-mix(in srgb, var(--color-surface) 60%, transparent) 50%,
+      color-mix(in srgb, var(--color-surface) 30%, transparent)
+    );
+  }
+
+  /* Text that fills with the brand gradient on hover */
+  .logo-gradient-hover {
+    background: linear-gradient(
+      to right,
+      var(--color-accent-blue) 0%,
+      var(--color-accent-green) 45%,
+      var(--color-text) 50%,
+      var(--color-text) 100%
+    );
+    background-size: 220% 100%;
+    background-position: 100% 0;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    transition: background-position 0.5s ease;
+  }
+  .logo-gradient-hover:hover,
+  .group:hover .logo-gradient-hover-on-group {
+    background-position: 0% 0;
+  }
+
+  /* Loading: sweep through the masked app logo */
+  .logo-shimmer-animate {
+    background: linear-gradient(
+      to right,
+      color-mix(in srgb, var(--color-text) 15%, transparent) 0%,
+      color-mix(in srgb, var(--color-text) 15%, transparent) 20%,
+      var(--color-accent-blue) 35%,
+      var(--color-accent-green) 50%,
+      color-mix(in srgb, var(--color-text) 15%, transparent) 65%,
+      color-mix(in srgb, var(--color-text) 15%, transparent) 100%
+    );
+    background-size: 300% 100%;
+    background-position: 100% 0;
+    animation: logo-shimmer 1.5s linear infinite;
+    opacity: 0.8;
+  }
+
+  /* Border that fills with the gradient on hover */
+  .gradient-border-hover {
+    border: 1px solid transparent;
+    background:
+      linear-gradient(var(--color-surface), var(--color-surface)) padding-box,
+      linear-gradient(
+          to right,
+          var(--color-accent-blue) 0%,
+          var(--color-accent-green) 45%,
+          var(--color-bleu) 50%,
+          var(--color-bleu) 100%
+        )
+        border-box;
+    background-size:
+      100% 100%,
+      220% 100%;
+    background-position:
+      0 0,
+      100% 0;
+    transition: background-position 0.5s ease;
+  }
+  .gradient-border-hover:hover {
+    background-position:
+      0 0,
+      0% 0;
+  }
+
+  .gradient-grey-border-hover {
+    border: 1px solid transparent;
+    background:
+      linear-gradient(var(--color-surface), var(--color-surface)) padding-box,
+      linear-gradient(
+          to right,
+          var(--color-accent-blue) 0%,
+          var(--color-accent-green) 45%,
+          var(--color-gris) 50%,
+          var(--color-gris) 100%
+        )
+        border-box;
+    background-size:
+      100% 100%,
+      220% 100%;
+    background-position:
+      0 0,
+      100% 0;
+    transition: background-position 0.5s ease;
+  }
+  .gradient-grey-border-hover:hover {
+    background-position:
+      0 0,
+      0% 0;
+  }
+
+  /* Field whose border fills with the gradient on focus. Needs its transparent
+     border: never combine with a `border-<colour>` class. */
+  .input-gradient-border {
+    border: 1px solid transparent;
+    background:
+      linear-gradient(var(--color-bg), var(--color-bg)) padding-box,
+      linear-gradient(
+          to right,
+          var(--color-accent-blue) 0%,
+          var(--color-accent-green) 45%,
+          var(--color-border) 50%,
+          var(--color-border) 100%
+        )
+        border-box;
+    background-size:
+      100% 100%,
+      220% 100%;
+    background-position:
+      0 0,
+      100% 0;
+    transition: background-position 0.5s ease;
+    outline: none;
+  }
+  .input-gradient-border:hover {
+    background:
+      linear-gradient(var(--color-bg), var(--color-bg)) padding-box,
+      linear-gradient(
+          to right,
+          var(--color-accent-blue) 0%,
+          var(--color-accent-green) 45%,
+          var(--color-border-hover) 50%,
+          var(--color-border-hover) 100%
+        )
+        border-box;
+    background-size:
+      100% 100%,
+      220% 100%;
+    background-position:
+      0 0,
+      100% 0;
+  }
+  .input-gradient-border:focus {
+    background-position:
+      0 0,
+      0% 0;
+  }
+
+  /* Hairlines (title underlines, dividers) */
+  .hairline-gradient {
+    background: linear-gradient(
+      to right,
+      var(--color-accent-blue) 0%,
+      var(--color-accent-green) 50%,
+      transparent 100%
+    );
+  }
+  .hairline-gradient-centered {
+    background: linear-gradient(
+      to right,
+      transparent 0%,
+      var(--color-accent-blue) 25%,
+      var(--color-accent-green) 50%,
+      var(--color-accent-blue) 75%,
+      transparent 100%
+    );
+  }
+  .hairline-gradient-reverse {
+    background: linear-gradient(
+      to right,
+      transparent 0%,
+      var(--color-accent-green) 50%,
+      var(--color-accent-blue) 100%
+    );
+  }
+
+  /* Vertical rails (selected item, card edge) */
+  .rail-gradient {
+    background: linear-gradient(
+      to bottom,
+      var(--color-accent-blue) 0%,
+      var(--color-accent-green) 100%
+    );
+  }
+  .rail-accent {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: linear-gradient(
+      to bottom,
+      var(--color-accent-blue) 0%,
+      var(--color-accent-green) 100%
+    );
+    pointer-events: none;
+  }
+  .side-gradient {
+    background: linear-gradient(
+      to bottom,
+      var(--color-accent-deep),
+      var(--color-accent-deep) 50%,
+      var(--color-accent-gold)
+    );
+  }
+  .side-gradient-2 {
+    background: linear-gradient(
+      to bottom,
+      var(--color-accent-deep),
+      var(--color-accent-blue) 50%,
+      var(--color-accent-green)
+    );
+  }
+  .side-gradient-2-reverse {
+    background: linear-gradient(
+      to bottom,
+      var(--color-accent-green),
+      var(--color-accent-blue) 50%,
+      var(--color-accent-deep)
+    );
+  }
+}
+
+@keyframes logo-shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: 0% 0;
+  }
+}
+
+/* ============================================================================
+   8. EFFECTS
+   ========================================================================== */
+
+@layer components {
+  .bg-transparent-blur {
+    background: var(--color-overlay);
+    backdrop-filter: blur(10px);
+  }
+
+  .modal-backdrop {
+    background-color: var(--color-modal-backdrop);
+  }
+
+  .input-soft-shadow {
+    box-shadow: var(--shadow-input-soft);
+  }
+
+  .table-sticky-shadow {
+    box-shadow: var(--shadow-table-sticky);
+  }
+}
+
+/* ============================================================================
+   9. NAVIGATION — floating navbar
+   ========================================================================== */
+
+@layer components {
+  .navbar-spacing {
+    padding-top: var(--navbar-spacing);
+  }
+
+  /* Uppercase link; a gradient underline draws in on hover and stays on the
+     active page (`data-active="true"`). */
+  .analysis-link {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.5rem 0.35rem;
+    font-size: var(--font-size-fluid-2xs);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-weight: 500;
+    color: color-mix(in srgb, var(--color-text) 70%, transparent);
+    white-space: nowrap;
+    transition: color 200ms ease;
+    cursor: pointer;
+  }
+  .analysis-link:hover,
+  .analysis-link[data-active='true'] {
+    color: var(--color-accent-blue);
+  }
+  .analysis-link::after {
+    content: '';
+    position: absolute;
+    left: 0.35rem;
+    right: 0.35rem;
+    bottom: 0.2rem;
+    height: 1px;
+    background: linear-gradient(
+      to right,
+      var(--color-accent-blue) 0%,
+      var(--color-accent-green) 100%
+    );
+    transform: scaleX(0);
+    transform-origin: left center;
+    transition: transform 250ms ease;
+  }
+  .analysis-link:hover::after,
+  .analysis-link[data-active='true']::after {
+    transform: scaleX(1);
+  }
+}
+
+/* ============================================================================
+   10. MARKDOWN TABLES — same look as the app tables (navy header, zebra rows)
+   Higher specificity than the typography plugin's :where() selectors.
+   ========================================================================== */
+
+@layer components {
+  .prose table {
+    border-collapse: collapse;
+  }
+  .prose thead {
+    background-color: var(--color-primary-dark);
+    border-bottom-width: 0;
+  }
+  .prose thead th {
+    color: #ffffff;
+    font-weight: 300;
+    border: 1px solid var(--color-border);
+    padding: 0.35rem 0.5rem;
+    vertical-align: middle;
+  }
+  .prose tbody tr {
+    border-bottom-width: 0;
+  }
+  .prose tbody tr:nth-child(even) {
+    background-color: var(--color-bg);
+  }
+  .prose tbody td {
+    border: 1px solid var(--color-border);
+    padding: 0.35rem 0.5rem;
+  }
+}
+
+/* ============================================================================
+   11. SCROLLBARS — thin, on theme tokens
+   ========================================================================== */
+
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background-color: var(--color-scrollbar-thumb);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-scrollbar-thumb-hover);
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+@layer utilities {
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
