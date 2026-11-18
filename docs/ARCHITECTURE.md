@@ -19,8 +19,10 @@ du frontend. Pour installer et lancer l'application, voir le
     `answers`, `processing`, `vector_stores`, `dd_types`, `authz`, `auth`,
     `file_parser`). Les services lèvent les erreurs de `core/exceptions.py` et
     ne connaissent pas FastAPI ;
-  - `exports/` : les exports PDF et Excel ;
-  - `models/` et `schemas/`.
+  - `exports/` : le rapport PDF ;
+  - `models/` : une table par fichier, avec ses formes d'API : une classe de
+    base porte les champs et leurs limites, la table, le formulaire de création
+    et la réponse en héritent.
 - **Frontend** : React 18, Vite 4, Tailwind 3, axios et react-router. Code dans
   `frontend/src/`.
 - **LLM** : l'API **Responses** d'OpenAI (`client.responses.create`). Le modèle
@@ -69,7 +71,7 @@ du frontend. Pour installer et lancer l'application, voir le
   l'autocommit au niveau du pilote, si bien que les rollbacks n'avaient aucun
   effet.
 - **Adresses e-mail** : enregistrées et comparées en minuscules
-  (`schemas/user.py`, type `Email`). PostgreSQL compare le texte en tenant
+  (`models/user.py`, type `Email`). PostgreSQL compare le texte en tenant
   compte de la casse.
 
 ## Modèle de données
@@ -262,7 +264,7 @@ cassé.
     variables à renseigner ;
   - `backend/.env` est trouvé quel que soit le dossier de lancement, et les
     variables d'environnement priment sur lui.
-- **Rôles** : `Literal["admin", "analyst"]` (`schemas/user.py`).
+- **Rôles** : `Literal["admin", "analyst"]` (`models/user.py`).
   - L'inscription (`UserRegister`) n'a pas de champ `role` et refuse tout champ
     inconnu : un nouveau compte est toujours analyste.
   - Le premier administrateur se crée avec `python -m app.cli create-admin`
@@ -414,7 +416,8 @@ plafond qu'il faut relever.
 
 ### Export PDF
 
-`exports/answers.py` produit un rapport à deux niveaux :
+`exports/pdf.py` produit un rapport à deux niveaux (le rendu du markdown est dans
+`exports/markdown.py`, la lecture des sources dans `exports/sources.py`) :
 - le corps : la synthèse de chaque type de DD ;
 - les annexes : pour chaque section, son résumé, puis les questions, les réponses
   et les sources.
@@ -422,14 +425,19 @@ plafond qu'il faut relever.
 Sans synthèse, le rapport ne contient que le détail.
 - La référence de la question (`A.01`) est remise devant son texte, à partir du
   `question_code`.
-- **Bannière** : facultative, lue dans `BRAND_BANNER_PATH`. Si le fichier manque,
-  le rapport sort sans bannière et un avertissement est journalisé.
+- **Charte** : la bannière, facultative, est lue dans `BRAND_BANNER_PATH` ; si le
+  fichier manque, le rapport sort sans elle et un avertissement est journalisé.
+  Les couleurs (`PDF_PRIMARY_COLOR`, `PDF_TEXT_COLOR`, `PDF_RULE_COLOR`) et la
+  mention de pied de page (`PDF_FOOTER_NOTICE`) viennent aussi de la
+  configuration.
+- La fonction renvoie des octets ; la route construit la réponse HTTP.
 - **Tableaux markdown larges** : chaque colonne reçoit d'abord un minimum
   (`_COL_MIN_POINTS`). Si le tableau ne tient pas, la marge intérieure est
   réduite. Au-delà d'environ 40 colonnes, il est écrit en lignes de texte.
 - La règle horizontale markdown (`---`) ressort encore en clair.
 
-L'export Excel des réponses est dans le même module.
+Il n'y a pas d'export Excel. L'export CSV de la page de revue est fabriqué dans
+le navigateur.
 
 ### Tableau de bord
 

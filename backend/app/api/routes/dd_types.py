@@ -8,8 +8,8 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_active_user
 from app.api.uploads import QUESTIONNAIRE_EXTENSIONS, read_upload
 from app.core.database import get_db
+from app.models.dd_types import DDTypeCreate, DDTypeResponse, DDTypeUpdate
 from app.models.user import User
-from app.schemas.dd_types import DDTypeCreate, DDTypeResponse, DDTypeUpdate
 from app.services import dd_types as dd_types_service
 
 router = APIRouter()

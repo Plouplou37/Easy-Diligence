@@ -20,9 +20,13 @@ from app.engine.summarizer import (
 from app.models.base import stored_id
 from app.models.dd_types import DDType
 from app.models.session import DDSession
-from app.models.summary import DDSummaryBatch
+from app.models.summary import (
+    DDSummaryBatch,
+    DDSummaryBatchResponse,
+    DDSummaryResponse,
+    DDSummaryUpdate,
+)
 from app.models.user import User
-from app.schemas.summary import DDSummaryBatchResponse, DDSummaryResponse, DDSummaryUpdate
 from app.services import summaries as summaries_service
 
 router = APIRouter()

@@ -3,12 +3,10 @@ Pagination utilities for API endpoints
 """
 
 from math import ceil
-from typing import Any, Generic, TypeVar
+from typing import Any
 
 from pydantic import BaseModel
 from sqlalchemy.orm import Query
-
-T = TypeVar("T")
 
 
 class PaginationParams(BaseModel):
@@ -55,13 +53,6 @@ class PaginationMeta(BaseModel):
             has_next=params.page < total_pages,
             has_previous=params.page > 1,
         )
-
-
-class PaginatedResponse(BaseModel, Generic[T]):
-    """Generic paginated response"""
-
-    items: list[T]
-    meta: PaginationMeta
 
 
 def paginate_query(query: Query, params: PaginationParams) -> Query:

@@ -11,7 +11,7 @@ from app.api.deps import get_accessible_session, get_current_active_user
 from app.core.database import get_db
 from app.models.session import DDSession
 from app.models.user import User
-from app.schemas.vector_stores import SessionVectorStoreAssignment
+from app.models.vector_store import SessionVectorStoreAssignment
 from app.services import vector_stores
 
 router = APIRouter()

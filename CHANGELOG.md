@@ -68,6 +68,25 @@
   qu'elle.
 - Les sections et les questions arrivent dans l'ordre du questionnaire.
 
+### Export
+
+- Un seul export côté serveur : le rapport PDF. L'export Excel est supprimé ;
+  l'export CSV de la page de revue reste.
+- Les couleurs du rapport et sa mention de pied de page se règlent dans la
+  configuration (`PDF_PRIMARY_COLOR`, `PDF_TEXT_COLOR`, `PDF_RULE_COLOR`,
+  `PDF_FOOTER_NOTICE`).
+- Le code de l'export est découpé : `exports/pdf.py`, `markdown.py`,
+  `sources.py`.
+
+### Modèles
+
+- `schemas/` disparaît : chaque fichier de `models/` porte sa table et ce que
+  l'API en lit et en renvoie. Les champs et leurs limites ne sont écrits
+  qu'une fois, et l'API refuse maintenant ce que la base refuserait (longueur,
+  position négative). Le schéma de la base ne change pas.
+- La durée d'expiration choisie à la création d'un vector store est respectée
+  (elle valait toujours 30 jours).
+
 ### Codes des questions
 
 - Les sections sont lettrées par leur position (A, B…) et les questions

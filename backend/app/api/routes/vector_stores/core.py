@@ -8,7 +8,7 @@ from app.api.deps import get_current_active_user
 from app.core.cache import CacheInvalidator
 from app.core.database import get_db
 from app.models.user import User
-from app.schemas.vector_stores import VectorStoreCreate, VectorStoreResponse, VectorStoreUpdate
+from app.models.vector_store import VectorStoreCreate, VectorStoreResponse, VectorStoreUpdate
 from app.services import vector_stores
 
 router = APIRouter()

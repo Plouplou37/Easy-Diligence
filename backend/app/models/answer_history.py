@@ -1,9 +1,13 @@
+"""The versions of an answer: the table, and what the API returns."""
+
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Optional
 
+from pydantic import field_validator
 from sqlalchemy import Index, Text
 from sqlmodel import Field, Relationship
 
+from app.models.answer import decode_sources
 from app.models.base import JSONType, SQLModel, timestamp_field
 
 if TYPE_CHECKING:
@@ -28,3 +32,29 @@ class DDAnswerHistory(SQLModel, table=True):
     editor: Optional["User"] = Relationship(
         sa_relationship_kwargs={"foreign_keys": "DDAnswerHistory.edited_by"}
     )
+
+
+class AnswerHistoryResponse(SQLModel):
+    id: int
+    answer_id: int
+    version: int
+    content: str
+    sources: Any | None = None
+    edited_by: int | None
+    edit_reason: str | None
+    created_at: datetime
+    editor_name: str | None = None
+
+    @field_validator("sources", mode="before")
+    @classmethod
+    def _sources(cls, value: Any) -> Any:
+        return decode_sources(value)
+
+
+class AnswerVersionHistory(SQLModel):
+    """Every version of an answer, newest first."""
+
+    answer_id: int
+    current_version: int
+    versions: list[AnswerHistoryResponse]
+    total_versions: int

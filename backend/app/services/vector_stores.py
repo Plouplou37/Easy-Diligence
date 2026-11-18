@@ -23,15 +23,19 @@ from app.models.base import stored_id
 from app.models.dd_types import DDType
 from app.models.session import DDSession
 from app.models.user import User
-from app.models.vector_store import SessionVectorStore, VectorStore
-from app.schemas.vector_stores import VectorStoreCreate, VectorStoreResponse, VectorStoreUpdate
+from app.models.vector_store import (
+    SessionVectorStore,
+    VectorStore,
+    VectorStoreCreate,
+    VectorStoreResponse,
+    VectorStoreUpdate,
+)
 from app.services.authz import user_is_admin
 from app.services.dd_types import get_dd_type_by_code
 
 logger = logging.getLogger(__name__)
 
 CACHE_TTL = 300  # seconds
-EXPIRES_AFTER_DAYS = 30  # a store unused this long expires at OpenAI
 
 # Statuses of a store that is gone at OpenAI.
 STALE = ("expired", "missing")
@@ -137,7 +141,7 @@ def get_store(db: Session, store: VectorStore) -> VectorStoreResponse:
 def create_store(db: Session, data: VectorStoreCreate, user: User) -> VectorStoreResponse:
     """A new store at OpenAI, recorded as the user's."""
     store_id = openai_client().create_vector_store(
-        name=data.name, expires_after_days=EXPIRES_AFTER_DAYS
+        name=data.name, expires_after_days=data.expires_after_days
     )
     store = VectorStore(
         id=store_id, name=data.name, description=data.description, created_by=stored_id(user)

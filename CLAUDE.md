@@ -19,8 +19,10 @@ Guide court pour un agent qui travaille sur Easy Diligence. Le reste est dans :
   - `services/` : la logique métier et les accès à la base (sessions, réponses,
     traitement, vector stores, droits, authentification, import). Une route lit
     la requête, appelle un service et répond ;
-  - `exports/` : les exports PDF et Excel ;
-  - `models/` (SQLModel, une classe par table) et `schemas/` (Pydantic) ;
+  - `exports/` : le rapport PDF (`pdf.py`), son rendu markdown et ses sources ;
+  - `models/` : un fichier par table (SQLModel), avec ce que l'API en lit et en
+    renvoie (création, mise à jour, réponse). Les champs communs sont dans une
+    classe de base ;
   - `alembic/` : les migrations de la base.
 - Frontend React dans `frontend/src/`.
 - La configuration est lue par `backend/app/core/config.py`. Chaque variable est
@@ -55,6 +57,9 @@ Guide court pour un agent qui travaille sur Easy Diligence. Le reste est dans :
 - **Une session ou un type de DD lus dans l'URL** passent par les dépendances
   `get_accessible_session` et `get_visible_dd_type` de `api/deps.py`, qui
   vérifient les droits.
+- **Dans un modèle, `Field` est celui de SQLModel, qui ignore `pattern` (et
+  `regex`)** sans erreur. Pour un motif, utiliser `pydantic.Field` (voir
+  `models/user.py`). `max_length`, `ge` et `le` sont bien appliqués.
 - **Authentification** : tout endpoint qui demande un utilisateur passe par
   `api/deps.py` (`get_current_active_user`, `get_current_admin_user`). Ne pas
   décoder un jeton ailleurs.

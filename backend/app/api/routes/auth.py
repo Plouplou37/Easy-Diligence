@@ -17,17 +17,17 @@ from app.core.security import (
     verify_token,
 )
 from app.models.base import stored_id
-from app.models.user import User as UserModel
-from app.schemas.user import (
+from app.models.user import (
     PasswordChange,
     PasswordReset,
     PasswordResetConfirm,
     RefreshRequest,
     Token,
-    User,
     UserRegister,
+    UserResponse,
     UserUpdate,
 )
+from app.models.user import User as UserModel
 from app.services.auth import (
     authenticate_user,
     change_password,
@@ -50,7 +50,7 @@ def _client_address(request: Request) -> str | None:
     return request.client.host if request.client else None
 
 
-@router.post("/register", response_model=User, status_code=status.HTTP_201_CREATED)
+@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 def register(user_register: UserRegister, db: Session = Depends(get_db)):
     """Register a new account. It is always an analyst: the schema has no role
     field and refuses one. Admins are made with `python -m app.cli create-admin`."""
@@ -119,13 +119,13 @@ def refresh_token(body: RefreshRequest, db: Session = Depends(get_db)):
     return tokens
 
 
-@router.get("/me", response_model=User)
+@router.get("/me", response_model=UserResponse)
 def read_current_user(current_user: UserModel = Depends(get_current_user)):
     """Get current user information."""
     return current_user
 
 
-@router.put("/profile", response_model=User)
+@router.put("/profile", response_model=UserResponse)
 def update_profile(
     user_update: UserUpdate,
     current_user: UserModel = Depends(get_current_user),

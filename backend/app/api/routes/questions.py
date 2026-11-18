@@ -8,8 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_active_user
 from app.core.database import get_db
-from app.models.user import User
-from app.schemas.questions import (
+from app.models.questions import (
     DDTypeDetailResponse,
     QuestionCreate,
     QuestionResponse,
@@ -19,6 +18,7 @@ from app.schemas.questions import (
     SectionResponse,
     SectionUpdate,
 )
+from app.models.user import User
 from app.services import dd_types as dd_types_service
 from app.services import questions as questions_service
 

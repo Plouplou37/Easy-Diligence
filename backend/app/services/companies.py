@@ -4,9 +4,8 @@ from sqlalchemy.orm import Session
 
 from app.core.exceptions import NotFoundError
 from app.models.base import stored_id
-from app.models.company import Company
+from app.models.company import Company, CompanyCreate
 from app.models.user import User
-from app.schemas.company import CompanyCreate
 from app.services.authz import (
     assert_company_ownership,
     assert_company_view,

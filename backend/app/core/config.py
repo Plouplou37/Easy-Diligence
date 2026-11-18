@@ -1,6 +1,6 @@
 from typing import Literal
 
-from pydantic import SecretStr, field_validator
+from pydantic import Field, SecretStr, field_validator
 
 from app.core.database_settings import (  # noqa: F401  (ConfigurationError re-exported)
     ConfigurationError,
@@ -11,6 +11,7 @@ from app.core.database_settings import (  # noqa: F401  (ConfigurationError re-e
 # Shortest JWT signing key accepted: 32 characters. `openssl rand -hex 32`
 # gives 64.
 _JWT_SECRET_MIN_LENGTH = 32
+_HEX_COLOR = r"^#[0-9A-Fa-f]{6}$"
 
 
 class Settings(DatabaseSettings):
@@ -138,6 +139,12 @@ class Settings(DatabaseSettings):
     # Optional banner image at the top of exported PDF reports (PNG or JPEG).
     # Empty means no banner; a path to a missing file is logged and ignored.
     brand_banner_path: str = ""
+    # The PDF report's colours (#RRGGBB): titles and bars, secondary text, thin
+    # rules; and the notice printed at the foot of every page.
+    pdf_primary_color: str = Field(default="#243B5E", pattern=_HEX_COLOR)
+    pdf_text_color: str = Field(default="#4A4A4A", pattern=_HEX_COLOR)
+    pdf_rule_color: str = Field(default="#E7EBF1", pattern=_HEX_COLOR)
+    pdf_footer_notice: str = "PRIVATE AND CONFIDENTIAL — NOT FOR PUBLIC DISTRIBUTION"
 
     @field_validator("openai_api_key")
     @classmethod

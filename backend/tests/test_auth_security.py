@@ -356,3 +356,8 @@ def test_create_admin_command(db_factory, monkeypatch):
         input=f"{PASSWORD}\n{PASSWORD}\n",
     )
     assert again.exit_code == 1
+
+
+@pytest.mark.parametrize("username", ["ab", "with space", "x" * 31])
+def test_registration_checks_the_username(client, username):
+    assert register(client, username=username).status_code == 422

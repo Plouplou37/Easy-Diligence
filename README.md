@@ -24,7 +24,8 @@ rédiger une synthèse par type de DD, puis exportent un rapport PDF.
   Elles se rédigent en direct ou en différé via la Batch API d'OpenAI, deux fois
   moins chère.
 - **Export** : un rapport PDF à deux niveaux (la synthèse en corps de texte, le
-  détail des questions et réponses en annexe) et un export Excel.
+  détail des questions et réponses en annexe), et un export CSV des réponses
+  depuis la page de revue.
 - **Comptes et cloisonnement** : rôles `admin` et `analyst`. Chacun ne voit que
   ses propres données, et l'administrateur voit tout.
 
@@ -198,9 +199,8 @@ backend/              API FastAPI
     core/             transverse : config, base, sécurité, cache, e-mail
     engine/           moteur de réponses : client OpenAI, traitement, synthèses
     services/         logique métier et accès à la base
-    exports/          exports PDF et Excel
-    models/           modèles SQLModel (une classe par table)
-    schemas/          schémas Pydantic
+    exports/          rapport PDF
+    models/           tables SQLModel et ce que l'API en lit et en renvoie
   alembic/            migrations de la base (Alembic)
   db/schema.sql       script SQL complet du schéma, généré
   scripts/            import et mise à jour de questionnaires

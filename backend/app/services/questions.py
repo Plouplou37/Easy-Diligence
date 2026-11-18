@@ -15,9 +15,15 @@ from sqlmodel import col
 from app.core.exceptions import InvalidRequestError, NotFoundError
 from app.models.base import stored_id
 from app.models.dd_types import DDType
-from app.models.questions import DDQuestion, DDSection
+from app.models.questions import (
+    DDQuestion,
+    DDSection,
+    QuestionCreate,
+    QuestionUpdate,
+    SectionCreate,
+    SectionUpdate,
+)
 from app.models.user import User
-from app.schemas.questions import QuestionCreate, QuestionUpdate, SectionCreate, SectionUpdate
 from app.services.authz import assert_dd_type_ownership, assert_dd_type_view
 from app.services.dd_types import get_dd_type_by_code, get_section_in
 from app.services.question_codes import next_question_code, next_section_code

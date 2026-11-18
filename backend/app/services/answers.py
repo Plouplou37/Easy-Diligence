@@ -12,7 +12,7 @@ from sqlmodel import col
 from app.core.cache import CacheInvalidator
 from app.core.exceptions import InvalidRequestError, NotFoundError
 from app.core.pagination import PaginationParams, paginate_query
-from app.models.answer import AnswerStatus, DDAnswer
+from app.models.answer import AnswerResponse, AnswerStatus, AnswerUpdate, DDAnswer
 from app.models.answer_history import DDAnswerHistory
 from app.models.base import relation, stored_id
 from app.models.dd_types import DDType
@@ -22,7 +22,6 @@ from app.models.response import DDResponse
 from app.models.session import DDSession
 from app.models.user import User
 from app.models.vector_store import SessionVectorStore, VectorStore
-from app.schemas.answer import AnswerResponse, AnswerUpdate
 from app.services import vector_stores
 from app.services.authz import assert_session_access, filter_sessions_for_user
 from app.services.dd_types import get_dd_type_by_code

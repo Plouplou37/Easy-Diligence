@@ -16,9 +16,8 @@ from app.models.dd_types import DDType
 from app.models.execution import DDExecution
 from app.models.session import DDSession
 from app.models.summary import DDSummary, DDSummaryBatch
-from app.models.user import User
+from app.models.user import Role, User
 from app.models.vector_store import SessionVectorStore, VectorStore
-from app.schemas.user import Role
 
 _OWNS_DATA = "This user owns sessions or other data: deactivate the account instead."
 

@@ -179,13 +179,12 @@ const AnswerReview = () => {
     exportAnswersToCSV(filteredAnswers, sessionId);
   };
 
-  const handleServerExport = async (format) => {
+  const handlePdfExport = async () => {
     setExportOpen(false);
     setExporting(true);
     try {
-      const res = await answersAPI.export(sessionId, format);
-      const ext = format === 'excel' ? 'xlsx' : 'pdf';
-      downloadBlob(res.data, `session-${sessionId}-DD_Report.${ext}`);
+      const res = await answersAPI.export(sessionId, 'pdf');
+      downloadBlob(res.data, `session-${sessionId}-DD_Report.pdf`);
     } catch (error) {
       console.error('Failed to export answers:', error);
       toast.error('Export failed. Please try again.');
@@ -254,16 +253,10 @@ const AnswerReview = () => {
                   />
                   <div className={`absolute right-0 mt-2 w-48 z-20 py-1 ${menu.panel}`}>
                     <button
-                      onClick={() => handleServerExport('pdf')}
+                      onClick={handlePdfExport}
                       className={menu.item}
                     >
                       PDF report
-                    </button>
-                    <button
-                      onClick={() => handleServerExport('excel')}
-                      className={menu.item}
-                    >
-                      Excel workbook
                     </button>
                     <button
                       onClick={handleCsvExport}

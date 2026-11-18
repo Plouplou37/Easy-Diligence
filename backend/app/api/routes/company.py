@@ -5,8 +5,8 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_active_user
 from app.core.database import get_db
+from app.models.company import CompanyCreate, CompanyResponse
 from app.models.user import User
-from app.schemas.company import CompanyCreate, CompanyResponse
 from app.services import companies
 
 router = APIRouter()

@@ -309,3 +309,16 @@ def test_the_assignee_and_an_admin_manage_the_assignments(
             f"/api/vector-stores/session/{session.id}/assignments", headers=auth_headers(user)
         )
         assert [a["vector_store_id"] for a in listing.json()["assignments"]] == ["vs_1"]
+
+
+def test_create_keeps_the_chosen_expiry(client, analyst, auth_headers, fake_vector_stores):
+    """The form offers a number of days; the backend used to send 30 whatever it was."""
+    headers = auth_headers(analyst)
+    client.post(
+        "/api/vector-stores/", json={"name": "Docs", "expires_after_days": 90}, headers=headers
+    )
+    assert ("expires_after_days", 90) in fake_vector_stores.calls
+    refused = client.post(
+        "/api/vector-stores/", json={"name": "Docs", "expires_after_days": 0}, headers=headers
+    )
+    assert refused.status_code == 422

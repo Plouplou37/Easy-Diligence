@@ -131,7 +131,6 @@ module = [
     "app.engine.openai_client",
     "app.engine.processor",
     "app.engine.summarizer",
-    "app.exports.answers",
 ]
 ignore_errors = true
 

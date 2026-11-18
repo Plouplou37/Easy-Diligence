@@ -6,9 +6,8 @@ from sqlmodel import col
 
 from app.core.exceptions import NotFoundError
 from app.models.session import DDSession
-from app.models.summary import DDSummary
+from app.models.summary import DDSummary, DDSummaryResponse
 from app.models.user import User
-from app.schemas.summary import DDSummaryResponse
 from app.services.authz import assert_session_access
 from app.services.dd_types import get_dd_type_by_code
 

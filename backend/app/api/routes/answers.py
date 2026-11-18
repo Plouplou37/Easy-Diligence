@@ -1,8 +1,8 @@
-"""Answers: listing, review (edit, status, revert, history), regeneration, export."""
+"""Answers: listing, review (edit, status, revert, history), regeneration, PDF export."""
 
 from typing import Any
 
-from fastapi import APIRouter, Body, Depends, File, Form, UploadFile
+from fastapi import APIRouter, Body, Depends, File, Form, Response, UploadFile
 from fastapi.concurrency import run_in_threadpool
 from sqlalchemy.orm import Session
 from sqlmodel import col
@@ -12,18 +12,17 @@ from app.api.uploads import read_upload
 from app.core.database import get_db
 from app.core.exceptions import InvalidRequestError
 from app.core.pagination import PaginationMeta, PaginationParams
-from app.exports.answers import AnswerExporter
-from app.models.answer import DDAnswer
-from app.models.session import DDSession
-from app.models.summary import DDSummary
-from app.models.user import User
-from app.schemas.answer import (
+from app.exports import pdf
+from app.models.answer import (
     AnswerListResponse,
     AnswerResponse,
     AnswerUpdate,
-    PaginatedAnswerResponse,
+    DDAnswer,
 )
-from app.schemas.answer_history import AnswerHistoryResponse, AnswerVersionHistory
+from app.models.answer_history import AnswerHistoryResponse, AnswerVersionHistory
+from app.models.session import DDSession
+from app.models.summary import DDSummary
+from app.models.user import User
 from app.services import answers as answers_service
 
 router = APIRouter()
@@ -51,8 +50,7 @@ def _list_response(
     stats = None
     if include_stats:
         stats = {**(extra_stats or {}), **answers_service.page_stats(items)}
-    page = PaginatedAnswerResponse(items=items, meta=PaginationMeta.from_params(params, total))
-    return AnswerListResponse.from_paginated(page, filters=filters, stats=stats)
+    return AnswerListResponse.of(items, PaginationMeta.from_params(params, total), filters, stats)
 
 
 @router.get("/all", response_model=AnswerListResponse)
@@ -215,12 +213,13 @@ def export_session_answers(
     session: DDSession = Depends(get_accessible_session),
     db: Session = Depends(get_db),
 ):
-    """The session's report, as a PDF (with the summaries) or an Excel workbook."""
-    kind = format.lower()
-    if kind not in ("pdf", "excel"):
-        raise InvalidRequestError("Format must be 'pdf' or 'excel'")
+    """The session's report, as a PDF: the syntheses, then every answer."""
+    if format.lower() != "pdf":
+        raise InvalidRequestError("Only the PDF export is available")
     answers = answers_service.answers_for_export(db, session)
-    if kind == "excel":
-        return AnswerExporter.generate_excel_report(session, answers)
     summaries = db.query(DDSummary).filter(col(DDSummary.session_id) == session.id).all()
-    return AnswerExporter.generate_pdf_report(session, answers, summaries=summaries)
+    return Response(
+        content=pdf.build_report(session, answers, summaries),
+        media_type=pdf.MEDIA_TYPE,
+        headers={"Content-Disposition": f"attachment; filename={pdf.report_filename(session)}"},
+    )

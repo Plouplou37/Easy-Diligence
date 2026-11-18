@@ -11,15 +11,18 @@ if TYPE_CHECKING:
     from app.models.user import User
 
 
-class VectorStore(SQLModel, table=True):
+class VectorStoreBase(SQLModel):
+    name: str = Field(max_length=255)
+    description: str | None = Field(default=None, sa_type=Text)  # ours, not OpenAI's
+
+
+class VectorStore(VectorStoreBase, table=True):
     """An OpenAI vector store we track. Only ownership and our own fields live
     here; everything else is read from OpenAI."""
 
     __tablename__ = "vector_stores"
 
     id: str = Field(primary_key=True, max_length=255)  # OpenAI vector store ID
-    name: str = Field(max_length=255)
-    description: str | None = Field(default=None, sa_type=Text)  # ours, not OpenAI's
     created_by: int = Field(foreign_key="users.id", index=True)  # owner
     created_at: datetime | None = timestamp_field()
     updated_at: datetime | None = timestamp_field(updated=True)
@@ -44,3 +47,33 @@ class SessionVectorStore(SQLModel, table=True):
     session: Optional["DDSession"] = Relationship()
     vector_store: Optional["VectorStore"] = Relationship(back_populates="session_assignments")
     assignee: Optional["User"] = Relationship()
+
+
+class VectorStoreCreate(VectorStoreBase):
+    # Days without use before OpenAI deletes the store.
+    expires_after_days: int = Field(default=30, ge=1, le=365)
+
+
+class VectorStoreUpdate(SQLModel):
+    name: str | None = Field(default=None, max_length=255)
+    description: str | None = None
+
+
+class VectorStoreResponse(VectorStoreBase):
+    """A store, with its state at OpenAI ("expired" or "missing" once gone there)."""
+
+    id: str
+    file_count: int
+    total_bytes: int
+    status: str
+    expires_after_days: int | None = None
+    expires_at: datetime | None = None
+    last_active_at: datetime | None = None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+
+class SessionVectorStoreAssignment(SQLModel):
+    """Body of an assignment: a DD type, or nothing for the whole session."""
+
+    dd_type_id: int | None = None

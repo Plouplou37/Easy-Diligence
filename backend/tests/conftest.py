@@ -236,6 +236,7 @@ class FakeVectorStoreClient:
 
     def create_vector_store(self, name, expires_after_days=None):
         self._record("create_vector_store", name)
+        self._record("expires_after_days", expires_after_days)
         return f"vs_{next(_sequence)}"
 
     def get_vector_store_info(self, vector_store_id):

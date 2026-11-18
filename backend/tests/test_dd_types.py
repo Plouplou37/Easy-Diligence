@@ -176,3 +176,19 @@ def test_the_structure_comes_in_order(client, analyst, own_type, auth_headers):
     ).json()
     assert [s["section_code"] for s in body["sections"]] == ["A", "B"]
     assert [q["question_code"] for q in body["sections"][0]["questions"]] == ["A.01", "A.02"]
+
+
+def test_the_api_checks_the_limits_of_the_columns(client, analyst, own_type, auth_headers):
+    """The limits are written once, on the model: the API refuses what the
+    database would refuse."""
+    headers = auth_headers(analyst)
+    too_long = client.post(
+        "/api/dd-types/", json={"code": "C" * 51, "name": "Too long"}, headers=headers
+    )
+    assert too_long.status_code == 422
+    negative = client.post(
+        f"/api/questions/dd-types/{own_type.code}/sections",
+        json={"title": "Risk", "order_index": -1},
+        headers=headers,
+    )
+    assert negative.status_code == 422

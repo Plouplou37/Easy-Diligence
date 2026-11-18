@@ -1,10 +1,15 @@
+"""Answers: the table, and what the API reads and returns."""
+
 import enum
+import json
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Optional
 
+from pydantic import field_validator
 from sqlalchemy import CheckConstraint, Index, Text
 from sqlmodel import Field, Relationship
 
+from app.core.pagination import PaginationMeta
 from app.models.base import TIMESTAMP, JSONType, SQLModel, enum_type, timestamp_field
 
 if TYPE_CHECKING:
@@ -143,3 +148,89 @@ class DDAnswer(SQLModel, table=True):
     history: list["DDAnswerHistory"] = Relationship(
         back_populates="answer", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
     )
+
+
+def decode_sources(value: Any) -> Any:
+    """Sources as stored (a dict or a list), or as some clients send them: a
+    JSON string. A value that is neither is kept, wrapped, for the reader."""
+    if value is None or isinstance(value, dict | list):
+        return value
+    if isinstance(value, str):
+        try:
+            parsed = json.loads(value)
+        except (json.JSONDecodeError, ValueError):
+            return {"value": value}
+        return parsed if isinstance(parsed, dict | list) else {"value": parsed}
+    return {"value": str(value)}
+
+
+class AnswerUpdate(SQLModel):
+    """A reviewer's edit."""
+
+    answer_text: str
+    edit_reason: str | None = None
+    sources: dict[str, Any] | list[Any] | None = None
+
+    @field_validator("sources", mode="before")
+    @classmethod
+    def _sources(cls, value: Any) -> Any:
+        decoded = decode_sources(value)
+        # Only real sources are stored: an unreadable value is dropped.
+        return None if isinstance(decoded, dict) and set(decoded) == {"value"} else decoded
+
+
+class AnswerResponse(SQLModel):
+    id: int
+    session_id: int
+    execution_id: int | None
+    dd_type_id: int | None
+    dd_type_code: str | None = None
+    section_code: str | None = None
+    question_code: str | None = None
+    answer_text: str | None
+    sources: Any | None = None
+    confidence_score: float | None
+    tokens_used: int = 0
+    status: AnswerStatus
+
+    # Versions
+    version: int = 1
+    is_current: bool = True
+    edited_by: int | None = None
+    edited_at: datetime | None = None
+    is_edited: bool = False
+    retry_count: int = 0
+    answered_at: datetime | None
+    created_at: datetime
+    updated_at: datetime | None
+
+    # Labels for the review page (services/answers.py)
+    editor_name: str | None = None
+    session_name: str | None = None
+    section_name: str | None = None
+    question_text: str | None = None
+    validation_status: str | None = None
+    total_validations: int = 0
+    openai_message_ids: list[str] = []
+
+    @field_validator("sources", mode="before")
+    @classmethod
+    def _sources(cls, value: Any) -> Any:
+        return decode_sources(value)
+
+
+class AnswerListResponse(SQLModel):
+    answers: list[AnswerResponse]
+    pagination: dict[str, Any]
+    filters: dict[str, Any] | None = None
+    stats: dict[str, Any] | None = None
+
+    @classmethod
+    def of(
+        cls,
+        answers: list[AnswerResponse],
+        meta: PaginationMeta,
+        filters: dict[str, Any],
+        stats: dict[str, Any] | None = None,
+    ) -> "AnswerListResponse":
+        return cls(answers=answers, pagination=meta.model_dump(), filters=filters, stats=stats)

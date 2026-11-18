@@ -1,9 +1,15 @@
-from datetime import datetime
-from typing import TYPE_CHECKING, Optional
+"""Accounts and logins: the tables, and every form of an account the API reads
+or returns (registration, profile, tokens, passwords, admin management)."""
 
+from datetime import datetime
+from typing import TYPE_CHECKING, Annotated, Literal, Optional
+
+import pydantic
+from pydantic import AfterValidator, BaseModel, ConfigDict, EmailStr, field_validator
 from sqlalchemy import Text
 from sqlmodel import Field, Relationship
 
+from app.core.validation import validate_password_strength
 from app.models.base import TIMESTAMP, SQLModel, timestamp_field
 
 if TYPE_CHECKING:
@@ -61,3 +67,164 @@ class UserSession(SQLModel, table=True):
     created_at: datetime | None = timestamp_field()
 
     user: Optional["User"] = Relationship()
+
+
+# --- What the API reads and returns ---------------------------------------------
+# Pydantic's Field, not SQLModel's: SQLModel ignores `pattern` (and `regex`).
+
+Role = Literal["admin", "analyst"]
+
+# Email addresses are stored and compared lowercase: PostgreSQL compares text
+# case-sensitively, so Jane@x.com and jane@x.com would otherwise be two accounts.
+Email = Annotated[EmailStr, AfterValidator(lambda value: value.strip().lower())]
+
+
+class UserProfile(BaseModel):
+    """What a person says about themselves, without any privilege."""
+
+    email: Email
+    username: str = pydantic.Field(..., min_length=3, max_length=30, pattern="^[a-zA-Z0-9._-]+$")
+    full_name: str | None = None
+    company: str | None = None
+    phone: str | None = None
+
+
+class UserBase(UserProfile):
+    role: Role = "analyst"
+
+
+class UserCreate(UserBase):
+    """Server-side creation, role included (the create-admin command, tests)."""
+
+    password: str = pydantic.Field(..., min_length=8)
+
+    @field_validator("password")
+    @classmethod
+    def validate_password(cls, v: str) -> str:
+        return validate_password_strength(v)
+
+
+class UserRegister(UserProfile):
+    """Self-registration. There is no role field, and unknown fields are
+    refused: a request carrying "role" gets a 422 instead of being trusted.
+    A registered account is always an analyst."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    password: str = pydantic.Field(..., min_length=8)
+
+    @field_validator("password")
+    @classmethod
+    def validate_password(cls, v: str) -> str:
+        return validate_password_strength(v)
+
+
+class UserUpdate(BaseModel):
+    full_name: str | None = None
+    company: str | None = None
+    phone: str | None = None
+    email: Email | None = None
+
+
+class UserResponse(UserBase):
+    """An account, as the API returns it."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    is_active: bool
+    is_verified: bool
+    created_at: datetime
+    updated_at: datetime | None
+    last_login: datetime | None
+
+
+class Token(BaseModel):
+    access_token: str
+    refresh_token: str | None = None
+    token_type: str = "bearer"
+
+
+class RefreshRequest(BaseModel):
+    """Body of POST /auth/refresh: the token travels in the body, never in the
+    URL, where proxies and server logs would record it."""
+
+    refresh_token: str
+
+
+class PasswordChange(BaseModel):
+    current_password: str
+    new_password: str = pydantic.Field(..., min_length=8)
+
+    @field_validator("new_password")
+    @classmethod
+    def validate_password(cls, v: str) -> str:
+        return validate_password_strength(v)
+
+
+class PasswordReset(BaseModel):
+    email: Email
+
+
+class PasswordResetConfirm(BaseModel):
+    token: str
+    new_password: str = pydantic.Field(..., min_length=8)
+
+    @field_validator("new_password")
+    @classmethod
+    def validate_password(cls, v: str) -> str:
+        return validate_password_strength(v)
+
+
+# --- Admin ----------------------------------------------------------------------
+
+
+class UserListItem(BaseModel):
+    """User information for admin list view"""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    username: str
+    email: EmailStr
+    full_name: str | None
+    company: str | None
+    role: str
+    is_active: bool
+    is_verified: bool
+    last_login: datetime | None
+    created_at: datetime
+
+
+class UserListResponse(BaseModel):
+    """Paginated user list response"""
+
+    users: list[UserListItem]
+    total: int
+    page: int
+    per_page: int
+    total_pages: int
+
+
+class UserRoleUpdate(BaseModel):
+    """Schema for updating user role (anything but admin/analyst is a 422)"""
+
+    model_config = ConfigDict(json_schema_extra={"example": {"role": "admin"}})
+
+    role: Role
+
+
+class UserStatusUpdate(BaseModel):
+    """Schema for updating user status"""
+
+    model_config = ConfigDict(json_schema_extra={"example": {"is_active": True}})
+
+    is_active: bool
+
+
+class AdminActionResponse(BaseModel):
+    """Standard response for admin actions"""
+
+    success: bool
+    message: str
+    user_id: int | None = None

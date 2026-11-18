@@ -13,7 +13,11 @@ if TYPE_CHECKING:
     from app.models.user import User
 
 
-class DDSummary(SQLModel, table=True):
+class DDSummaryBase(SQLModel):
+    summary_text: str = Field(sa_type=Text)
+
+
+class DDSummary(DDSummaryBase, table=True):
     """A generated summary attached to a session.
 
     Two kinds, distinguished by section_id:
@@ -38,7 +42,6 @@ class DDSummary(SQLModel, table=True):
     section_id: int | None = Field(
         default=None, foreign_key="dd_sections.id", ondelete="CASCADE", index=True
     )
-    summary_text: str = Field(sa_type=Text)
     # NULL = AI-generated and untouched; set = manually edited
     edited_by: int | None = Field(default=None, foreign_key="users.id")
     generated_at: datetime | None = timestamp_field()
@@ -87,3 +90,39 @@ class DDSummaryBatch(SQLModel, table=True):
 
     session: Optional["DDSession"] = Relationship()
     dd_type: Optional["DDType"] = Relationship()
+
+
+class DDSummaryUpdate(DDSummaryBase):
+    """A reviewer's edit of a summary."""
+
+
+class DDSummaryResponse(DDSummaryBase):
+    id: int
+    session_id: int
+    dd_type_id: int
+    section_id: int | None = None  # NULL = DD-type synthesis, set = section summary
+    edited_by: int | None = None
+    generated_at: datetime | None = None
+    updated_at: datetime | None = None
+    # Labels for the page
+    dd_type_code: str | None = None
+    dd_type_name: str | None = None
+    section_title: str | None = None
+
+
+class DDSummaryBatchResponse(SQLModel):
+    """State of the OpenAI batch writing a DD type's section summaries.
+
+    `status` carries OpenAI's own values (validating, in_progress, completed,
+    failed, expired, cancelled), plus 'collected' once the results are stored
+    and the synthesis written, and 'none' when there is no batch.
+    """
+
+    status: str
+    message: str | None = None
+    openai_batch_id: str | None = None
+    completed: int | None = None  # progress, when OpenAI reports it
+    total: int | None = None
+    sections: int | None = None  # section summaries stored, once collected
+    created_at: datetime | None = None
+    updated_at: datetime | None = None

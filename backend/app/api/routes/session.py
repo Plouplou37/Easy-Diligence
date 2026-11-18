@@ -7,15 +7,14 @@ from app.api.deps import get_accessible_session, get_current_active_user
 from app.core.database import get_db
 from app.core.pagination import PaginationMeta, PaginationParams
 from app.models.base import stored_id
-from app.models.session import DDSession
-from app.models.user import User
-from app.schemas.session import (
-    PaginatedSessionResponse,
+from app.models.session import (
+    DDSession,
     SessionCreate,
     SessionListResponse,
     SessionResponse,
     SessionStatusResponse,
 )
+from app.models.user import User
 from app.services import sessions as sessions_service
 
 router = APIRouter()
@@ -34,7 +33,7 @@ def create_session(
 @router.get("/{session_identifier}", response_model=SessionResponse)
 def get_session(session: DDSession = Depends(get_accessible_session)):
     """A session, by id or session code."""
-    return SessionResponse.from_db_model(session)
+    return SessionResponse.of(session)
 
 
 @router.get("/{session_identifier}/status", response_model=SessionStatusResponse)
@@ -73,17 +72,11 @@ def list_sessions(
         search=search,
     )
 
-    items = []
-    for session in sessions:
-        item = SessionResponse.from_db_model(session)
-        if session.creator:
-            item.created_by_username = session.creator.username or session.creator.email
-        items.append(item)
-
-    page_of_sessions = PaginatedSessionResponse(
-        items=items, meta=PaginationMeta.from_params(params, total)
+    return SessionListResponse.of(
+        [SessionResponse.of(session) for session in sessions],
+        PaginationMeta.from_params(params, total),
+        filters,
     )
-    return SessionListResponse.from_paginated(page_of_sessions, filters=filters)
 
 
 @router.delete("/{session_identifier}")

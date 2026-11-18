@@ -12,7 +12,7 @@ from sqlalchemy.exc import OperationalError, ProgrammingError
 import app.models  # noqa: F401  (registers every mapper before the first query)
 from app.core.database import SessionLocal
 from app.core.exceptions import ConflictError
-from app.schemas.user import UserCreate
+from app.models.user import UserCreate
 from app.services.auth import create_user
 
 cli = typer.Typer(help="Easy Diligence administration commands.", no_args_is_help=True)

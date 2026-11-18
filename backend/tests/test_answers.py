@@ -1,9 +1,6 @@
 """Answers: what the review page lists, the review itself (edit, status, revert,
 history) and the export of the current versions."""
 
-import io
-
-import pandas as pd
 import pytest
 
 from app.models.answer import AnswerStatus, DDAnswer
@@ -12,6 +9,7 @@ from app.models.message import DDMessage
 from app.models.questions import DDQuestion
 from app.models.response import DDResponse
 from app.models.vector_store import SessionVectorStore
+from app.services.answers import answers_for_export
 
 
 @pytest.fixture
@@ -37,7 +35,7 @@ def answered(db, analyst, make_dd_type, make_dd_session):
                 dd_type_id=dd_type.id,
                 section_id=question.section_id,
                 question_id=question.id,
-                section_code="S1",
+                section_code="A",
                 question_code=question.question_code,
                 answer_text=f"Answer to {question.question_code}",
                 sources={"files": [], "web": [], "total_count": 0},
@@ -117,7 +115,7 @@ def test_someone_else_cannot_review(client, make_user, answered, auth_headers):
     )
 
 
-def test_export_keeps_only_the_current_versions(db, client, analyst, answered, auth_headers):
+def test_export_keeps_only_the_current_versions(db, answered):
     """Superseded versions and failed attempts stay in the table: a regenerated
     question used to appear twice in the report."""
     session, dd_type, answers = answered
@@ -129,7 +127,7 @@ def test_export_keeps_only_the_current_versions(db, client, analyst, answered, a
             dd_type_id=dd_type.id,
             section_id=old.section_id,
             question_id=old.question_id,
-            section_code="S1",
+            section_code="A",
             question_code=old.question_code,
             answer_text="Old attempt",
             status=AnswerStatus.FAILED,
@@ -138,12 +136,9 @@ def test_export_keeps_only_the_current_versions(db, client, analyst, answered, a
     )
     db.commit()
 
-    response = client.get(
-        f"/api/answers/session/{session.id}/export?format=excel", headers=auth_headers(analyst)
-    )
-    rows = pd.read_excel(io.BytesIO(response.content), sheet_name="All Answers")
-    assert len(rows) == 2
-    assert "Old attempt" not in rows.to_string()
+    exported = answers_for_export(db, session)
+    assert len(exported) == 2
+    assert "Old attempt" not in [a.answer_text for a in exported]
 
 
 def test_regenerate_with_a_document(
@@ -196,8 +191,6 @@ def test_filtering_by_section_needs_the_dd_type(client, analyst, answered, auth_
 
 def test_the_export_follows_the_questionnaire_order(db, answered):
     """Not the codes: an imported reference need not sort like the questions."""
-    from app.services.answers import answers_for_export
-
     session, _, answers = answered
     first, second = (db.get(DDQuestion, a.question_id) for a in answers)
     first.question_code, second.question_code = "Z.99", "A.01"

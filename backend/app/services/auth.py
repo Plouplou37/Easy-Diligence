@@ -10,8 +10,7 @@ from app.core.security import (
     refresh_token_expiry,
     verify_password,
 )
-from app.models.user import User, UserSession
-from app.schemas.user import Role, UserProfile
+from app.models.user import Role, User, UserProfile, UserSession
 
 
 def _now() -> datetime:

@@ -1,3 +1,5 @@
+"""DD types (questionnaires): the table, and what the API reads and returns."""
+
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 
@@ -17,18 +19,21 @@ if TYPE_CHECKING:
 DEFAULT_DD_TYPE_ICON = "📋"
 
 
-class DDType(SQLModel, table=True):
-    __tablename__ = "dd_types"
-
-    id: int | None = Field(default=None, primary_key=True)
+class DDTypeBase(SQLModel):
     code: str = Field(max_length=50, unique=True, index=True)
     name: str = Field(max_length=255)
     description: str | None = Field(default=None, sa_type=Text)
     icon: str | None = Field(default=None, max_length=10)  # emoji or icon reference
+    order_index: int | None = Field(default=0)
+
+
+class DDType(DDTypeBase, table=True):
+    __tablename__ = "dd_types"
+
+    id: int | None = Field(default=None, primary_key=True)
     is_active: bool | None = Field(default=True)
     is_system: bool | None = Field(default=False)  # system types can't be deleted
     is_validated: bool | None = Field(default=False)  # validation freezes the structure
-    order_index: int | None = Field(default=0)
     # Owner of this DD type. NULL = shared (system templates visible to everyone).
     created_by: int | None = Field(default=None, foreign_key="users.id", index=True)
     created_at: datetime | None = timestamp_field()
@@ -43,3 +48,28 @@ class DDType(SQLModel, table=True):
     )
     executions: list["DDExecution"] = Relationship(back_populates="dd_type")
     creator: Optional["User"] = Relationship()
+
+
+class DDTypeCreate(DDTypeBase):
+    """A new, empty DD type."""
+
+
+class DDTypeUpdate(SQLModel):
+    """What may change on a DD type; fields left out stay as they are."""
+
+    code: str | None = Field(default=None, max_length=50)
+    name: str | None = Field(default=None, max_length=255)
+    description: str | None = None
+    icon: str | None = Field(default=None, max_length=10)
+    is_active: bool | None = None
+    order_index: int | None = None
+
+
+class DDTypeResponse(DDTypeBase):
+    id: int
+    is_active: bool
+    is_system: bool
+    is_validated: bool
+    created_by: int | None = None
+    created_at: datetime
+    updated_at: datetime

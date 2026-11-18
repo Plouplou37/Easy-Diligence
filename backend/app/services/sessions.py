@@ -18,9 +18,8 @@ from app.models.company import Company
 from app.models.dd_types import DDType
 from app.models.execution import DDExecution, ExecutionStatus
 from app.models.questions import DDQuestion, DDSection
-from app.models.session import DDSession, SessionStatus
+from app.models.session import DDSession, SessionCreate, SessionStatus
 from app.models.user import User
-from app.schemas.session import SessionCreate
 from app.services.authz import (
     assert_company_view,
     assert_session_access,

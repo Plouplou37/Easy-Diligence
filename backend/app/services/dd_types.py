@@ -17,10 +17,9 @@ from app.core.exceptions import (
     PermissionDeniedError,
 )
 from app.models.base import relation, stored_id
-from app.models.dd_types import DEFAULT_DD_TYPE_ICON, DDType
+from app.models.dd_types import DEFAULT_DD_TYPE_ICON, DDType, DDTypeCreate, DDTypeUpdate
 from app.models.questions import DDQuestion, DDSection
 from app.models.user import User
-from app.schemas.dd_types import DDTypeCreate, DDTypeUpdate
 from app.services.authz import (
     assert_dd_type_ownership,
     assert_dd_type_view,
