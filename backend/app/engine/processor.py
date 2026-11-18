@@ -196,7 +196,7 @@ class DDProcessor:
             failed_count = 0
 
             # Process each question
-            for idx, question in enumerate(questions):
+            for question in questions:
                 # Check if processing should continue (user may have paused)
                 if not self._should_continue_processing(db):
                     logger.info(
@@ -217,7 +217,7 @@ class DDProcessor:
                     break
 
                 try:
-                    self._process_single_question(db, question, vector_store_ids, company_info, idx)
+                    self._process_single_question(db, question, vector_store_ids, company_info)
                     successful_count += 1
                     logger.info(
                         f"Successfully processed question {question.question_code} ({successful_count}/{len(questions)})"
@@ -426,7 +426,7 @@ class DDProcessor:
             failed_count = 0
 
             # Process remaining questions
-            for idx, question in enumerate(questions_to_process):
+            for question in questions_to_process:
                 # Check if processing should continue (user may have paused)
                 if not self._should_continue_processing(db):
                     logger.info(
@@ -447,7 +447,7 @@ class DDProcessor:
                     break
 
                 try:
-                    self._process_single_question(db, question, vector_store_ids, company_info, idx)
+                    self._process_single_question(db, question, vector_store_ids, company_info)
                     successful_count += 1
                     logger.info(
                         f"Successfully processed question {question.question_code} ({successful_count}/{len(questions_to_process)})"
@@ -631,7 +631,6 @@ class DDProcessor:
         question: DDQuestion,
         vector_store_ids: list,
         company_info: dict,
-        question_index: int,
     ):
         """Process a single question with full response tracking"""
         try:

@@ -6,10 +6,11 @@ alter or drop a constraint later without guessing the name the database chose.
 """
 
 import enum
-from typing import Any
+from typing import Any, cast
 
 from sqlalchemy import JSON, DateTime, Enum, func
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm import QueryableAttribute
 from sqlmodel import Field, SQLModel
 
 SQLModel.metadata.naming_convention = {
@@ -56,6 +57,15 @@ def enum_type(enum_cls: type[enum.Enum], name: str, *, store_values: bool = Fals
     )
 
 
+def relation(attribute: Any) -> QueryableAttribute[Any]:
+    """A relationship attribute, as loader options (joinedload) expect it.
+
+    SQLModel types `DDSession.company` as the related model, not as the
+    attribute SQLAlchemy sees at run time: this restores the right type.
+    """
+    return cast(QueryableAttribute[Any], attribute)
+
+
 def stored_id(row: Any) -> int:
     """The id of a stored row. Typed optional on the models (None until the
     insert); once a row is read from or written to the database, it is set."""
@@ -64,4 +74,12 @@ def stored_id(row: Any) -> int:
     return int(row.id)
 
 
-__all__ = ["JSONType", "TIMESTAMP", "SQLModel", "enum_type", "stored_id", "timestamp_field"]
+__all__ = [
+    "JSONType",
+    "TIMESTAMP",
+    "SQLModel",
+    "enum_type",
+    "relation",
+    "stored_id",
+    "timestamp_field",
+]

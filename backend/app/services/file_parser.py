@@ -1,403 +1,176 @@
+"""Reading a questionnaire file (Excel, CSV or JSON) into sections and questions.
+
+The readers give the structure; `parse_file` then gives the codes
+(services/question_codes.py): A, B... for the sections, A.01... for the
+questions, or the reviewer's reference when a JSON file carries one.
+"""
+
 import json
-import random
-import time
 from io import BytesIO
+from typing import Any
 
 import openpyxl
 import pandas as pd
 
+from app.services.question_codes import assign_codes
+
+Section = dict[str, Any]
+
 
 class FileParsingError(Exception):
-    """Custom exception for file parsing errors"""
+    """The file cannot be read as a questionnaire. The message says why, for the user."""
 
-    pass
+
+def _new_section(title: Any, order: int, description: str | None = None) -> Section:
+    return {
+        "title": str(title).strip(),
+        "description": description,
+        "order_index": order,
+        "questions": [],
+    }
+
+
+def _rows_to_sections(rows: list[tuple[int, Any, Any]], kind: str) -> list[Section]:
+    """Sections from (row number, section cell, question cell) rows: a section
+    cell opens a new section, a question cell adds a question to it."""
+    sections: list[Section] = []
+    current: Section | None = None
+    for row_number, section_name, question_text in rows:
+        if not section_name and not question_text:
+            continue
+        if section_name:
+            current = _new_section(section_name, len(sections))
+            sections.append(current)
+        if question_text:
+            if current is None:
+                raise FileParsingError(f"Question found without section at row {row_number}")
+            current["questions"].append(
+                {
+                    "question_text": str(question_text).strip(),
+                    "order_index": len(current["questions"]),
+                }
+            )
+    if not sections:
+        raise FileParsingError(f"No valid sections found in {kind} file")
+    return sections
 
 
 class DDTypeFileParser:
-    """Service for parsing DD Type structure files (Excel, CSV, JSON)"""
+    """Reads a questionnaire file: one section per block, one question per row."""
 
-    @staticmethod
-    def generate_section_code(title: str) -> str:
-        """
-        Generate section code following existing pattern:
-        First 6 chars of title + 6-digit timestamp + 2-digit random
-        """
-        title_prefix = title.upper().replace(" ", "").replace("_", "")[:6]
-        timestamp = str(int(time.time()))[-6:]
-        random_suffix = str(random.randint(10, 99))
-        return f"{title_prefix}_{timestamp}{random_suffix}"
-
-    @staticmethod
-    def generate_question_code(question_text: str, section_code: str) -> str:
-        """
-        Generate question code following pattern similar to section:
-        First 6 chars of question + section timestamp + 2-digit random
-        """
-        # Extract first few words from question text
-        question_prefix = (
-            "".join(question_text.split()[:2]).upper().replace(" ", "").replace("_", "")[:6]
-        )
-        # Use section's timestamp part for consistency
-        section_timestamp = (
-            section_code.split("_")[1][:6] if "_" in section_code else str(int(time.time()))[-6:]
-        )
-        random_suffix = str(random.randint(10, 99))
-        return f"{question_prefix}_{section_timestamp}{random_suffix}"
-
-    @staticmethod
-    def generate_question_code_from_reference(reference: str, section_code: str) -> str:
-        """Question code built from the reviewer's reference ("A.01").
-
-        generate_question_code takes the first two words of the text, which is
-        how the reference questionnaires' codes came to read "A.01-_<digits>": the text opened with
-        "A.01 - ". Once the reference moved out of the text into its own field,
-        the text would yield "WHATIS_<digits>" instead, and the reference would
-        silently drop out of the code as well. The shape is kept on purpose:
-        update_questionnaire.py, the PDF export and the frontend badge all read
-        the reference back from it.
-        """
-        section_timestamp = (
-            section_code.split("_")[1][:6] if "_" in section_code else str(int(time.time()))[-6:]
-        )
-        random_suffix = str(random.randint(10, 99))
-        return f"{reference.strip().upper()[:20]}-_{section_timestamp}{random_suffix}"
-
-    def parse_excel(self, file_content: bytes) -> list[dict]:
-        """
-        Parse Excel file with format:
-        Column A: Section (only on first row of each section)
-        Column B: Question
-        """
+    def parse_excel(self, file_content: bytes) -> list[Section]:
+        """Column A: the section (on its first row only); column B: the question.
+        The first row is a header."""
         try:
-            workbook = openpyxl.load_workbook(BytesIO(file_content))
-            worksheet = workbook.active
+            worksheet = openpyxl.load_workbook(BytesIO(file_content)).active
+        except Exception as error:
+            raise FileParsingError(f"Error parsing Excel file: {error}") from error
+        if worksheet is None:
+            raise FileParsingError("The Excel file has no sheet")
 
-            sections = []
-            current_section = None
-            section_order = 0
-            question_order = 0
+        rows = []
+        for row_number, row in enumerate(worksheet.iter_rows(min_row=2, values_only=True), 2):
+            section_name = row[0] if len(row) > 0 and row[0] else None
+            question_text = row[1] if len(row) > 1 and row[1] else None
+            rows.append((row_number, section_name, question_text))
+        return _rows_to_sections(rows, "Excel")
 
-            for row_num, row in enumerate(
-                worksheet.iter_rows(min_row=2, values_only=True), start=2
-            ):
-                section_name = row[0] if len(row) > 0 and row[0] else None
-                question_text = row[1] if len(row) > 1 and row[1] else None
+    def parse_csv(self, file_content: bytes) -> list[Section]:
+        """Column 1: the section (on its first row only); column 2: the question.
+        The first row is a header."""
+        for encoding in ("utf-8", "utf-8-sig", "latin1", "cp1252"):
+            try:
+                text = file_content.decode(encoding)
+                frame = pd.read_csv(BytesIO(text.encode("utf-8")))
+                break
+            except (UnicodeDecodeError, pd.errors.ParserError):
+                continue
+            except Exception as error:
+                raise FileParsingError(f"Error parsing CSV file: {error}") from error
+        else:
+            raise FileParsingError("Unable to parse CSV file with any supported encoding")
 
-                # Skip empty rows
-                if not section_name and not question_text:
-                    continue
+        if frame.empty or len(frame.columns) < 2:
+            raise FileParsingError("CSV must have at least 2 columns (Section, Question)")
 
-                # New section detected
-                if section_name:
-                    if current_section:
-                        sections.append(current_section)
+        def cell(value: Any) -> Any:
+            return value if pd.notna(value) and str(value).strip() else None
 
-                    section_code = self.generate_section_code(section_name)
-                    current_section = {
-                        "title": str(section_name).strip(),
-                        "section_code": section_code,
-                        "description": None,
-                        "order_index": section_order,
-                        "questions": [],
-                    }
-                    section_order += 1
-                    question_order = 0
-
-                # Add question to current section
-                if question_text and current_section:
-                    question_code = self.generate_question_code(
-                        str(question_text), current_section["section_code"]
-                    )
-                    current_section["questions"].append(
-                        {
-                            "question_text": str(question_text).strip(),
-                            "question_code": question_code,
-                            "order_index": question_order,
-                        }
-                    )
-                    question_order += 1
-                elif question_text and not current_section:
-                    raise FileParsingError(f"Question found without section at row {row_num}")
-
-            # Add last section
-            if current_section:
-                sections.append(current_section)
-
-            if not sections:
-                raise FileParsingError("No valid sections found in Excel file")
-
-            return sections
-
-        except Exception as e:
-            if isinstance(e, FileParsingError):
-                raise e
-            raise FileParsingError(f"Error parsing Excel file: {str(e)}")  # noqa: B904
-
-    def parse_csv(self, file_content: bytes) -> list[dict]:
-        """
-        Parse CSV file with format:
-        Column 1: Section (only on first row of each section)
-        Column 2: Question
-        """
-        try:
-            # Try different encodings
-            for encoding in ["utf-8", "utf-8-sig", "latin1", "cp1252"]:
-                try:
-                    content = file_content.decode(encoding)
-                    df = pd.read_csv(BytesIO(content.encode("utf-8")))
-                    break
-                except (UnicodeDecodeError, pd.errors.ParserError):
-                    continue
-            else:
-                raise FileParsingError("Unable to parse CSV file with any supported encoding")
-
-            if df.empty or len(df.columns) < 2:
-                raise FileParsingError("CSV must have at least 2 columns (Section, Question)")
-
-            sections = []
-            current_section = None
-            section_order = 0
-            question_order = 0
-
-            for index, row in df.iterrows():
-                section_name = (
-                    row.iloc[0] if pd.notna(row.iloc[0]) and str(row.iloc[0]).strip() else None
-                )
-                question_text = (
-                    row.iloc[1]
-                    if len(row) > 1 and pd.notna(row.iloc[1]) and str(row.iloc[1]).strip()
-                    else None
-                )
-
-                # Skip empty rows
-                if not section_name and not question_text:
-                    continue
-
-                # New section detected
-                if section_name:
-                    if current_section:
-                        sections.append(current_section)
-
-                    section_code = self.generate_section_code(str(section_name))
-                    current_section = {
-                        "title": str(section_name).strip(),
-                        "section_code": section_code,
-                        "description": None,
-                        "order_index": section_order,
-                        "questions": [],
-                    }
-                    section_order += 1
-                    question_order = 0
-
-                # Add question to current section
-                if question_text and current_section:
-                    question_code = self.generate_question_code(
-                        str(question_text), current_section["section_code"]
-                    )
-                    current_section["questions"].append(
-                        {
-                            "question_text": str(question_text).strip(),
-                            "question_code": question_code,
-                            "order_index": question_order,
-                        }
-                    )
-                    question_order += 1
-                elif question_text and not current_section:
-                    raise FileParsingError(f"Question found without section at row {index + 2}")
-
-            # Add last section
-            if current_section:
-                sections.append(current_section)
-
-            if not sections:
-                raise FileParsingError("No valid sections found in CSV file")
-
-            return sections
-
-        except Exception as e:
-            if isinstance(e, FileParsingError):
-                raise e
-            raise FileParsingError(f"Error parsing CSV file: {str(e)}")  # noqa: B904
-
-    def parse_json(self, file_content: bytes) -> list[dict]:
-        """
-        Parse JSON file with format:
-        [
-            {
-                "section": "Section Name",
-                "questions": ["Question 1", "Question 2", ...]
-            }
+        rows = [
+            (position + 2, cell(row.iloc[0]), cell(row.iloc[1]))
+            for position, (_, row) in enumerate(frame.iterrows())
         ]
+        return _rows_to_sections(rows, "CSV")
+
+    def parse_json(self, file_content: bytes) -> list[Section]:
+        """A list of sections:
+
+            [{"section": "Name", "description": "...", "questions": [...]}]
+
+        A question is a string, or an object with "text", and optionally
+        "context_prompt" (where to look) and "ref" (the reviewer's reference,
+        kept as the question's code).
         """
         try:
-            content = file_content.decode("utf-8")
-            data = json.loads(content)
+            data = json.loads(file_content.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as error:
+            raise FileParsingError(f"Invalid JSON format: {error}") from error
+        if not isinstance(data, list):
+            raise FileParsingError("JSON must be an array of section objects")
 
-            if not isinstance(data, list):
-                raise FileParsingError("JSON must be an array of section objects")
+        sections: list[Section] = []
+        for position, section_data in enumerate(data, 1):
+            if not isinstance(section_data, dict):
+                raise FileParsingError(f"Section {position} must be an object")
+            name = section_data.get("section")
+            questions = section_data.get("questions", [])
+            if not name:
+                raise FileParsingError(f"Section {position} missing 'section' field")
+            if not isinstance(questions, list):
+                raise FileParsingError(f"Questions for section '{name}' must be an array")
 
-            sections = []
+            section = _new_section(name, len(sections), section_data.get("description"))
+            for entry in questions:
+                if isinstance(entry, dict):
+                    text = entry.get("text") or entry.get("question_text")
+                    context_prompt = (entry.get("context_prompt") or "").strip() or None
+                    reference = (entry.get("ref") or "").strip() or None
+                else:
+                    text, context_prompt, reference = entry, None, None
+                if not text or not str(text).strip():
+                    continue
+                section["questions"].append(
+                    {
+                        "question_text": str(text).strip(),
+                        "order_index": len(section["questions"]),
+                        "context_prompt": context_prompt,
+                        "reference": reference,
+                    }
+                )
+            if section["questions"]:  # a section without questions is left out
+                sections.append(section)
 
-            for section_order, section_data in enumerate(data):
-                if not isinstance(section_data, dict):
-                    raise FileParsingError(f"Section {section_order + 1} must be an object")
+        if not sections:
+            raise FileParsingError("No valid sections with questions found in JSON file")
+        return sections
 
-                section_name = section_data.get("section")
-                questions = section_data.get("questions", [])
+    def parse_file(self, file_content: bytes, filename: str) -> list[Section]:
+        """The questionnaire in the file, with its codes:
 
-                if not section_name:
-                    raise FileParsingError(f"Section {section_order + 1} missing 'section' field")
-
-                if not isinstance(questions, list):
-                    raise FileParsingError(
-                        f"Questions for section '{section_name}' must be an array"
-                    )
-
-                section_code = self.generate_section_code(str(section_name))
-                section = {
-                    "title": str(section_name).strip(),
-                    "section_code": section_code,
-                    "description": section_data.get("description"),
-                    "order_index": section_order,
-                    "questions": [],
-                }
-
-                for question_order, entry in enumerate(questions):
-                    # A question is either a bare string (the original format) or
-                    # an object carrying its own fields. The object form exists so
-                    # a questionnaire can hold what used to be folded into the text:
-                    # the "where to look" sources (context_prompt) and the reviewer's
-                    # numbering (ref). With strings only, re-importing a file would
-                    # push them back in.
-                    if isinstance(entry, dict):
-                        question_text = entry.get("text") or entry.get("question_text")
-                        context_prompt = (entry.get("context_prompt") or "").strip() or None
-                        reference = (entry.get("ref") or "").strip() or None
-                    else:
-                        question_text = entry
-                        context_prompt = None
-                        reference = None
-
-                    if not question_text or not str(question_text).strip():
-                        continue
-
-                    if reference:
-                        question_code = self.generate_question_code_from_reference(
-                            reference, section_code
-                        )
-                    else:
-                        question_code = self.generate_question_code(
-                            str(question_text), section_code
-                        )
-                    section["questions"].append(
-                        {
-                            "question_text": str(question_text).strip(),
-                            "question_code": question_code,
-                            "order_index": question_order,
-                            "context_prompt": context_prompt,
-                        }
-                    )
-
-                if section["questions"]:  # Only add sections with questions
-                    sections.append(section)
-
-            if not sections:
-                raise FileParsingError("No valid sections with questions found in JSON file")
-
-            return sections
-
-        except json.JSONDecodeError as e:
-            raise FileParsingError(f"Invalid JSON format: {str(e)}")  # noqa: B904
-        except Exception as e:
-            if isinstance(e, FileParsingError):
-                raise e
-            raise FileParsingError(f"Error parsing JSON file: {str(e)}")  # noqa: B904
-
-    def parse_file(self, file_content: bytes, filename: str) -> list[dict]:
+        [{"title", "section_code", "description", "order_index",
+          "questions": [{"question_text", "question_code", "order_index",
+                         "context_prompt"?}]}]
         """
-        Parse file based on extension and return structured sections data
-
-        Returns:
-            List of sections with questions in the format:
-            [
-                {
-                    'title': 'Section Name',
-                    'section_code': 'SECTIO_123456789',
-                    'description': None or str,
-                    'order_index': int,
-                    'questions': [
-                        {
-                            'question_text': 'Question text',
-                            'question_code': 'QUESTI_123456789',
-                            'order_index': int
-                        }
-                    ]
-                }
-            ]
-        """
-        filename_lower = filename.lower()
-
-        if filename_lower.endswith(".xlsx") or filename_lower.endswith(".xls"):
-            return self.parse_excel(file_content)
-        elif filename_lower.endswith(".csv"):
-            return self.parse_csv(file_content)
-        elif filename_lower.endswith(".json"):
-            return self.parse_json(file_content)
+        name = filename.lower()
+        if name.endswith((".xlsx", ".xls")):
+            sections = self.parse_excel(file_content)
+        elif name.endswith(".csv"):
+            sections = self.parse_csv(file_content)
+        elif name.endswith(".json"):
+            sections = self.parse_json(file_content)
         else:
             raise FileParsingError(
                 "Unsupported file format. Supported formats: .xlsx, .xls, .csv, .json"
             )
-
-    def validate_parsed_data(self, sections: list[dict]) -> tuple[bool, list[str]]:
-        """
-        Validate parsed sections data
-
-        Returns:
-            (is_valid, list_of_errors)
-        """
-        errors = []
-
-        if not sections:
-            errors.append("No sections found")
-            return False, errors
-
-        section_codes = []
-        question_codes = []
-
-        for i, section in enumerate(sections):
-            # Validate section structure
-            required_fields = ["title", "section_code", "order_index", "questions"]
-            for field in required_fields:
-                if field not in section:
-                    errors.append(f"Section {i + 1}: Missing required field '{field}'")
-
-            # Check for duplicate section codes
-            if section.get("section_code") in section_codes:
-                errors.append(
-                    f"Section {i + 1}: Duplicate section code '{section.get('section_code')}'"
-                )
-            else:
-                section_codes.append(section.get("section_code"))
-
-            # Validate questions
-            if not section.get("questions"):
-                errors.append(f"Section '{section.get('title', i + 1)}': No questions found")
-            else:
-                for j, question in enumerate(section["questions"]):
-                    # Validate question structure
-                    required_q_fields = ["question_text", "question_code", "order_index"]
-                    for field in required_q_fields:
-                        if field not in question:
-                            errors.append(
-                                f"Section '{section.get('title')}', Question {j + 1}: Missing required field '{field}'"
-                            )
-
-                    # Check for duplicate question codes
-                    if question.get("question_code") in question_codes:
-                        errors.append(
-                            f"Section '{section.get('title')}', Question {j + 1}: Duplicate question code '{question.get('question_code')}'"
-                        )
-                    else:
-                        question_codes.append(question.get("question_code"))
-
-        return len(errors) == 0, errors
+        assign_codes(sections)
+        return sections

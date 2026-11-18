@@ -59,11 +59,29 @@
 - Une nouvelle session pouvait inclure les types de DD privés d'un autre
   utilisateur. Un type de DD privé d'un autre ne peut plus être lancé.
 
+- Supprimer un compte vidait le créateur de ses sessions et de ses sociétés :
+  ses sociétés devenaient visibles de tous. Un compte qui possède des données
+  ne se supprime plus, il se désactive.
+- La recherche de la page d'administration ne cherchait que dans la page
+  affichée, avec un total faux.
+- Une section ajoutée après une première section prenait la même position
+  qu'elle.
+- Les sections et les questions arrivent dans l'ordre du questionnaire.
+
+### Codes des questions
+
+- Les sections sont lettrées par leur position (A, B…) et les questions
+  numérotées dans leur section (A.01, A.02…), à l'import comme à la création à
+  l'écran. La référence du fichier, quand il en donne une, reste le code. Les
+  anciens codes (`A.01-_96323997`) sont toujours lus.
+- Filtrer les réponses par section demande aussi le type de DD, et l'export
+  suit l'ordre du questionnaire.
+
 ### Services
 
-- La logique et les accès à la base des réponses, des sessions, du traitement
-  et des vector stores passent dans `services/`. Les routes ne font plus que
-  lire la requête, appeler un service et répondre.
+- La logique et les accès à la base passent dans `services/`, pour toutes les
+  routes. Les routes ne font plus que lire la requête, appeler un service et
+  répondre.
 - Les routes sont des fonctions simples : une route asynchrone qui appelait la
   base ou OpenAI bloquait tout le serveur pendant l'appel.
 - La session et le type de DD lus dans l'URL passent par deux dépendances

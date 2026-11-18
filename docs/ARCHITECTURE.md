@@ -267,6 +267,11 @@ cassé.
     inconnu : un nouveau compte est toujours analyste.
   - Le premier administrateur se crée avec `python -m app.cli create-admin`
     (`app/cli.py`), qui demande le mot de passe au clavier.
+  - **Supprimer un compte** (`services/users.py`) n'est possible que s'il ne
+    possède rien : ni session (créée ou assignée), ni société, type de DD,
+    vector store, réponse modifiée ou synthèse. Sinon, on le désactive. La
+    suppression vidait ces liens, et une société sans créateur est partagée
+    avec tout le monde.
 - **Une seule dépendance d'authentification** : `api/deps.py`
   (`get_current_active_user`, alias `get_current_user`, et
   `get_current_admin_user`). C'est le seul endroit où un jeton est décodé, et
@@ -462,15 +467,30 @@ Le parser est `services/file_parser.py`, et un exemple se trouve dans
 
 - Une question est soit une **chaîne**, soit un **objet**. La forme objet garde
   la référence et les sources dans leurs propres champs.
-- ⚠️ **`ref` n'est pas cosmétique.** Sans elle, `generate_question_code` fabrique
-  le code à partir des deux premiers mots du texte (`WHATIS_…`). Avec elle,
-  `generate_question_code_from_reference` produit `A.01-_…`.
-- Cette forme est lue à trois endroits :
-  - `scripts/update_questionnaire.py`, pour l'alignement ;
-  - l'export PDF, pour la numérotation ;
-  - le badge du frontend (`utils/questionCode.js`), qui affiche `A.01`, avec le
-    code complet au survol.
+- Le fichier Excel ou CSV a deux colonnes, section puis question, avec une ligne
+  d'en-tête ; la section n'est écrite que sur sa première ligne.
 - `POST /dd-types/import` crée **toujours** un nouveau type de DD.
+
+### Codes des sections et des questions
+
+`services/question_codes.py` :
+- une section prend la **lettre de sa position** : A, B… Z, puis AA, AB… ;
+- une question prend **la lettre de sa section et son rang** : `A.01`, `A.02` ;
+- si le fichier JSON donne une **référence** (`ref`, la numérotation du
+  fournisseur du questionnaire), elle devient le code. Une référence qui
+  apparaît deux fois dans le fichier est ignorée : ces questions prennent un
+  code de rang, et aucun code ne se répète dans un questionnaire ;
+- une section ou une question créée à l'écran prend la lettre ou le rang
+  suivant ;
+- les codes ne sont uniques **qu'au sein d'un questionnaire** : chacun a son
+  `A.01`. Rien ne retrouve une question par son code (tout passe par son
+  identifiant), mais filtrer des réponses par section demande aussi le type de
+  DD, et l'export suit l'ordre du questionnaire, pas celui des codes ;
+- le code est la référence affichée : par le badge de l'écran
+  (`utils/questionCode.js`), devant la question dans l'export PDF, et par
+  `scripts/update_questionnaire.py` pour l'alignement. Les trois lisent aussi
+  l'ancienne forme, `A.01-_96323997` (référence, horodatage et nombre
+  aléatoire).
 
 ### Scripts
 

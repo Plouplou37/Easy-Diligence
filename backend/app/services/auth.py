@@ -181,38 +181,6 @@ def validate_refresh_token(db: Session, refresh_token: str) -> User | None:
     return db.query(User).filter(col(User.id) == session.user_id).first()
 
 
-# Admin functions
-def get_all_users(db: Session, skip: int = 0, limit: int = 100) -> tuple[list[User], int]:
-    """Get all users with pagination. Returns (users, total_count)."""
-    total = db.query(User).count()
-    users = db.query(User).offset(skip).limit(limit).all()
-    return users, total
-
-
-def update_user_role(db: Session, user_id: int, new_role: Role) -> bool:
-    """Update user role. Returns True if successful."""
-    user = db.query(User).filter(col(User.id) == user_id).first()
-    if not user:
-        return False
-
-    user.role = new_role
-    user.updated_at = _now()
-    db.commit()
-    return True
-
-
-def update_user_status(db: Session, user_id: int, is_active: bool) -> bool:
-    """Update user active status. Returns True if successful."""
-    user = db.query(User).filter(col(User.id) == user_id).first()
-    if not user:
-        return False
-
-    user.is_active = is_active
-    user.updated_at = _now()
-    db.commit()
-    return True
-
-
 def is_admin(user: User) -> bool:
     """Check if user has admin role."""
     return user.role == "admin"

@@ -14,7 +14,7 @@ from app.core.exceptions import InvalidRequestError, NotFoundError
 from app.core.pagination import PaginationParams, paginate_query
 from app.models.answer import AnswerStatus, DDAnswer
 from app.models.answer_history import DDAnswerHistory
-from app.models.base import stored_id
+from app.models.base import relation, stored_id
 from app.models.dd_types import DDType
 from app.models.message import DDMessage
 from app.models.questions import DDQuestion, DDSection
@@ -152,10 +152,10 @@ def list_answers(
     Returns the page, the total count and the filters that were applied.
     """
     query = db.query(DDAnswer).options(
-        joinedload(DDAnswer.session),  # type: ignore[arg-type]
-        joinedload(DDAnswer.section),  # type: ignore[arg-type]
-        joinedload(DDAnswer.question),  # type: ignore[arg-type]
-        joinedload(DDAnswer.editor),  # type: ignore[arg-type]
+        joinedload(relation(DDAnswer.session)),
+        joinedload(relation(DDAnswer.section)),
+        joinedload(relation(DDAnswer.question)),
+        joinedload(relation(DDAnswer.editor)),
     )
     filters: dict[str, Any] = {}
 
@@ -175,6 +175,9 @@ def list_answers(
         query = query.filter(col(DDAnswer.dd_type_id) == dd_type_obj.id)
         filters["dd_type"] = dd_type
     if section_code:
+        # Section codes (A, B...) repeat from one questionnaire to the next.
+        if not dd_type:
+            raise InvalidRequestError("Filtering by section_code needs the dd_type too")
         query = query.join(DDSection, col(DDAnswer.section_id) == col(DDSection.id)).filter(
             col(DDSection.section_code) == section_code
         )
@@ -273,7 +276,14 @@ def answers_for_export(db: Session, session: DDSession) -> list[DDAnswer]:
         .outerjoin(DDQuestion, col(DDAnswer.question_id) == col(DDQuestion.id))
         .outerjoin(DDType, col(DDAnswer.dd_type_id) == col(DDType.id))
         .filter(col(DDAnswer.session_id) == session.id, col(DDAnswer.is_current).is_(True))
-        .order_by(col(DDType.code), col(DDSection.section_code), col(DDQuestion.question_code))
+        # The questionnaire's own order, not the codes': an imported reference
+        # need not sort like the questions it numbers.
+        .order_by(
+            col(DDType.code),
+            col(DDSection.order_index),
+            col(DDQuestion.order_index),
+            col(DDAnswer.id),
+        )
         .all()
     )
     if not answers:

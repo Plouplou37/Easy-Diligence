@@ -28,7 +28,11 @@ class DDSection(SQLModel, table=True):
 
     dd_type_obj: Optional["DDType"] = Relationship(back_populates="sections")
     questions: list["DDQuestion"] = Relationship(
-        back_populates="section", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+        back_populates="section",
+        sa_relationship_kwargs={
+            "cascade": "all, delete-orphan",
+            "order_by": "DDQuestion.order_index, DDQuestion.id",
+        },
     )
 
 

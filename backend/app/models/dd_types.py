@@ -35,7 +35,11 @@ class DDType(SQLModel, table=True):
     updated_at: datetime | None = timestamp_field(updated=True)
 
     sections: list["DDSection"] = Relationship(
-        back_populates="dd_type_obj", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+        back_populates="dd_type_obj",
+        sa_relationship_kwargs={
+            "cascade": "all, delete-orphan",
+            "order_by": "DDSection.order_index, DDSection.id",
+        },
     )
     executions: list["DDExecution"] = Relationship(back_populates="dd_type")
     creator: Optional["User"] = Relationship()

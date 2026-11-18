@@ -1,7 +1,15 @@
-from fastapi import APIRouter, Depends, HTTPException
+"""Summaries of a session: the section summaries and the DD type synthesis.
+
+Generated now (the model writes them during the request) or through an OpenAI
+batch (half price, up to 24 h), then reviewed and edited before the export.
+"""
+
+from typing import Any
+
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_active_user
+from app.api.deps import get_accessible_session, get_current_active_user, get_visible_dd_type
 from app.core.database import get_db
 from app.engine.summarizer import (
     cancel_section_summaries_batch,
@@ -9,86 +17,55 @@ from app.engine.summarizer import (
     generate_summaries_for_dd_type,
     submit_section_summaries_batch,
 )
+from app.models.base import stored_id
 from app.models.dd_types import DDType
 from app.models.session import DDSession
-from app.models.summary import DDSummary
+from app.models.summary import DDSummaryBatch
 from app.models.user import User
-from app.schemas.summary import (
-    DDSummaryBatchResponse,
-    DDSummaryResponse,
-    DDSummaryUpdate,
-)
-from app.services.authz import assert_session_access
-from app.services.sessions import get_session_for_user
+from app.schemas.summary import DDSummaryBatchResponse, DDSummaryResponse, DDSummaryUpdate
+from app.services import summaries as summaries_service
 
 router = APIRouter()
 
+RUN = "/session/{session_identifier}/dd/{dd_type}"
 
-def _to_response(summary: DDSummary) -> DDSummaryResponse:
-    """Serialize a DDSummary with convenience labels for the frontend."""
-    return DDSummaryResponse(
-        id=summary.id,
-        session_id=summary.session_id,
-        dd_type_id=summary.dd_type_id,
-        section_id=summary.section_id,
-        summary_text=summary.summary_text,
-        edited_by=summary.edited_by,
-        generated_at=summary.generated_at,
-        updated_at=summary.updated_at,
-        dd_type_code=summary.dd_type.code if summary.dd_type else None,
-        dd_type_name=summary.dd_type.name if summary.dd_type else None,
-        section_title=summary.section.title if summary.section else None,
+
+def _batch_response(
+    row: DDSummaryBatch | None, info: dict[str, Any], with_sections: bool = True
+) -> DDSummaryBatchResponse:
+    return DDSummaryBatchResponse(
+        status=info["status"],
+        message=info.get("message"),
+        openai_batch_id=row.openai_batch_id if row else None,
+        completed=info.get("completed"),
+        total=info.get("total"),
+        sections=info.get("sections") if with_sections else None,
+        created_at=row.created_at if row else None,
+        updated_at=row.updated_at if row else None,
     )
 
 
-def _load_session_or_404(db: Session, session_id: int) -> DDSession:
-    session = db.query(DDSession).filter(DDSession.id == session_id).first()
-    if not session:
-        raise HTTPException(status_code=404, detail="Session not found")
-    return session
-
-
-@router.post(
-    "/session/{session_identifier}/dd/{dd_type}/generate", response_model=list[DDSummaryResponse]
-)
+@router.post(RUN + "/generate", response_model=list[DDSummaryResponse])
 async def generate_summaries(
-    session_identifier: str,
-    dd_type: str,
+    session: DDSession = Depends(get_accessible_session),
+    dd_type: DDType = Depends(get_visible_dd_type),
+    db: Session = Depends(get_db),
+):
+    """Write the section summaries and the DD type synthesis now."""
+    summaries = await generate_summaries_for_dd_type(db, session, dd_type.code)
+    return [summaries_service.to_response(s) for s in summaries]
+
+
+@router.post(RUN + "/generate/batch", response_model=DDSummaryBatchResponse)
+def generate_summaries_via_batch(
+    session: DDSession = Depends(get_accessible_session),
+    dd_type: DDType = Depends(get_visible_dd_type),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
-    """Generate section summaries + the DD-type synthesis for a session/DD type."""
-    session = get_session_for_user(db, session_identifier, current_user)
-
-    summaries = await generate_summaries_for_dd_type(db, session, dd_type)
-
-    return [_to_response(s) for s in summaries]
-
-
-@router.post(
-    "/session/{session_identifier}/dd/{dd_type}/generate/batch",
-    response_model=DDSummaryBatchResponse,
-)
-async def generate_summaries_via_batch(
-    session_identifier: str,
-    dd_type: str,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-):
-    """Queue the section summaries as an OpenAI batch (half price, up to 24h).
-
-    Returns immediately with the job state; poll the GET below to collect the
-    results. The synthesis is not queued -- it is derived from the section
-    summaries and is generated when the batch is collected.
-
-    Kept apart from the synchronous endpoint rather than folded into it behind a
-    flag: the two return different things, and a union response would blur the
-    immediate path's contract.
-    """
-    session = get_session_for_user(db, session_identifier, current_user)
-
-    row = submit_section_summaries_batch(db, session, dd_type, current_user.id)
-
+    """Queue the section summaries as an OpenAI batch; the GET below collects
+    them. The synthesis is written from the section summaries, at collection."""
+    row = submit_section_summaries_batch(db, session, dd_type.code, stored_id(current_user))
     return DDSummaryBatchResponse(
         status=row.status,
         message="Section summaries queued",
@@ -98,108 +75,51 @@ async def generate_summaries_via_batch(
     )
 
 
-@router.get(
-    "/session/{session_identifier}/dd/{dd_type}/batch", response_model=DDSummaryBatchResponse
-)
+@router.get(RUN + "/batch", response_model=DDSummaryBatchResponse)
 async def get_summary_batch_status(
-    session_identifier: str,
-    dd_type: str,
+    session: DDSession = Depends(get_accessible_session),
+    dd_type: DDType = Depends(get_visible_dd_type),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
 ):
-    """Refresh a summary batch's state and, once complete, store its results.
+    """Refresh a batch's state and, once it is done, store its results.
 
-    Polled by the frontend. Collection happens here rather than in a background
-    task on purpose: BackgroundTasks are in-process and do not survive a restart,
-    which is exactly what leaves executions orphaned today. A batch runs for up
-    to 24h, far longer than any process is guaranteed to live.
+    Polled by the page. Collecting here rather than in a background task is on
+    purpose: a batch runs for up to 24 h, longer than a process is sure to live.
     """
-    session = get_session_for_user(db, session_identifier, current_user)
-
-    row, info = await collect_section_summaries_batch(db, session, dd_type)
-
-    return DDSummaryBatchResponse(
-        status=info["status"],
-        message=info.get("message"),
-        openai_batch_id=row.openai_batch_id if row else None,
-        completed=info.get("completed"),
-        total=info.get("total"),
-        sections=info.get("sections"),
-        created_at=row.created_at if row else None,
-        updated_at=row.updated_at if row else None,
-    )
+    row, info = await collect_section_summaries_batch(db, session, dd_type.code)
+    return _batch_response(row, info)
 
 
-@router.post(
-    "/session/{session_identifier}/dd/{dd_type}/batch/cancel", response_model=DDSummaryBatchResponse
-)
-async def cancel_summary_batch(
-    session_identifier: str,
-    dd_type: str,
+@router.post(RUN + "/batch/cancel", response_model=DDSummaryBatchResponse)
+def cancel_summary_batch(
+    session: DDSession = Depends(get_accessible_session),
+    dd_type: DDType = Depends(get_visible_dd_type),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
 ):
-    """Cancel a summary batch still running at OpenAI.
-
-    Until this existed, a batch sitting in OpenAI's queue could only be stopped
-    from the OpenAI dashboard -- and it kept both generate buttons disabled in
-    the meantime. Requests already completed stay billed; the rest are dropped.
-    """
-    session = get_session_for_user(db, session_identifier, current_user)
-
-    row, info = cancel_section_summaries_batch(db, session, dd_type)
-
-    return DDSummaryBatchResponse(
-        status=info["status"],
-        message=info.get("message"),
-        openai_batch_id=row.openai_batch_id if row else None,
-        completed=info.get("completed"),
-        total=info.get("total"),
-        created_at=row.created_at if row else None,
-        updated_at=row.updated_at if row else None,
-    )
+    """Cancel a batch still running at OpenAI. Requests already done stay billed."""
+    row, info = cancel_section_summaries_batch(db, session, dd_type.code)
+    return _batch_response(row, info, with_sections=False)
 
 
 @router.get("/session/{session_identifier}", response_model=list[DDSummaryResponse])
-async def list_summaries(
-    session_identifier: str,
+def list_summaries(
     dd_type: str | None = None,
+    session: DDSession = Depends(get_accessible_session),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
-    """List stored summaries for a session (optionally filtered by DD type code)."""
-    session = get_session_for_user(db, session_identifier, current_user)
-    session_id = session.id
-
-    query = db.query(DDSummary).filter(DDSummary.session_id == session_id)
-    if dd_type:
-        dd_type_obj = db.query(DDType).filter(DDType.code == dd_type).first()
-        if not dd_type_obj:
-            raise HTTPException(status_code=404, detail=f"DD type '{dd_type}' not found")
-        query = query.filter(DDSummary.dd_type_id == dd_type_obj.id)
-
-    summaries = query.all()
-    return [_to_response(s) for s in summaries]
+    """The stored summaries of a session, of one DD type (its code) if given."""
+    summaries = summaries_service.list_summaries(db, session, current_user, dd_type)
+    return [summaries_service.to_response(s) for s in summaries]
 
 
 @router.put("/{summary_id}", response_model=DDSummaryResponse)
-async def update_summary(
+def update_summary(
     summary_id: int,
     update: DDSummaryUpdate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
-    """Manually edit a summary's text before export."""
-    summary = db.query(DDSummary).filter(DDSummary.id == summary_id).first()
-    if not summary:
-        raise HTTPException(status_code=404, detail="Summary not found")
-
-    # Per-user isolation via the owning session
-    session = _load_session_or_404(db, summary.session_id)
-    assert_session_access(session, current_user)
-
-    summary.summary_text = update.summary_text
-    summary.edited_by = current_user.id
-    db.commit()
-    db.refresh(summary)
-    return _to_response(summary)
+    """Edit a summary's text before the export."""
+    summary = summaries_service.edit_summary(db, summary_id, update.summary_text, current_user)
+    return summaries_service.to_response(summary)

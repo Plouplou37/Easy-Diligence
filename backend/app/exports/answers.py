@@ -31,6 +31,7 @@ from reportlab.platypus import (
 )
 
 from app.core.config import settings
+from app.services.question_codes import reference_of
 
 logger = logging.getLogger(__name__)
 
@@ -319,9 +320,7 @@ def _spaced_caps(text: str) -> str:
     return "   ".join(spaced_words)
 
 
-# The reviewer's reference ("A.01"), as imports embed it in question codes
-# ("A.01-_<digits>"), and as older question texts still open with it.
-_CODE_REFERENCE = re.compile(r"^([A-Za-z]{1,3}\.?\d{1,3})-_")
+# A reference ("A.01") at the head of a question text, as older texts still have.
 _TEXT_REFERENCE = re.compile(r"^\s*[A-Za-z]{1,3}\.?\d{1,3}\s*-\s")
 
 
@@ -336,9 +335,9 @@ def _question_text(answer) -> str:
     question = getattr(answer, "question", None)
     if question is not None and getattr(question, "question_text", None):
         text = question.question_text
-        match = _CODE_REFERENCE.match(answer.question_code or "")
-        if match and not _TEXT_REFERENCE.match(text):
-            return f"{match.group(1)} - {text}"
+        reference = reference_of(answer.question_code)
+        if reference and not _TEXT_REFERENCE.match(text):
+            return f"{reference} - {text}"
         return text
     return answer.question_code or "No question text"
 

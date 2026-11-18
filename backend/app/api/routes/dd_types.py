@@ -1,60 +1,32 @@
-import logging
+"""DD types (questionnaires): listing, creation (blank or from a file), changes,
+activation, validation, deletion."""
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, UploadFile
+from fastapi.concurrency import run_in_threadpool
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_active_user
 from app.api.uploads import QUESTIONNAIRE_EXTENSIONS, read_upload
 from app.core.database import get_db
-from app.models.dd_types import DEFAULT_DD_TYPE_ICON
-from app.models.dd_types import DDType as DDTypeModel
-from app.models.questions import DDQuestion, DDSection
 from app.models.user import User
 from app.schemas.dd_types import DDTypeCreate, DDTypeResponse, DDTypeUpdate
-from app.services.authz import (
-    assert_dd_type_ownership,
-    assert_dd_type_view,
-    filter_dd_types_for_user,
-)
-from app.services.file_parser import DDTypeFileParser, FileParsingError
-
-logger = logging.getLogger(__name__)
+from app.services import dd_types as dd_types_service
 
 router = APIRouter()
 
 
-# Helper function to get DD type by code
-def get_dd_type_by_code(db: Session, code: str) -> DDTypeModel:
-    """Helper function to get DD type by code and raise 404 if not found"""
-    dd_type = db.query(DDTypeModel).filter(DDTypeModel.code == code).first()
-    if not dd_type:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=f"DD type with code '{code}' not found"
-        )
-    return dd_type
-
-
 @router.get("/", response_model=list[DDTypeResponse])
-async def list_dd_types(
+def list_dd_types(
     active_only: bool = True,
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
-    """List DD types visible to the current user (own + shared system types)"""
-    query = db.query(DDTypeModel)
-
-    if active_only:
-        query = query.filter(DDTypeModel.is_active == True)
-
-    # Per-user visibility: admins see all, others see shared + their own
-    query = filter_dd_types_for_user(query, current_user)
-
-    dd_types = (
-        query.order_by(DDTypeModel.order_index, DDTypeModel.name).offset(skip).limit(limit).all()
+    """The DD types the user may see: theirs and the shared ones."""
+    return dd_types_service.list_dd_types(
+        db, current_user, active_only=active_only, skip=skip, limit=limit
     )
-    return dd_types
 
 
 @router.post("/import", response_model=DDTypeResponse)
@@ -67,280 +39,95 @@ async def create_dd_type_from_file(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
-    """Create a new DD type from uploaded file (Excel, CSV, or JSON)"""
-
-    # Check if code already exists
-    existing = db.query(DDTypeModel).filter(DDTypeModel.code == code).first()
-    if existing:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="DD type code already exists"
-        )
-
-    file_content = await read_upload(file, allowed_extensions=QUESTIONNAIRE_EXTENSIONS)
-
-    try:
-        # Parse the uploaded file
-        parser = DDTypeFileParser()
-        sections_data = parser.parse_file(file_content, file.filename)
-
-        if not sections_data:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="No valid data found in the uploaded file",
-            )
-
-        # Create the DD type
-        db_dd_type = DDTypeModel(
-            code=code,
-            name=name,
-            description=description,
-            icon=icon or DEFAULT_DD_TYPE_ICON,
-            order_index=0,
-            is_active=True,
-            is_system=False,
-            created_by=current_user.id,
-        )
-
-        db.add(db_dd_type)
-        db.flush()
-
-        # Create sections and questions
-        for _section_order, section_data in enumerate(sections_data):
-            # Create section
-            db_section = DDSection(
-                dd_type_id=db_dd_type.id,
-                section_code=section_data["section_code"],
-                title=section_data["title"],
-                # No placeholder. This used to default to "Section for <title>",
-                # which filled 213 of 217 rows with a restatement of the title.
-                # The description is now sent to the model alongside the section
-                # heading, so an empty one is better than a tautological one.
-                description=section_data.get("description"),
-                order_index=section_data["order_index"],
-            )
-
-            db.add(db_section)
-            db.flush()
-
-            # Create questions for this section
-            for question_data in section_data["questions"]:
-                db_question = DDQuestion(
-                    section_id=db_section.id,
-                    question_code=question_data["question_code"],
-                    question_text=question_data["question_text"],
-                    context_prompt=question_data.get("context_prompt"),
-                    order_index=question_data["order_index"],
-                )
-
-                db.add(db_question)
-
-        db.commit()
-        db.refresh(db_dd_type)
-
-        return db_dd_type
-
-    except FileParsingError as e:
-        # The parser's own messages describe what is wrong with the file.
-        raise HTTPException(  # noqa: B904
-            status_code=status.HTTP_400_BAD_REQUEST, detail=f"File parsing error: {e}"
-        )
-    except HTTPException:
-        raise
-    except Exception:
-        logger.exception("Error creating DD type from file")
-        db.rollback()
-        raise HTTPException(  # noqa: B904
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Error creating DD type from file",
-        )
+    """Create a DD type from a questionnaire file (Excel, CSV or JSON)."""
+    content = await read_upload(file, allowed_extensions=QUESTIONNAIRE_EXTENSIONS)
+    return await run_in_threadpool(
+        dd_types_service.import_dd_type,
+        db,
+        current_user,
+        code=code,
+        name=name,
+        description=description,
+        icon=icon,
+        content=content,
+        filename=file.filename or "",
+    )
 
 
 @router.get("/{dd_type_code}", response_model=DDTypeResponse)
-async def get_dd_type(
+def get_dd_type(
     dd_type_code: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
-    """Get a specific DD type by code"""
-    dd_type = db.query(DDTypeModel).filter(DDTypeModel.code == dd_type_code).first()
-    if not dd_type:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="DD type not found")
-    assert_dd_type_view(dd_type, current_user)
-    return dd_type
+    """A DD type the user may see."""
+    return dd_types_service.get_dd_type_by_code(db, dd_type_code, current_user)
 
 
 @router.post("/", response_model=DDTypeResponse)
-async def create_dd_type(
-    dd_type: DDTypeCreate,
+def create_dd_type(
+    data: DDTypeCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
-    """Create a new DD type"""
-    # Check if code already exists
-    existing = db.query(DDTypeModel).filter(DDTypeModel.code == dd_type.code).first()
-    if existing:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="DD type code already exists"
-        )
-
-    db_dd_type = DDTypeModel(
-        code=dd_type.code,
-        name=dd_type.name,
-        description=dd_type.description,
-        icon=dd_type.icon,
-        order_index=dd_type.order_index,
-        is_active=True,
-        is_system=False,
-        created_by=current_user.id,
-    )
-
-    db.add(db_dd_type)
-    db.commit()
-    db.refresh(db_dd_type)
-
-    return db_dd_type
+    """Create an empty DD type, owned by the user."""
+    return dd_types_service.create_dd_type(db, data, current_user)
 
 
 @router.put("/{dd_type_code}", response_model=DDTypeResponse)
-async def update_dd_type(
+def update_dd_type(
     dd_type_code: str,
-    dd_type_update: DDTypeUpdate,
+    data: DDTypeUpdate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
-    """Update an existing DD type"""
-    dd_type = db.query(DDTypeModel).filter(DDTypeModel.code == dd_type_code).first()
-    if not dd_type:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="DD type not found")
-
-    # Only the owner (or an admin) may modify this DD type
-    assert_dd_type_ownership(dd_type, current_user)
-
-    # Check if trying to update a system DD type's critical fields
-    if dd_type.is_system and dd_type_update.code and dd_type_update.code != dd_type.code:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Cannot change code of system DD type"
-        )
-
-    # Check if new code conflicts with existing one
-    if dd_type_update.code and dd_type_update.code != dd_type.code:
-        existing = db.query(DDTypeModel).filter(DDTypeModel.code == dd_type_update.code).first()
-        if existing:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, detail="DD type code already exists"
-            )
-
-    # Update fields
-    update_data = dd_type_update.model_dump(exclude_unset=True)
-    for field, value in update_data.items():
-        setattr(dd_type, field, value)
-
-    db.commit()
-    db.refresh(dd_type)
-
-    return dd_type
+    """Change a DD type (its owner or an admin)."""
+    dd_type = dd_types_service.get_owned_dd_type(db, dd_type_code, current_user)
+    return dd_types_service.update_dd_type(db, dd_type, data)
 
 
 @router.delete("/{dd_type_code}")
-async def delete_dd_type(
+def delete_dd_type(
     dd_type_code: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
-    """Delete a DD type (only if not system type and not in use)"""
-    dd_type = db.query(DDTypeModel).filter(DDTypeModel.code == dd_type_code).first()
-    if not dd_type:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="DD type not found")
-
-    # Only the owner (or an admin) may delete this DD type
-    assert_dd_type_ownership(dd_type, current_user)
-
-    # Check if it's a system DD type
-    if dd_type.is_system:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Cannot delete system DD type"
-        )
-
-    # Check if it's in use (has execution records)
-    # Sections are just structure and can be cascade-deleted
-    if dd_type.executions:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Cannot delete DD type that is in use. Set to inactive instead.",
-        )
-
-    db.delete(dd_type)
-    db.commit()
-
+    """Delete a DD type that has never been run."""
+    dd_type = dd_types_service.get_owned_dd_type(db, dd_type_code, current_user)
+    dd_types_service.delete_dd_type(db, dd_type)
     return {"message": "DD type deleted successfully"}
 
 
 @router.post("/{dd_type_code}/activate")
-async def activate_dd_type(
+def activate_dd_type(
     dd_type_code: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
-    """Activate a DD type"""
-    dd_type = db.query(DDTypeModel).filter(DDTypeModel.code == dd_type_code).first()
-    if not dd_type:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="DD type not found")
-
-    assert_dd_type_ownership(dd_type, current_user)
-
-    dd_type.is_active = True
-    db.commit()
-    db.refresh(dd_type)
-
+    """Offer the DD type for new sessions."""
+    dd_type = dd_types_service.get_owned_dd_type(db, dd_type_code, current_user)
+    dd_types_service.set_active(db, dd_type, True)
     return {"message": "DD type activated successfully"}
 
 
 @router.post("/{dd_type_code}/deactivate")
-async def deactivate_dd_type(
+def deactivate_dd_type(
     dd_type_code: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
-    """Deactivate a DD type"""
-    dd_type = db.query(DDTypeModel).filter(DDTypeModel.code == dd_type_code).first()
-    if not dd_type:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="DD type not found")
-
-    assert_dd_type_ownership(dd_type, current_user)
-
-    dd_type.is_active = False
-    db.commit()
-    db.refresh(dd_type)
-
+    """Stop offering the DD type for new sessions."""
+    dd_type = dd_types_service.get_owned_dd_type(db, dd_type_code, current_user)
+    dd_types_service.set_active(db, dd_type, False)
     return {"message": "DD type deactivated successfully"}
 
 
 @router.put("/{dd_type_code}/validate", response_model=DDTypeResponse)
-async def validate_dd_type(
+def validate_dd_type(
     dd_type_code: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
-    """Validate and lock a DD type, making it immutable - owner or admin"""
-    # Get the DD type
-    dd_type = db.query(DDTypeModel).filter(DDTypeModel.code == dd_type_code).first()
-    if not dd_type:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="DD type not found")
-
-    # Only the owner (or an admin) may validate/lock this DD type
-    assert_dd_type_ownership(dd_type, current_user)
-
-    # Check if already validated
-    if dd_type.is_validated:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"DD type '{dd_type.name}' is already validated and locked",
-        )
-
-    # Validate the DD type by setting is_validated to True
-    dd_type.is_validated = True
-
-    db.commit()
-    db.refresh(dd_type)
-
-    return dd_type
+    """Freeze a DD type's structure. Irreversible."""
+    dd_type = dd_types_service.get_owned_dd_type(db, dd_type_code, current_user)
+    return dd_types_service.validate_dd_type(db, dd_type)

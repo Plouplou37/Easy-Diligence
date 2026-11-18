@@ -1,4 +1,4 @@
-"""Dashboard aggregation (api/routes/dashboard.py).
+"""Dashboard aggregation (services/dashboard.py).
 
 build_dashboard_rows is fed plain tuples and objects: no database, the local
 .env points at production.
@@ -7,8 +7,8 @@ build_dashboard_rows is fed plain tuples and objects: no database, the local
 from datetime import datetime
 from types import SimpleNamespace
 
-from app.api.routes.dashboard import build_dashboard_rows
 from app.models.answer import AnswerStatus
+from app.services.dashboard import build_dashboard_rows
 
 
 def _session(id_, codes, created=datetime(2026, 9, 1)):

@@ -13,7 +13,7 @@ from sqlmodel import col
 from app.core.exceptions import InvalidRequestError, NotFoundError, PermissionDeniedError
 from app.core.pagination import PaginationParams, paginate_query
 from app.models.answer import AnswerStatus, DDAnswer
-from app.models.base import stored_id
+from app.models.base import relation, stored_id
 from app.models.company import Company
 from app.models.dd_types import DDType
 from app.models.execution import DDExecution, ExecutionStatus
@@ -141,8 +141,8 @@ def list_sessions(
         filters["search"] = search
 
     query = query.options(
-        joinedload(DDSession.company),  # type: ignore[arg-type]
-        joinedload(DDSession.creator),  # type: ignore[arg-type]
+        joinedload(relation(DDSession.company)),
+        joinedload(relation(DDSession.creator)),
     ).order_by(col(DDSession.created_at).desc())
 
     total = query.count()
@@ -268,7 +268,7 @@ def session_progress(db: Session, session: DDSession) -> list[dict[str, Any]]:
     """The progress of each DD type run of the session, as the session page shows it."""
     executions = (
         db.query(DDExecution)
-        .options(joinedload(DDExecution.dd_type))  # type: ignore[arg-type]
+        .options(joinedload(relation(DDExecution.dd_type)))
         .filter(col(DDExecution.session_id) == session.id)
         .all()
     )

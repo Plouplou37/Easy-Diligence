@@ -26,6 +26,7 @@ from app.models.dd_types import DDType
 from app.models.questions import DDQuestion, DDSection
 from app.models.session import DDSession
 from app.models.user import User
+from app.services.question_codes import question_code, section_letter
 
 PASSWORD = "Str0ngPassw0rd"
 # bcrypt is slow on purpose: hash the shared test password once.
@@ -157,7 +158,8 @@ def make_company(db):
 
 @pytest.fixture
 def make_dd_type(db):
-    """A questionnaire: sections x questions, shared unless an owner is given."""
+    """A questionnaire: sections x questions (A.01, A.02, B.01...), shared
+    unless an owner is given."""
 
     def _make(
         owner: User | None = None, *, sections: int = 1, questions: int = 2, code: str | None = None
@@ -171,7 +173,7 @@ def make_dd_type(db):
         for s in range(sections):
             section = DDSection(
                 dd_type_id=dd_type.id,
-                section_code=f"S{s + 1}",
+                section_code=section_letter(s),
                 title=f"Section {s + 1}",
                 order_index=s,
             )
@@ -181,7 +183,7 @@ def make_dd_type(db):
                 db.add(
                     DDQuestion(
                         section_id=section.id,
-                        question_code=f"A.{s + 1}{q + 1:02d}",
+                        question_code=question_code(section_letter(s), q + 1),
                         question_text=f"Question {s + 1}.{q + 1}?",
                         order_index=q,
                     )

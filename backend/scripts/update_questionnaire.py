@@ -7,10 +7,9 @@ choice was a duplicate type or 205 calls to PUT /questions/questions/{id}.
 
 What it writes is deliberately narrow -- question_text, nothing else:
 
-* The codes stay. file_parser generates them from a timestamp plus a random
-  suffix, so they cannot be reproduced; and dd_answers copies section_code /
-  question_code at creation time and orders exports by them, so a new code
-  would cut past answers loose from the structure they were written against.
+* The codes stay: dd_answers copies section_code / question_code at creation
+  time, so a new code would cut past answers loose from the structure they
+  were written against.
 * The ids stay, so existing answers keep pointing at their question.
 * context_prompt is only ever filled in, never overwritten. Files can now carry
   it (it holds the "where to look" sources), but a value already in the database
@@ -52,11 +51,11 @@ from app.models.questions import DDQuestion, DDSection  # noqa: E402
 # intact and would otherwise rewrite every following question with its
 # neighbour's text.
 #
-# It used to open the question text ("A.01 - What is..."). It now lives in the
-# question code on the database side and in a 'ref' field on the file side; the
-# text pattern is kept for rows and files that still carry it there.
+# It used to open the question text ("A.01 - What is..."). It now is the
+# question code on the database side (services/question_codes.py) and a 'ref'
+# field on the file side; the text pattern is kept for rows and files that
+# still carry it there.
 REFERENCE = re.compile(r"^\s*([A-Za-z]{1,3}\.?\d{1,3})\s*-\s")
-CODE_REFERENCE = re.compile(r"^([A-Za-z]{1,3}\.?\d{1,3})-_")
 
 MAX_SHOWN = 5
 
@@ -68,10 +67,9 @@ def reference_of(text: str):
 
 def db_reference_of(question):
     """A question's reference: from its code, or from its text for older rows."""
-    match = CODE_REFERENCE.match(question.question_code or "")
-    if match:
-        return match.group(1).upper()
-    return reference_of(question.question_text)
+    from app.services.question_codes import reference_of as code_reference
+
+    return code_reference(question.question_code) or reference_of(question.question_text)
 
 
 def file_reference_of(ref: str, text: str):

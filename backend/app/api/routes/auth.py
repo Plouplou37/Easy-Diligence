@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user
 from app.core.database import get_db
 from app.core.email import email_service
-from app.core.exceptions import TooManyRequestsError
+from app.core.exceptions import InvalidRequestError, PermissionDeniedError, TooManyRequestsError
 from app.core.login_throttle import login_throttle
 from app.core.security import (
     create_password_reset_token,
@@ -16,6 +16,7 @@ from app.core.security import (
     reset_token_matches,
     verify_token,
 )
+from app.models.base import stored_id
 from app.models.user import User as UserModel
 from app.schemas.user import (
     PasswordChange,
@@ -81,12 +82,12 @@ def login(
     login_throttle.record_success(email)
 
     if not user.is_active:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account is inactive")
+        raise PermissionDeniedError("Account is inactive")
 
-    tokens = create_tokens(user.id, user.email, user.role)
+    tokens = create_tokens(stored_id(user), user.email, user.role or "analyst")
     create_user_session(
         db,
-        user.id,
+        stored_id(user),
         tokens["access_token"],
         tokens["refresh_token"],
         address,
@@ -110,7 +111,7 @@ def refresh_token(body: RefreshRequest, db: Session = Depends(get_db)):
     if not user or not user.is_active:
         raise invalid
 
-    tokens = create_tokens(user.id, user.email, user.role)
+    tokens = create_tokens(stored_id(user), user.email, user.role or "analyst")
     if not rotate_user_session(
         db, body.refresh_token, tokens["access_token"], tokens["refresh_token"]
     ):
@@ -131,13 +132,13 @@ def update_profile(
     db: Session = Depends(get_db),
 ):
     """Update the current user's profile."""
-    return update_user(db, current_user.id, user_update.model_dump(exclude_unset=True))
+    return update_user(db, stored_id(current_user), user_update.model_dump(exclude_unset=True))
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
 def logout(current_user: UserModel = Depends(get_current_user), db: Session = Depends(get_db)):
     """Logout: invalidate every session of the current user."""
-    invalidate_user_sessions(db, current_user.id)
+    invalidate_user_sessions(db, stored_id(current_user))
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
@@ -149,13 +150,11 @@ def change_user_password(
 ):
     """Change the current user's password; every session is closed after it."""
     if not change_password(
-        db, current_user.id, password_change.current_password, password_change.new_password
+        db, stored_id(current_user), password_change.current_password, password_change.new_password
     ):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Current password is incorrect"
-        )
+        raise InvalidRequestError("Current password is incorrect")
 
-    invalidate_user_sessions(db, current_user.id)
+    invalidate_user_sessions(db, stored_id(current_user))
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
@@ -182,9 +181,7 @@ async def reset_password_request(password_reset: PasswordReset, db: Session = De
 def reset_password_confirm(reset_data: PasswordResetConfirm, db: Session = Depends(get_db)):
     """Set a new password with a reset token. A token works once: it is tied to
     the password it was issued for."""
-    invalid = HTTPException(
-        status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired reset token"
-    )
+    invalid = InvalidRequestError("Invalid or expired reset token")
 
     token = read_password_reset_token(reset_data.token)
     if not token:
@@ -195,6 +192,6 @@ def reset_password_confirm(reset_data: PasswordResetConfirm, db: Session = Depen
         raise invalid
 
     set_password(db, user, reset_data.new_password)
-    invalidate_user_sessions(db, user.id)
+    invalidate_user_sessions(db, stored_id(user))
 
     return {"detail": "Password has been reset successfully. Please log in with your new password."}

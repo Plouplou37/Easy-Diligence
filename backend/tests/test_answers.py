@@ -182,3 +182,25 @@ def test_regenerate_with_a_document(
     assert seen["extra"]["filename"] == "memo.pdf"
     assert seen["company"]["name"] == "Example Asia Fund"
     assert ("upload_file", "memo.pdf") in fake_vector_stores.calls
+
+
+def test_filtering_by_section_needs_the_dd_type(client, analyst, answered, auth_headers):
+    """Section codes (A, B...) repeat from one questionnaire to the next."""
+    session, dd_type, _ = answered
+    headers = auth_headers(analyst)
+    url = f"/api/answers/session/{session.id}"
+    assert client.get(f"{url}?section_code=A", headers=headers).status_code == 400
+    response = client.get(f"{url}?section_code=A&dd_type={dd_type.code}", headers=headers)
+    assert len(response.json()["answers"]) == 2
+
+
+def test_the_export_follows_the_questionnaire_order(db, answered):
+    """Not the codes: an imported reference need not sort like the questions."""
+    from app.services.answers import answers_for_export
+
+    session, _, answers = answered
+    first, second = (db.get(DDQuestion, a.question_id) for a in answers)
+    first.question_code, second.question_code = "Z.99", "A.01"
+    db.commit()
+    exported = answers_for_export(db, session)
+    assert [a.question_id for a in exported] == [first.id, second.id]

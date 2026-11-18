@@ -1,12 +1,7 @@
-// Imported question codes embed the reviewer's reference: "A.01-_96323997".
-// The digits after it are a timestamp plus a random suffix, generated at import
-// to keep codes unique -- meaningless to a reader. Since the reference no longer
-// opens the question text, the badge is where people read it, so it shows
-// "A.01" alone. Same pattern as CODE_REFERENCE on the backend
-// (scripts/update_questionnaire.py, exports/answers.py).
-//
-// Codes that do not follow that shape -- questions created in the UI get
-// "WHATIS_12345678" -- are returned untouched: there is no reference to show.
+// A question code is its reference: "A.01" (backend/app/services/question_codes.py),
+// shown as is. Older codes carried a timestamp and a random suffix after it,
+// "A.01-_96323997", meaningless to a reader: the badge shows "A.01" alone.
+// Any other code is returned untouched.
 const CODE_REFERENCE = /^([A-Za-z]{1,3}\.?\d{1,3})-_/;
 
 export const displayQuestionCode = (code) => {
