@@ -1,18 +1,18 @@
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
 from sqlalchemy.orm import Session
-from app.database import get_db
+from app.core.database import get_db
 from app.models.dd_types import DDType as DDTypeModel, DEFAULT_DD_TYPE_ICON
 from app.models.questions import DDSection, DDQuestion
 from app.models.user import User
-from app.dependencies import get_current_active_user, get_current_admin_user
-from app.core.authz import (
+from app.api.deps import get_current_active_user, get_current_admin_user
+from app.services.authz import (
     filter_dd_types_for_user,
     assert_dd_type_view,
     assert_dd_type_ownership,
 )
 from app.schemas.dd_types import DDTypeCreate, DDTypeUpdate, DDTypeResponse
 from app.core.cache import cache_response, CacheInvalidator
-from app.core.file_parser import DDTypeFileParser, FileParsingError
+from app.services.file_parser import DDTypeFileParser, FileParsingError
 from typing import Optional, List
 from datetime import datetime
 

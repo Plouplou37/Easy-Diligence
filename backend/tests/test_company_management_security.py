@@ -81,11 +81,11 @@ class TestCompanyAuditFields:
         assert hasattr(Company, 'creator'), "Company should have creator relationship"
         assert hasattr(Company, 'updater'), "Company should have updater relationship"
     
-    @patch('app.api.company.get_db')
-    @patch('app.api.company.get_current_active_user')
+    @patch('app.api.routes.company.get_db')
+    @patch('app.api.routes.company.get_current_active_user')
     def test_create_company_populates_created_by(self, mock_user, mock_db):
         """Test that creating a company populates created_by field"""
-        from app.api.company import create_company
+        from app.api.routes.company import create_company
         from app.schemas.company import CompanyCreate
         
         # Mock user
@@ -123,11 +123,11 @@ class TestCompanyAuditFields:
         assert added_company.website_url == "https://test.com"
         assert added_company.description == "Test description"
     
-    @patch('app.api.company.get_db')
-    @patch('app.api.company.get_current_active_user')
+    @patch('app.api.routes.company.get_db')
+    @patch('app.api.routes.company.get_current_active_user')
     def test_update_company_populates_updated_by(self, mock_user, mock_db):
         """Test that updating a company populates updated_by field"""
-        from app.api.company import update_company
+        from app.api.routes.company import update_company
         from app.schemas.company import CompanyCreate
         
         # Mock user
@@ -176,7 +176,7 @@ class TestCompanySecurityValidation:
     
     def test_company_endpoints_exist(self):
         """Test that company endpoints are properly defined"""
-        from app.api.company import router
+        from app.api.routes.company import router
         
         # Get all routes
         routes = router.routes
@@ -204,8 +204,8 @@ class TestCompanySecurityValidation:
     
     def test_company_authentication_dependencies(self):
         """Test that company endpoints have authentication dependencies"""
-        from app.api.company import router
-        from app.dependencies import get_current_active_user
+        from app.api.routes.company import router
+        from app.api.deps import get_current_active_user
         import inspect
         
         # Get all endpoint functions

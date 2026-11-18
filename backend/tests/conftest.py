@@ -7,7 +7,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.main import app
-from app.database import get_db, Base
+from app.core.database import get_db, Base
 from app.models.user import User
 from app.models.company import Company
 from app.core.security import get_password_hash
@@ -144,5 +144,5 @@ def mock_redis():
 @pytest.fixture
 def mock_openai():
     """Mock OpenAI client for testing."""
-    with patch('app.core.openai_client.openai_client') as mock:
+    with patch('app.engine.openai_client.openai_client') as mock:
         yield mock

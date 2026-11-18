@@ -1,15 +1,15 @@
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, status
 from sqlalchemy.orm import Session
-from app.database import get_db
+from app.core.database import get_db
 from app.models.session import DDSession
 from app.models.company import Company
 from app.models.execution import DDExecution, ExecutionStatus
 from app.models.vector_store import SessionVectorStore
 from app.models.user import User
-from app.core.processor import DDProcessor
+from app.engine.processor import DDProcessor
 from app.core.utils import get_session_by_identifier, build_company_info
-from app.core.authz import assert_session_access
-from app.dependencies import get_current_active_user
+from app.services.authz import assert_session_access
+from app.api.deps import get_current_active_user
 import logging
 
 logger = logging.getLogger(__name__)
@@ -31,7 +31,7 @@ def safe_background_task(func, session_id, dd_type, *args, **kwargs):
 
         # Update execution status to FAILED
         try:
-            from app.database import SessionLocal
+            from app.core.database import SessionLocal
             db = SessionLocal()
             try:
                 # Get DD type by code

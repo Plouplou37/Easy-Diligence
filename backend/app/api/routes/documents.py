@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status
 from sqlalchemy.orm import Session
-from app.database import get_db
+from app.core.database import get_db
 from app.models.session import DDSession, SessionStatus
 from app.models.user import User
-from app.dependencies import get_current_active_user
-from app.core.openai_client import OpenAIProcessor
+from app.api.deps import get_current_active_user
+from app.engine.openai_client import OpenAIProcessor
 from typing import List, Optional
 import json
 from pydantic import BaseModel

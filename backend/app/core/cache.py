@@ -9,7 +9,7 @@ import threading
 from typing import Optional, Any, Union, Dict
 from functools import wraps
 import redis
-from app.config import settings
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 

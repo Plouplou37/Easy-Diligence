@@ -5,11 +5,11 @@ Handle assigning/unassigning vector stores to sessions
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import func
-from app.database import get_db
+from app.core.database import get_db
 from app.models.vector_store import VectorStore, SessionVectorStore
 from app.models.dd_types import DDType
 from app.models.user import User
-from app.dependencies import get_current_active_user
+from app.api.deps import get_current_active_user
 from app.schemas.vector_stores import SessionVectorStoreAssignment
 from typing import Optional
 import logging

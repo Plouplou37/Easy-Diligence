@@ -1,6 +1,6 @@
 """Create a DD type from a questionnaire JSON, without going through HTTP.
 
-Mirrors POST /dd-types/import (app/api/dd_types.py): same parser, same section
+Mirrors POST /dd-types/import (app/api/routes/dd_types.py): same parser, same section
 and question creation, same ownership semantics. Useful to load a questionnaire
 without running the API and holding a JWT.
 
@@ -13,8 +13,8 @@ import sys
 
 sys.path.insert(0, ".")
 
-from app.database import SessionLocal                    # noqa: E402
-from app.core.file_parser import DDTypeFileParser        # noqa: E402
+from app.core.database import SessionLocal                    # noqa: E402
+from app.services.file_parser import DDTypeFileParser        # noqa: E402
 from app.models.dd_types import DDType, DEFAULT_DD_TYPE_ICON   # noqa: E402
 from app.models.questions import DDSection, DDQuestion   # noqa: E402
 

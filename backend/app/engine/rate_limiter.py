@@ -1,6 +1,6 @@
 import time
 from typing import List, Tuple
-from app.config import settings
+from app.core.config import settings
 import logging
 
 logger = logging.getLogger(__name__)

@@ -1,4 +1,4 @@
-"""Document citations banned from answer text (core/openai_client.py).
+"""Document citations banned from answer text (engine/openai_client.py).
 
 gpt-5.6-luna loses text where OpenAI strips document-citation markers (see
 CONSULTED_LABEL). The model is asked to name its documents on a last
@@ -12,7 +12,7 @@ on their own:
 """
 from types import SimpleNamespace
 
-from app.core.openai_client import (
+from app.engine.openai_client import (
     CONSULTED_LABEL,
     OpenAIProcessor,
     count_file_citations,

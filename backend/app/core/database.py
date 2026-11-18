@@ -2,7 +2,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import QueuePool
-from app.config import settings
+from app.core.config import settings
 
 if not settings.database_url:
     raise RuntimeError(

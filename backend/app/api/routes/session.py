@@ -1,13 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from app.database import get_db
+from app.core.database import get_db
 from app.models.session import DDSession, SessionStatus
 from app.models.company import Company
 from app.models.questions import DDSection, DDQuestion
 from app.models.dd_types import DDType as DDTypeModel
 from app.models.user import User
-from app.dependencies import get_current_active_user
-from app.core.authz import assert_company_view
+from app.api.deps import get_current_active_user
+from app.services.authz import assert_company_view
 from app.schemas.session import SessionCreate, SessionResponse, SessionStatusResponse, SessionListResponse, PaginatedSessionResponse
 from app.core.cache import cache_response, CacheInvalidator
 from app.core.pagination import PaginationParams, paginate_query

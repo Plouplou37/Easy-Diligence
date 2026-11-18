@@ -4,7 +4,7 @@ from email.mime.multipart import MIMEMultipart
 from jinja2 import Template
 from typing import List, Optional
 import logging
-from app.config import settings
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 

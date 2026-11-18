@@ -2,7 +2,7 @@ from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from sqlalchemy import JSON
-from app.database import Base
+from app.core.database import Base
 
 class DDResponse(Base):
     __tablename__ = "dd_responses"

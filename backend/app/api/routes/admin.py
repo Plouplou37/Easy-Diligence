@@ -4,12 +4,12 @@ from sqlalchemy.orm import Session
 from typing import Optional
 import math
 
-from app.database import get_db
+from app.core.database import get_db
 from app.schemas.admin import (
     UserListResponse, UserListItem, UserRoleUpdate, 
     UserStatusUpdate, AdminActionResponse
 )
-from app.core.auth import (
+from app.services.auth import (
     get_all_users, update_user_role, update_user_status, 
     is_admin, get_user
 )

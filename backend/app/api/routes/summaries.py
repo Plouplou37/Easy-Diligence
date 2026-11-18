@@ -2,14 +2,14 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List, Optional
 
-from app.database import get_db
+from app.core.database import get_db
 from app.models.summary import DDSummary
 from app.models.session import DDSession
 from app.models.dd_types import DDType
 from app.models.user import User
-from app.dependencies import get_current_active_user
-from app.core.authz import assert_session_access
-from app.core.summarizer import (
+from app.api.deps import get_current_active_user
+from app.services.authz import assert_session_access
+from app.engine.summarizer import (
     cancel_section_summaries_batch,
     collect_section_summaries_batch,
     generate_summaries_for_dd_type,

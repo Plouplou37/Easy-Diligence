@@ -2,18 +2,18 @@ from fastapi import APIRouter, Depends, HTTPException, Form, File, UploadFile
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-from app.database import get_db
+from app.core.database import get_db
 from app.models.answer import DDAnswer, AnswerStatus
 from app.models.answer_history import DDAnswerHistory
 from app.models.session import DDSession
 from app.models.questions import DDSection, DDQuestion
 from app.models.user import User
-from app.dependencies import get_current_active_user
-from app.core.authz import filter_sessions_for_user, assert_session_access, user_is_admin
+from app.api.deps import get_current_active_user
+from app.services.authz import filter_sessions_for_user, assert_session_access, user_is_admin
 from app.schemas.answer import AnswerUpdate, AnswerResponse, AnswerWithHistory, AnswerListResponse, PaginatedAnswerResponse
 from app.schemas.answer_history import AnswerVersionHistory, AnswerHistoryResponse
 from app.core.pagination import PaginationParams, paginate_query, PaginationMeta
-from app.core.exporters import AnswerExporter
+from app.exports.answers import AnswerExporter
 from app.core.utils import build_company_info, get_session_by_identifier
 from typing import Optional, List, Dict, Any
 import asyncio
@@ -651,9 +651,9 @@ async def regenerate_answer(
         )
 
     # Resolve the DD type code, the vector stores and the company context
-    from app.core.processor import DDProcessor
-    from app.api.processing import get_vector_store_ids_for_processing
-    from app.core.openai_client import OpenAIProcessor
+    from app.engine.processor import DDProcessor
+    from app.api.routes.processing import get_vector_store_ids_for_processing
+    from app.engine.openai_client import OpenAIProcessor
     from app.models.vector_store import VectorStore, SessionVectorStore
     from app.core.cache import CacheInvalidator
 
@@ -1102,4 +1102,4 @@ async def export_session_answers(
     else:
         raise HTTPException(status_code=400, detail="Format must be 'pdf' or 'excel'")
 
-# Export functions moved to app.core.exporters for better code organization 
+# Export functions moved to app.exports.answers for better code organization 

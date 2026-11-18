@@ -1,8 +1,8 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from app.config import settings
-from app.api.routes import api_router
-from app.database import engine, Base
+from app.core.config import settings
+from app.api.router import api_router
+from app.core.database import engine, Base
 import redis
 import json
 from typing import Dict

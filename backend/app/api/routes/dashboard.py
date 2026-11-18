@@ -17,10 +17,10 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import and_, case, func
 from sqlalchemy.orm import Session, joinedload
 
-from app.core.authz import filter_sessions_for_user
-from app.core.summarizer import PENDING_BATCH_STATUSES
-from app.database import get_db
-from app.dependencies import get_current_active_user
+from app.services.authz import filter_sessions_for_user
+from app.engine.summarizer import PENDING_BATCH_STATUSES
+from app.core.database import get_db
+from app.api.deps import get_current_active_user
 from app.models.answer import DDAnswer
 from app.models.dd_types import DDType
 from app.models.execution import DDExecution

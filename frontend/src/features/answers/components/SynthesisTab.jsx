@@ -74,7 +74,7 @@ const SummaryBlock = ({ title, summary, onSaved }) => {
 };
 
 // A batch still in OpenAI's hands. Mirrors PENDING_BATCH_STATUSES in
-// core/summarizer.py -- while the status is one of these, nothing is stored yet.
+// engine/summarizer.py -- while the status is one of these, nothing is stored yet.
 const PENDING_BATCH_STATUSES = ['validating', 'in_progress', 'finalizing', 'cancelling'];
 
 // OpenAI's raw statuses read as jargon on screen ("in_progress").

@@ -40,7 +40,7 @@ sys.path.insert(0, ".")
 
 from sqlalchemy import or_                               # noqa: E402
 
-from app.database import SessionLocal                    # noqa: E402
+from app.core.database import SessionLocal                    # noqa: E402
 from app.models.answer import DDAnswer                   # noqa: E402
 from app.models.dd_types import DDType                   # noqa: E402
 from app.models.questions import DDSection, DDQuestion   # noqa: E402

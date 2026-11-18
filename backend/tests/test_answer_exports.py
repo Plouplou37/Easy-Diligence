@@ -15,8 +15,8 @@ from app.models.answer import DDAnswer, AnswerStatus
 from app.models.session import DDSession
 from app.models.user import User
 from app.models.company import Company
-from app.core.exporters import AnswerExporter
-from app.database import get_db
+from app.exports.answers import AnswerExporter
+from app.core.database import get_db
 
 
 def _make_answer(i=0, sources='[{"type": "document", "content": "Test source"}]',
@@ -190,9 +190,9 @@ class TestAnswerExportEndpoint:
     def mock_answers(self):
         return [_make_answer(i, section_code="SEC1", confidence=0.85) for i in range(2)]
     
-    @patch('app.api.answers.get_db')
-    @patch('app.dependencies.get_current_active_user')
-    @patch('app.core.exporters.AnswerExporter.generate_pdf_report')
+    @patch('app.api.routes.answers.get_db')
+    @patch('app.api.deps.get_current_active_user')
+    @patch('app.exports.answers.AnswerExporter.generate_pdf_report')
     def test_export_session_answers_pdf(self, mock_pdf_export, mock_auth, mock_db_dep, client, mock_db, mock_user, mock_session, mock_answers):
         """Test PDF export endpoint"""
         # Setup mocks
@@ -214,9 +214,9 @@ class TestAnswerExportEndpoint:
         assert response.status_code == 200
         mock_pdf_export.assert_called_once_with(mock_session, mock_answers)
     
-    @patch('app.api.answers.get_db')
-    @patch('app.dependencies.get_current_active_user')
-    @patch('app.core.exporters.AnswerExporter.generate_excel_report')
+    @patch('app.api.routes.answers.get_db')
+    @patch('app.api.deps.get_current_active_user')
+    @patch('app.exports.answers.AnswerExporter.generate_excel_report')
     def test_export_session_answers_excel(self, mock_excel_export, mock_auth, mock_db_dep, client, mock_db, mock_user, mock_session, mock_answers):
         """Test Excel export endpoint"""
         # Setup mocks
@@ -238,8 +238,8 @@ class TestAnswerExportEndpoint:
         assert response.status_code == 200
         mock_excel_export.assert_called_once_with(mock_session, mock_answers)
     
-    @patch('app.api.answers.get_db')
-    @patch('app.dependencies.get_current_active_user')
+    @patch('app.api.routes.answers.get_db')
+    @patch('app.api.deps.get_current_active_user')
     def test_export_session_not_found(self, mock_auth, mock_db_dep, client, mock_db, mock_user):
         """Test export with non-existent session"""
         # Setup mocks
@@ -254,8 +254,8 @@ class TestAnswerExportEndpoint:
         assert response.status_code == 404
         assert "not found" in response.json()["detail"]
     
-    @patch('app.api.answers.get_db')
-    @patch('app.dependencies.get_current_active_user')
+    @patch('app.api.routes.answers.get_db')
+    @patch('app.api.deps.get_current_active_user')
     def test_export_no_answers(self, mock_auth, mock_db_dep, client, mock_db, mock_user, mock_session):
         """Test export with no answers"""
         # Setup mocks
@@ -271,8 +271,8 @@ class TestAnswerExportEndpoint:
         assert response.status_code == 404
         assert "No answers found" in response.json()["detail"]
     
-    @patch('app.api.answers.get_db')
-    @patch('app.dependencies.get_current_active_user')
+    @patch('app.api.routes.answers.get_db')
+    @patch('app.api.deps.get_current_active_user')
     def test_export_invalid_format(self, mock_auth, mock_db_dep, client, mock_db, mock_user, mock_session, mock_answers):
         """Test export with invalid format"""
         # Setup mocks
@@ -304,8 +304,8 @@ class TestAnswerAPICompatibility:
     def mock_user(self):
         return User(id=1, email="test@example.com", username="testuser", role="user")
     
-    @patch('app.api.answers.get_db')
-    @patch('app.dependencies.get_current_active_user')
+    @patch('app.api.routes.answers.get_db')
+    @patch('app.api.deps.get_current_active_user')
     def test_answer_list_endpoint_still_works(self, mock_auth, mock_db_dep, client, mock_db, mock_user):
         """Test that main answer list endpoint is unaffected by export extraction"""
         # Setup mocks
@@ -335,8 +335,8 @@ class TestAnswerAPICompatibility:
         assert data["answers"] == []
         assert data["pagination"]["total_items"] == 0
     
-    @patch('app.api.answers.get_db')
-    @patch('app.dependencies.get_current_active_user')
+    @patch('app.api.routes.answers.get_db')
+    @patch('app.api.deps.get_current_active_user')
     def test_answer_stats_endpoint_still_works(self, mock_auth, mock_db_dep, client, mock_db, mock_user):
         """Test that answer stats endpoint is unaffected"""
         # Setup mocks

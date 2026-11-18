@@ -23,7 +23,7 @@ from typing import Dict, List, Optional, Tuple
 
 from sqlalchemy.orm import Session
 
-from app.core.openai_client import OpenAIProcessor
+from app.engine.openai_client import OpenAIProcessor
 from app.models.answer import DDAnswer, AnswerStatus
 from app.models.questions import DDSection, DDQuestion
 from app.models.dd_types import DDType

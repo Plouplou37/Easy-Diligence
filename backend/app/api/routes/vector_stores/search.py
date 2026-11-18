@@ -4,11 +4,11 @@ Handle search operations within vector stores
 """
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from app.database import get_db
+from app.core.database import get_db
 from app.models.vector_store import VectorStore
 from app.models.user import User
-from app.dependencies import get_current_active_user
-from app.core.openai_client import OpenAIProcessor
+from app.api.deps import get_current_active_user
+from app.engine.openai_client import OpenAIProcessor
 from app.schemas.vector_stores import VectorStoreSearchRequest, VectorStoreSearchResponse
 import logging
 

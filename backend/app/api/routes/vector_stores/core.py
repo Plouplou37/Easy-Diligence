@@ -4,12 +4,12 @@ Basic create, read, update, delete functionality
 """
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from app.database import get_db
+from app.core.database import get_db
 from app.models.vector_store import VectorStore
 from app.models.user import User
-from app.dependencies import get_current_active_user
-from app.core.authz import user_is_admin
-from app.core.openai_client import OpenAIProcessor
+from app.api.deps import get_current_active_user
+from app.services.authz import user_is_admin
+from app.engine.openai_client import OpenAIProcessor
 from app.schemas.vector_stores import VectorStoreCreate, VectorStoreUpdate, VectorStoreResponse
 from app.core.cache import cache_response, CacheInvalidator
 from typing import List

@@ -8,7 +8,15 @@ du frontend. Pour installer et lancer l'application, voir le
 ## Stack
 
 - **Backend** : FastAPI (Python 3.11 ou plus), SQLAlchemy 2, MySQL 8 via PyMySQL.
-  Code dans `backend/app/`, routes sous le préfixe `/api`.
+  Code dans `backend/app/`, routes sous le préfixe `/api` :
+  - `api/` : l'assemblage des routers (`router.py`), un router par ressource
+    (`routes/`) et les dépendances communes (`deps.py`) ;
+  - `core/` : le transverse (configuration, base, sécurité, cache, e-mail) ;
+  - `engine/` : le moteur de réponses ;
+  - `services/` : la logique métier (authentification, droits, import de
+    questionnaires) ;
+  - `exports/` : les exports PDF et Excel ;
+  - `models/` et `schemas/`.
 - **Frontend** : React 18, Vite 4, Tailwind 3, axios et react-router. Code dans
   `frontend/src/`.
 - **LLM** : l'API **Responses** d'OpenAI (`client.responses.create`). Le modèle
@@ -17,8 +25,8 @@ du frontend. Pour installer et lancer l'application, voir le
   (GPT-5.x), nom de l'outil web (`web_search` ou `web_search_preview`), budget de
   sortie et `reasoning.effort`. Passer de `gpt-5.6-luna` à `gpt-4o` ne demande donc
   que de changer cette variable.
-- **Authentification** : jetons JWT (accès et rafraîchissement), rôles `admin`,
-  `analyst` et `viewer`.
+- **Authentification** : jetons JWT (accès et rafraîchissement), rôles `admin`
+  et `analyst`.
 - **Tâches longues** : les `BackgroundTasks` de FastAPI, dans le processus web.
 
 ## Base de données
@@ -27,7 +35,7 @@ du frontend. Pour installer et lancer l'application, voir le
   fonction crée les tables manquantes mais **ne modifie pas** une table existante.
 - `backend/migrations/` contient les anciens correctifs SQL, appliqués à la main
   sur une base existante. Une base neuve n'en a pas besoin.
-- ⚠️ **Autocommit au niveau du pilote.** `app/database.py` passe
+- ⚠️ **Autocommit au niveau du pilote.** `app/core/database.py` passe
   `connect_args={'autocommit': True}` à PyMySQL, alors que
   `sessionmaker(autocommit=False)` laisse croire à des transactions. Chaque
   instruction est donc validée immédiatement, et `db.rollback()` n'annule rien.
@@ -71,15 +79,15 @@ du frontend. Pour installer et lancer l'application, voir le
 - **La validation d'un type de DD est à sens unique.** Un type en brouillon est
   parfaitement utilisable : `is_validated` n'intervient ni dans le moteur ni dans
   `/processing`. La validation gèle seulement la **structure**
-  (`check_*_immutability`, `api/questions.py`), et aucun endpoint ne permet de
+  (`check_*_immutability`, `api/routes/questions.py`), et aucun endpoint ne permet de
   dévalider.
 - `PUT /company/{id}` attend un `CompanyCreate` **complet**, pas un patch : un
   envoi partiel efface les autres champs.
 
 ## Le moteur de réponses
 
-`core/processor.py` (`DDProcessor`) orchestre un traitement : `start_processing`,
-`resume_processing` et `_process_single_question`. `core/openai_client.py`
+`engine/processor.py` (`DDProcessor`) orchestre un traitement : `start_processing`,
+`resume_processing` et `_process_single_question`. `engine/openai_client.py`
 (`OpenAIProcessor.process_question`) fait l'appel à OpenAI.
 
 ### Un appel, deux outils
@@ -198,7 +206,7 @@ cassé.
     `REASONING_MIN_OUTPUT_TOKENS` de `openai_client.py`), car les tokens de
     raisonnement s'y imputent ;
   - `reasoning.effort` réglé par `REASONING_EFFORT` (`low`).
-- **Limitation de débit** (`core/rate_limiter.py`) : toutes les pauses sont
+- **Limitation de débit** (`engine/rate_limiter.py`) : toutes les pauses sont
   désactivées par défaut. Les quotas d'un compte OpenAI courant sont très
   au-dessus de ce qu'un traitement consomme, et les erreurs 429 sont couvertes
   par le backoff exponentiel et le disjoncteur de `DDProcessor`. Les variables
@@ -219,7 +227,7 @@ cassé.
 ## Cloisonnement par utilisateur
 
 Règle : **l'administrateur voit tout**, les autres ne voient que leurs données.
-Les fonctions communes sont dans **`core/authz.py`** : `user_is_admin`,
+Les fonctions communes sont dans **`services/authz.py`** : `user_is_admin`,
 `filter_*_for_user` et `assert_*_access/ownership`.
 
 - **Sessions** : visibles par leur créateur (`created_by`) ou la personne
@@ -248,17 +256,17 @@ Les fonctions communes sont dans **`core/authz.py`** : `user_is_admin`,
 
 ### Régénérer une réponse
 
-`POST /answers/{id}/regenerate` (`api/answers.py`,
+`POST /answers/{id}/regenerate` (`api/routes/answers.py`,
 `DDProcessor.regenerate_single_answer`) crée une nouvelle version au statut
 `needs_review`. Le contexte envoyé au modèle comprend les réponses précédentes.
 Le bouton se trouve sur chaque réponse (`AnswerCard`).
 
 ### Synthèses
 
-`core/summarizer.py` rédige d'abord un résumé par section, en parallèle, puis
+`engine/summarizer.py` rédige d'abord un résumé par section, en parallèle, puis
 une synthèse par type de DD (3 à 4 pages) à partir de ces résumés. Ce sont des
 appels de rédaction pure, sans outils. Le stockage est dans `dd_summaries` et
-l'API dans `api/summaries.py` :
+l'API dans `api/routes/summaries.py` :
 - `POST /summaries/session/{id}/dd/{ddType}/generate` ;
 - `GET /summaries/session/{id}` ;
 - `PUT /summaries/{id}`.
@@ -311,7 +319,7 @@ plafond qu'il faut relever.
 
 ### Export PDF
 
-`core/exporters.py` produit un rapport à deux niveaux :
+`exports/answers.py` produit un rapport à deux niveaux :
 - le corps : la synthèse de chaque type de DD ;
 - les annexes : pour chaque section, son résumé, puis les questions, les réponses
   et les sources.
@@ -330,7 +338,7 @@ L'export Excel des réponses est dans le même module.
 
 ### Tableau de bord
 
-`GET /api/dashboard/sessions` (`api/dashboard.py`) renvoie en un appel tout ce
+`GET /api/dashboard/sessions` (`api/routes/dashboard.py`) renvoie en un appel tout ce
 qu'affiche le tableau de bord, en environ huit requêtes groupées quel que soit
 le nombre de sessions.
 - Il est **en lecture seule** : l'état des batchs est lu dans
@@ -347,7 +355,7 @@ le nombre de sessions.
 
 ## Format d'import des questionnaires
 
-Le parser est `core/file_parser.py`, et un exemple se trouve dans
+Le parser est `services/file_parser.py`, et un exemple se trouve dans
 [`examples/example_questionnaire.json`](../examples/example_questionnaire.json).
 
 ```json
@@ -471,4 +479,4 @@ Ils se lancent depuis `backend/` : `uv run python scripts/<script>.py`.
 - **Un traitement reste en `in_progress` après un redémarrage** : le relancer avec
   « Reprendre ».
 - **Une synthèse revient `incomplete`** : relever la constante
-  `REASONING_MIN_OUTPUT_TOKENS` de `core/openai_client.py`.
+  `REASONING_MIN_OUTPUT_TOKENS` de `engine/openai_client.py`.

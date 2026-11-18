@@ -23,7 +23,7 @@ from reportlab.lib.utils import ImageReader
 from reportlab.lib import colors
 import pandas as pd
 
-from app.config import settings
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 

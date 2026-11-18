@@ -1,12 +1,12 @@
-from app.core.openai_client import OpenAIProcessor
-from app.core.rate_limiter import RateLimiter
+from app.engine.openai_client import OpenAIProcessor
+from app.engine.rate_limiter import RateLimiter
 from app.models.answer import DDAnswer, AnswerStatus, ErrorType
 from app.models.answer_history import DDAnswerHistory
 from app.models.execution import DDExecution, ExecutionStatus
 from app.models.response import DDResponse
 from app.models.message import DDMessage
 from app.models.questions import DDQuestion, DDSection
-from app.database import get_db
+from app.core.database import get_db
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import func
 import logging

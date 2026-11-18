@@ -8,10 +8,18 @@ Guide court pour un agent qui travaille sur Easy Diligence. Le reste est dans :
 
 ## Repères
 
-- Backend FastAPI dans `backend/app/` : routers dans `api/`, logique dans `core/`.
-  Le moteur est dans `core/openai_client.py` et `core/processor.py`.
+- Backend FastAPI dans `backend/app/` :
+  - `api/` : `router.py` (assemblage), `routes/` (un router par ressource),
+    `deps.py` (dépendances communes) ;
+  - `core/` : le transverse (config, database, sécurité, cache, e-mail) ;
+  - `engine/` : le moteur de réponses (`openai_client.py`, `processor.py`,
+    `summarizer.py`) ;
+  - `services/` : la logique métier (authentification, droits, import de
+    questionnaires) ;
+  - `exports/` : les exports PDF et Excel ;
+  - `models/` (SQLAlchemy) et `schemas/` (Pydantic).
 - Frontend React dans `frontend/src/`.
-- La configuration est lue par `backend/app/config.py`. Chaque variable est
+- La configuration est lue par `backend/app/core/config.py`. Chaque variable est
   décrite dans `.env.template` : une variable ajoutée au code doit l'être aussi
   dans ce fichier.
 

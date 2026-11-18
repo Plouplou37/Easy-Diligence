@@ -2,7 +2,7 @@ from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, Enum
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from sqlalchemy import JSON
-from app.database import Base
+from app.core.database import Base
 import enum
 
 class AnswerStatus(str, enum.Enum):

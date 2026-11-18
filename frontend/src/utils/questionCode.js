@@ -3,7 +3,7 @@
 // to keep codes unique -- meaningless to a reader. Since the reference no longer
 // opens the question text, the badge is where people read it, so it shows
 // "A.01" alone. Same pattern as CODE_REFERENCE on the backend
-// (scripts/update_questionnaire.py, core/exporters.py).
+// (scripts/update_questionnaire.py, exports/answers.py).
 //
 // Codes that do not follow that shape -- questions created in the UI get
 // "WHATIS_12345678" -- are returned untouched: there is no reference to show.

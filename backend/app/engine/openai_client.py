@@ -1,6 +1,6 @@
 import openai
 from openai import OpenAI
-from app.config import settings
+from app.core.config import settings
 from typing import Optional, Dict, Any, List, Union
 import json
 import os

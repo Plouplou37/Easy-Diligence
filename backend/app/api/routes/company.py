@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from app.database import get_db
-from app.dependencies import get_current_active_user
+from app.core.database import get_db
+from app.api.deps import get_current_active_user
 from app.models.company import Company
 from app.models.user import User
-from app.core.authz import (
+from app.services.authz import (
     filter_companies_for_user,
     assert_company_view,
     assert_company_ownership,

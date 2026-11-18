@@ -1,14 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func, case
-from app.database import get_db
+from app.core.database import get_db
 from app.models.execution import DDExecution, ExecutionStatus
 from app.models.session import DDSession
 from app.models.dd_types import DDType
 from app.models.answer import DDAnswer
 from app.models.user import User
-from app.dependencies import get_current_active_user
-from app.core.authz import filter_sessions_for_user, assert_session_access
+from app.api.deps import get_current_active_user
+from app.services.authz import filter_sessions_for_user, assert_session_access
 from app.core.cache import cache_response, CacheInvalidator
 from app.schemas.execution import (
     ExecutionCreate, ExecutionUpdate, ExecutionValidate, 

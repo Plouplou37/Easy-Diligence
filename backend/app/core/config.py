@@ -5,7 +5,7 @@ import secrets
 
 class Settings(BaseSettings):
     # Database. Required: left empty here only so this module stays importable,
-    # app/database.py refuses to start without it.
+    # app/core/database.py refuses to start without it.
     # Form: mysql+pymysql://<user>:<password>@<host>:3306/<database>
     database_url: str = ""
 

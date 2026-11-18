@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, DateTime, Text, Boolean, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-from app.database import Base
+from app.core.database import Base
 
 # Shown on the DD card. The import used to default to the literal string
 # "[DD]", which is truthy and so slipped past the frontend's own emoji

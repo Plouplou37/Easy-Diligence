@@ -5,12 +5,12 @@ from typing import Optional
 from datetime import datetime, timedelta
 import logging
 
-from app.database import get_db
+from app.core.database import get_db
 from app.schemas.user import (
     UserCreate, UserLogin, UserRegister, User, Token,
     UserUpdate, PasswordChange, PasswordReset, PasswordResetConfirm
 )
-from app.core.auth import (
+from app.services.auth import (
     authenticate_user, create_user, get_user, get_user_by_email,
     update_user, change_password, create_user_session,
     invalidate_user_sessions, validate_refresh_token

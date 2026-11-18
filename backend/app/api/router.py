@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api import auth, admin, company, session, documents, processing, answers, websocket, questions, dd_types, executions, summaries, dashboard
+from app.api.routes import auth, admin, company, session, documents, processing, answers, websocket, questions, dd_types, executions, summaries, dashboard
 
 api_router = APIRouter()
 
@@ -23,7 +23,7 @@ api_router.include_router(executions.router, prefix="/executions", tags=["execut
 api_router.include_router(summaries.router, prefix="/summaries", tags=["summaries"])
 api_router.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])
 
-from app.api.vector_stores import router as vector_stores_router
+from app.api.routes.vector_stores import router as vector_stores_router
 api_router.include_router(vector_stores_router, prefix="/vector-stores", tags=["vector-stores"])
 
 api_router.include_router(websocket.router, prefix="/ws", tags=["websocket"])
