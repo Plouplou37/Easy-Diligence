@@ -169,18 +169,6 @@ async def get_dd_type(
     return dd_type
 
 
-@router.get("/code/{code}", response_model=DDTypeResponse)
-async def get_dd_type_by_code(  # noqa: F811
-    code: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)
-):
-    """Get a DD type by its code"""
-    dd_type = db.query(DDTypeModel).filter(DDTypeModel.code == code).first()
-    if not dd_type:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="DD type not found")
-    assert_dd_type_view(dd_type, current_user)
-    return dd_type
-
-
 @router.post("/", response_model=DDTypeResponse)
 async def create_dd_type(
     dd_type: DDTypeCreate,

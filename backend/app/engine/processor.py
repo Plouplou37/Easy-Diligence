@@ -910,9 +910,9 @@ class DDProcessor:
         answer: DDAnswer,
         vector_store_ids: list,
         company_info: dict,
-        instruction: str = None,
-        reference_url: str = None,
-        extra_file_source: dict = None,
+        instruction: str | None = None,
+        reference_url: str | None = None,
+        extra_file_source: dict | None = None,
     ) -> DDAnswer:
         """Regenerate ONE existing answer on demand (interactive).
 

@@ -236,4 +236,76 @@ def test_cannot_assign_to_someone_elses_session(
     response = client.put(
         f"/api/vector-stores/vs_1/assign-session/{session.id}", headers=auth_headers(alice)
     )
+    assert response.status_code == 403
+
+
+# --- Stores gone at OpenAI --------------------------------------------------------
+
+
+def test_the_list_flags_stores_gone_at_openai_without_deleting_them(
+    client, db, analyst, make_store, auth_headers, fake_vector_stores
+):
+    make_store(analyst, "vs_ok")
+    make_store(analyst, "vs_gone")
+    make_store(analyst, "vs_old")
+    fake_vector_stores.missing = {"vs_gone"}
+    fake_vector_stores.expired = {"vs_old"}
+
+    stores = client.get("/api/vector-stores/", headers=auth_headers(analyst)).json()
+    assert {s["id"]: s["status"] for s in stores} == {
+        "vs_ok": "completed",
+        "vs_gone": "missing",
+        "vs_old": "expired",
+    }
+    assert db.query(VectorStore).count() == 3  # a read deletes nothing
+
+
+def test_refresh_removes_the_stores_gone_at_openai(
+    client, db, analyst, make_store, make_dd_session, auth_headers, fake_vector_stores
+):
+    make_store(analyst, "vs_ok")
+    make_store(analyst, "vs_gone")
+    session = make_dd_session(analyst)
+    db.add(
+        SessionVectorStore(session_id=session.id, vector_store_id="vs_gone", assigned_by=analyst.id)
+    )
+    db.commit()
+    fake_vector_stores.missing = {"vs_gone"}
+
+    response = client.post("/api/vector-stores/refresh", headers=auth_headers(analyst))
+    assert response.json()["removed"] == 1
+    db.expire_all()
+    assert [s.id for s in db.query(VectorStore)] == ["vs_ok"]
+    assert db.query(SessionVectorStore).count() == 0
+
+
+def test_files_of_a_store_gone_at_openai(
+    client, db, analyst, make_store, auth_headers, fake_vector_stores
+):
+    make_store(analyst, "vs_gone")
+    fake_vector_stores.missing = {"vs_gone"}
+    response = client.get("/api/vector-stores/vs_gone/files", headers=auth_headers(analyst))
     assert response.status_code == 404
+    assert db.get(VectorStore, "vs_gone") is not None
+
+
+# --- Who manages the assignments of a session ------------------------------------
+
+
+def test_the_assignee_and_an_admin_manage_the_assignments(
+    client, make_user, admin, make_store, make_dd_session, auth_headers, fake_vector_stores
+):
+    """These routes used to let only the session's creator through."""
+    owner, assignee = make_user(), make_user()
+    make_store(assignee, "vs_1")
+    session = make_dd_session(owner, assignee=assignee)
+
+    response = client.put(
+        f"/api/vector-stores/vs_1/assign-session/{session.id}", headers=auth_headers(assignee)
+    )
+    assert response.status_code == 200
+    for user in (assignee, admin):
+        listing = client.get(
+            f"/api/vector-stores/session/{session.id}/assignments", headers=auth_headers(user)
+        )
+        assert [a["vector_store_id"] for a in listing.json()["assignments"]] == ["vs_1"]

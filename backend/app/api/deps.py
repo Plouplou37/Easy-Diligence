@@ -11,8 +11,12 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.security import verify_token
+from app.models.dd_types import DDType
+from app.models.session import DDSession
 from app.models.user import User as UserModel
 from app.services.auth import get_user, is_admin
+from app.services.dd_types import get_dd_type_by_code
+from app.services.sessions import get_session_for_user
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
@@ -58,3 +62,22 @@ def get_current_admin_user(
     if not is_admin(current_user):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
     return current_user
+
+
+def get_accessible_session(
+    session_identifier: str,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_active_user),
+) -> DDSession:
+    """The session of the `{session_identifier}` path parameter (an id or a
+    session code), if the user may access it: 404 if unknown, 403 if not theirs."""
+    return get_session_for_user(db, session_identifier, current_user)
+
+
+def get_visible_dd_type(
+    dd_type: str,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_active_user),
+) -> DDType:
+    """The DD type of the `{dd_type}` path parameter (its code), if the user may see it."""
+    return get_dd_type_by_code(db, dd_type, current_user)

@@ -218,10 +218,13 @@ def make_dd_session(db, make_company):
 
 
 class FakeVectorStoreClient:
-    """Stands in for OpenAIProcessor on the vector store routes. Every store
-    exists and reports two files; the calls are recorded."""
+    """Stands in for OpenAIProcessor in the vector store service. Every store
+    reports two files, except those listed in `missing` (gone at OpenAI) or
+    `expired`; the calls are recorded."""
 
     calls: list[tuple] = []
+    missing: set[str] = set()
+    expired: set[str] = set()
 
     def __init__(self, *args, **kwargs):
         pass
@@ -229,48 +232,52 @@ class FakeVectorStoreClient:
     def _record(self, name, *args):
         FakeVectorStoreClient.calls.append((name, *args))
 
-    async def create_vector_store(self, name, expires_after_days=None):
+    def create_vector_store(self, name, expires_after_days=None):
         self._record("create_vector_store", name)
         return f"vs_{next(_sequence)}"
 
-    async def get_vector_store_info(self, vector_store_id):
+    def get_vector_store_info(self, vector_store_id):
         self._record("get_vector_store_info", vector_store_id)
+        if vector_store_id in self.missing:
+            raise RuntimeError("Error code: 404 - No vector store found")
         return {
             "id": vector_store_id,
-            "status": "completed",
+            "status": "expired" if vector_store_id in self.expired else "completed",
             "file_counts": {"total": 2},
             "usage_bytes": 2048,
         }
 
-    async def update_vector_store_name(self, vector_store_id, name):
+    def update_vector_store_name(self, vector_store_id, name):
         self._record("update_vector_store_name", vector_store_id, name)
         return True
 
-    async def delete_vector_store(self, vector_store_id):
+    def delete_vector_store(self, vector_store_id):
         self._record("delete_vector_store", vector_store_id)
         return True
 
-    async def list_vector_store_files(self, vector_store_id):
+    def list_vector_store_files(self, vector_store_id):
         self._record("list_vector_store_files", vector_store_id)
+        if vector_store_id in self.missing:
+            raise RuntimeError("Error code: 404 - No vector store found")
         return [{"id": "file_1", "filename": "prospectus.pdf", "status": "completed"}]
 
-    async def upload_file(self, content, filename):
+    def upload_file(self, content, filename):
         self._record("upload_file", filename)
         return f"file_{next(_sequence)}"
 
-    async def add_file_to_vector_store(self, vector_store_id, file_id, *args, **kwargs):
+    def add_file_to_vector_store(self, vector_store_id, file_id, *args, **kwargs):
         self._record("add_file_to_vector_store", vector_store_id, file_id)
         return {"id": file_id, "status": "in_progress"}
 
-    async def remove_file_from_vector_store(self, vector_store_id, file_id):
+    def remove_file_from_vector_store(self, vector_store_id, file_id):
         self._record("remove_file_from_vector_store", vector_store_id, file_id)
         return True
 
-    async def delete_file(self, file_id):
+    def delete_file(self, file_id):
         self._record("delete_file", file_id)
         return True
 
-    async def get_file(self, file_id):
+    def get_file(self, file_id):
         self._record("get_file", file_id)
         return {
             "filename": "prospectus.pdf",
@@ -279,16 +286,17 @@ class FakeVectorStoreClient:
             "purpose": "assistants",
         }
 
-    async def wait_for_file_indexed(self, *args, **kwargs):
+    def wait_for_file_indexed(self, *args, **kwargs):
         return True
 
 
 @pytest.fixture
 def fake_vector_stores(monkeypatch):
-    """Replace OpenAIProcessor wherever the vector store routes look it up."""
-    from app.api.routes.vector_stores import core, files
+    """Replace OpenAIProcessor in the vector store service."""
+    from app.services import vector_stores
 
     FakeVectorStoreClient.calls = []
-    for module in (core, files):
-        monkeypatch.setattr(module, "OpenAIProcessor", FakeVectorStoreClient)
+    FakeVectorStoreClient.missing = set()
+    FakeVectorStoreClient.expired = set()
+    monkeypatch.setattr(vector_stores, "OpenAIProcessor", FakeVectorStoreClient)
     return FakeVectorStoreClient

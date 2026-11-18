@@ -1,21 +1,24 @@
-"""Shared authorization helpers for per-user data isolation.
-
-Centralizes the ownership/visibility rules used across the API so the same
-pattern is not duplicated in every router:
+"""Who may see and change what: the per-user isolation rules, in one place.
 
 - Sessions (and everything hanging off a session: answers, executions) are
-  visible to their creator/assignee. Admins see everything.
+  visible to their creator and their assignee.
 - DD types are private to their owner (``created_by``); system types
   (``is_system``) and legacy types with no owner (``created_by IS NULL``) are
-  shared and visible to everyone. Admins see everything.
-- Companies (Asset Manager / Fund) are private to their creator
-  (``created_by``); legacy companies with no owner (``created_by IS NULL``) are
-  shared and visible to everyone. Admins see everything.
+  shared with everyone.
+- Companies are private to their creator; legacy companies with no owner are
+  shared with everyone.
+- Admins see and change everything.
+
+The ``assert_*`` functions raise the business errors of core/exceptions.py
+(404 where existence itself must not leak, 403 otherwise).
 """
 
-from fastapi import HTTPException, status
-from sqlalchemy import or_
+from typing import Any
 
+from sqlalchemy import or_
+from sqlmodel import col
+
+from app.core.exceptions import NotFoundError, PermissionDeniedError
 from app.models.company import Company
 from app.models.dd_types import DDType
 from app.models.session import DDSession
@@ -30,19 +33,12 @@ def user_is_admin(user: User) -> bool:
 # --- Sessions (and session-scoped resources) -------------------------------
 
 
-def filter_sessions_for_user(query, user: User):
-    """Restrict a DDSession query to sessions the user may see.
-
-    Admins are unrestricted. Other users see sessions they created or were
-    assigned to. The query must select/filter on the DDSession table.
-    """
+def filter_sessions_for_user(query: Any, user: User) -> Any:
+    """Restrict a query that involves the DDSession table to the user's sessions."""
     if user_is_admin(user):
         return query
     return query.filter(
-        or_(
-            DDSession.created_by == user.id,
-            DDSession.assigned_to == user.id,
-        )
+        or_(col(DDSession.created_by) == user.id, col(DDSession.assigned_to) == user.id)
     )
 
 
@@ -54,30 +50,23 @@ def user_can_access_session(session: DDSession, user: User) -> bool:
 
 
 def assert_session_access(session: DDSession, user: User) -> None:
-    """Raise 403 if the user cannot access the given session."""
+    """Refuse (403) a user who cannot access the session."""
     if not user_can_access_session(session, user):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You don't have permission to access this session",
-        )
+        raise PermissionDeniedError("You don't have permission to access this session")
 
 
 # --- DD types --------------------------------------------------------------
 
 
-def filter_dd_types_for_user(query, user: User):
-    """Restrict a DDType query to types the user may see.
-
-    Admins are unrestricted. Other users see system/shared types
-    (is_system OR created_by IS NULL) plus types they own.
-    """
+def filter_dd_types_for_user(query: Any, user: User) -> Any:
+    """Restrict a DDType query to the types the user may see."""
     if user_is_admin(user):
         return query
     return query.filter(
         or_(
-            DDType.is_system == True,  # noqa: E712 - SQLAlchemy needs ==
-            DDType.created_by == None,  # noqa: E711 - shared/legacy types
-            DDType.created_by == user.id,
+            col(DDType.is_system).is_(True),
+            col(DDType.created_by).is_(None),
+            col(DDType.created_by) == user.id,
         )
     )
 
@@ -90,54 +79,32 @@ def user_can_view_dd_type(dd_type: DDType, user: User) -> bool:
 
 
 def assert_dd_type_view(dd_type: DDType, user: User) -> None:
-    """Raise 404 if the user cannot even see the given DD type.
-
-    404 (not 403) so private types are not enumerable by other users.
-    """
+    """404 for a DD type the user cannot see, so private types are not enumerable."""
     if not user_can_view_dd_type(dd_type, user):
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="DD type not found",
-        )
+        raise NotFoundError("DD type not found")
 
 
 def user_can_modify_dd_type(dd_type: DDType, user: User) -> bool:
-    """Whether the user may modify/delete a single DD type.
-
-    Only the owner (or an admin) may modify. Shared system types are not
-    owned by regular users, so they cannot be modified by them.
-    """
+    """Only the owner (or an admin) may modify; shared types have no owner."""
     if user_is_admin(user):
         return True
     return dd_type.created_by is not None and dd_type.created_by == user.id
 
 
 def assert_dd_type_ownership(dd_type: DDType, user: User) -> None:
-    """Raise 403 if the user may not modify the given DD type."""
+    """Refuse (403) a user who may not modify the DD type."""
     if not user_can_modify_dd_type(dd_type, user):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You don't have permission to modify this DD type",
-        )
+        raise PermissionDeniedError("You don't have permission to modify this DD type")
 
 
-# --- Companies (Asset Manager / Fund) --------------------------------------
+# --- Companies -------------------------------------------------------------
 
 
-def filter_companies_for_user(query, user: User):
-    """Restrict a Company query to companies the user may see.
-
-    Admins are unrestricted. Other users see companies they created plus legacy
-    shared companies with no owner (created_by IS NULL).
-    """
+def filter_companies_for_user(query: Any, user: User) -> Any:
+    """Restrict a Company query to the companies the user may see."""
     if user_is_admin(user):
         return query
-    return query.filter(
-        or_(
-            Company.created_by == None,  # noqa: E711 - shared/legacy companies
-            Company.created_by == user.id,
-        )
-    )
+    return query.filter(or_(col(Company.created_by).is_(None), col(Company.created_by) == user.id))
 
 
 def user_can_view_company(company: Company, user: User) -> bool:
@@ -148,32 +115,19 @@ def user_can_view_company(company: Company, user: User) -> bool:
 
 
 def assert_company_view(company: Company, user: User) -> None:
-    """Raise 404 if the user cannot see the given company.
-
-    404 (not 403) so other users' companies are not enumerable.
-    """
+    """404 for a company the user cannot see, so others' companies are not enumerable."""
     if not user_can_view_company(company, user):
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Company not found",
-        )
+        raise NotFoundError("Company not found")
 
 
 def user_can_modify_company(company: Company, user: User) -> bool:
-    """Whether the user may modify a single company.
-
-    Only the owner (or an admin) may modify. Shared/legacy companies with no
-    owner can only be modified by an admin.
-    """
+    """Only the owner (or an admin) may modify; shared companies only by an admin."""
     if user_is_admin(user):
         return True
     return company.created_by is not None and company.created_by == user.id
 
 
 def assert_company_ownership(company: Company, user: User) -> None:
-    """Raise 403 if the user may not modify the given company."""
+    """Refuse (403) a user who may not modify the company."""
     if not user_can_modify_company(company, user):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You don't have permission to modify this company",
-        )
+        raise PermissionDeniedError("You don't have permission to modify this company")

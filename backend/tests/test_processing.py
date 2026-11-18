@@ -178,3 +178,27 @@ def test_processing_someone_elses_session_is_refused(
     )
     assert response.status_code == 403
     assert engine_client.calls == []
+
+
+def test_a_crash_of_the_run_marks_it_failed(db, run, engine_client, monkeypatch):
+    """The background run must not stay "in progress" forever."""
+
+    def crash(self, *args):
+        raise RuntimeError("the engine fell over")
+
+    monkeypatch.setattr(processor_module.DDProcessor, "start_processing", crash)
+    assert run("start").status_code == 200
+    assert _execution(db).status == ExecutionStatus.FAILED
+
+
+def test_a_private_dd_type_of_someone_else_cannot_be_run(
+    client, analyst, make_user, make_dd_type, make_dd_session, auth_headers, engine_client
+):
+    private = make_dd_type(make_user())
+    session = make_dd_session(analyst)
+    response = client.post(
+        f"/api/processing/session/{session.id}/dd/{private.code}/start",
+        headers=auth_headers(analyst),
+    )
+    assert response.status_code == 404
+    assert engine_client.calls == []

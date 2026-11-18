@@ -128,20 +128,15 @@ plugins = ["pydantic.mypy"]
 # in this list.
 [[tool.mypy.overrides]]
 module = [
-    "app.api.routes.answers",
     "app.api.routes.auth",
     "app.api.routes.dashboard",
     "app.api.routes.dd_types",
-    "app.api.routes.processing",
     "app.api.routes.questions",
-    "app.api.routes.session",
     "app.api.routes.summaries",
-    "app.api.routes.vector_stores.*",
     "app.engine.openai_client",
     "app.engine.processor",
     "app.engine.summarizer",
     "app.exports.answers",
-    "app.services.authz",
     "app.services.file_parser",
 ]
 ignore_errors = true

@@ -3,7 +3,6 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_active_user
 from app.core.database import get_db
-from app.core.utils import get_session_by_identifier
 from app.engine.summarizer import (
     cancel_section_summaries_batch,
     collect_section_summaries_batch,
@@ -20,6 +19,7 @@ from app.schemas.summary import (
     DDSummaryUpdate,
 )
 from app.services.authz import assert_session_access
+from app.services.sessions import get_session_for_user
 
 router = APIRouter()
 
@@ -58,8 +58,7 @@ async def generate_summaries(
     current_user: User = Depends(get_current_active_user),
 ):
     """Generate section summaries + the DD-type synthesis for a session/DD type."""
-    session, session_id = get_session_by_identifier(db, session_identifier)
-    assert_session_access(session, current_user)
+    session = get_session_for_user(db, session_identifier, current_user)
 
     summaries = await generate_summaries_for_dd_type(db, session, dd_type)
 
@@ -86,8 +85,7 @@ async def generate_summaries_via_batch(
     flag: the two return different things, and a union response would blur the
     immediate path's contract.
     """
-    session, session_id = get_session_by_identifier(db, session_identifier)
-    assert_session_access(session, current_user)
+    session = get_session_for_user(db, session_identifier, current_user)
 
     row = submit_section_summaries_batch(db, session, dd_type, current_user.id)
 
@@ -116,8 +114,7 @@ async def get_summary_batch_status(
     which is exactly what leaves executions orphaned today. A batch runs for up
     to 24h, far longer than any process is guaranteed to live.
     """
-    session, session_id = get_session_by_identifier(db, session_identifier)
-    assert_session_access(session, current_user)
+    session = get_session_for_user(db, session_identifier, current_user)
 
     row, info = await collect_section_summaries_batch(db, session, dd_type)
 
@@ -148,8 +145,7 @@ async def cancel_summary_batch(
     from the OpenAI dashboard -- and it kept both generate buttons disabled in
     the meantime. Requests already completed stay billed; the rest are dropped.
     """
-    session, session_id = get_session_by_identifier(db, session_identifier)
-    assert_session_access(session, current_user)
+    session = get_session_for_user(db, session_identifier, current_user)
 
     row, info = cancel_section_summaries_batch(db, session, dd_type)
 
@@ -172,8 +168,8 @@ async def list_summaries(
     current_user: User = Depends(get_current_active_user),
 ):
     """List stored summaries for a session (optionally filtered by DD type code)."""
-    session, session_id = get_session_by_identifier(db, session_identifier)
-    assert_session_access(session, current_user)
+    session = get_session_for_user(db, session_identifier, current_user)
+    session_id = session.id
 
     query = db.query(DDSummary).filter(DDSummary.session_id == session_id)
     if dd_type:

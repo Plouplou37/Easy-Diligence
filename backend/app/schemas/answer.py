@@ -91,16 +91,6 @@ class AnswerResponse(BaseModel):
         return {"value": str(v)}
 
 
-class AnswerWithHistory(BaseModel):
-    """Answer with its complete history"""
-
-    model_config = ConfigDict(from_attributes=True)
-
-    answer: AnswerResponse
-    history: list[dict[str, Any]] = []
-    validations: list[dict[str, Any]] = []
-
-
 # Paginated response types
 class PaginatedAnswerResponse(PaginatedResponse[AnswerResponse]):
     """Paginated response for answer lists"""

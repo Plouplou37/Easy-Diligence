@@ -5,9 +5,8 @@ falls back to memory and a test can never write into a real Redis.
 """
 
 import time
-from types import SimpleNamespace
 
-from app.core.cache import CacheInvalidator, CacheService, cache_response, cache_service
+from app.core.cache import CacheInvalidator, CacheService, cache_service, cached
 
 
 def test_set_get_delete():
@@ -18,14 +17,6 @@ def test_set_get_delete():
     assert cache.get("missing") is None
     assert cache.delete("test_key") is True
     assert cache.get("test_key") is None
-
-
-def test_key_depends_on_its_parameters():
-    cache = CacheService()
-    first = cache._generate_cache_key("test", user_id=123, session_id=456)
-    assert first == cache._generate_cache_key("test", user_id=123, session_id=456)
-    assert first != cache._generate_cache_key("test", user_id=123, session_id=789)
-    assert first.startswith("test:")
 
 
 def test_entries_expire():
@@ -59,37 +50,18 @@ def test_unserialisable_value_is_refused_quietly():
     assert isinstance(CacheService().set("bad", object()), bool)
 
 
-# --- The decorator, as the routes use it: keyword arguments only (FastAPI calls
-# endpoints that way). The key holds the user and the key_params, nothing else.
+# --- cached(): what the vector store service uses.
 
 
-async def test_decorator_caches_per_user():
+def test_cached_computes_once_then_serves_the_stored_value():
     calls = []
 
-    @cache_response(prefix="per_user", ttl=60)
-    async def endpoint(current_user=None):
-        calls.append(current_user.id)
-        return {"user": current_user.id, "call": len(calls)}
+    def compute():
+        calls.append(1)
+        return [{"id": "vs_1"}]
 
-    alice, bob = SimpleNamespace(id=1), SimpleNamespace(id=2)
-    assert (await endpoint(current_user=alice))["call"] == 1
-    assert (await endpoint(current_user=alice))["call"] == 1  # served from cache
-    assert (await endpoint(current_user=bob))["call"] == 2  # another user, another entry
-    assert calls == [1, 2]
-
-
-async def test_decorator_keys_on_the_listed_parameters_only():
-    calls = []
-
-    @cache_response(prefix="per_store", ttl=60, key_params=["vector_store_id"])
-    async def endpoint(vector_store_id: str, detail: str = "", current_user=None):
-        calls.append(vector_store_id)
-        return {"store": vector_store_id, "detail": detail}
-
-    user = SimpleNamespace(id=1)
-    await endpoint(vector_store_id="vs_1", detail="first", current_user=user)
-    # Same store, other unlisted parameter: still the cached answer.
-    cached = await endpoint(vector_store_id="vs_1", detail="second", current_user=user)
-    assert cached["detail"] == "first"
-    await endpoint(vector_store_id="vs_2", detail="third", current_user=user)
-    assert calls == ["vs_1", "vs_2"]
+    assert cached("vector_stores:1", 60, compute) == [{"id": "vs_1"}]
+    assert cached("vector_stores:1", 60, compute) == [{"id": "vs_1"}]
+    assert len(calls) == 1
+    assert cached("vector_stores:2", 60, compute) == [{"id": "vs_1"}]  # another key
+    assert len(calls) == 2

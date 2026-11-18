@@ -56,4 +56,12 @@ def enum_type(enum_cls: type[enum.Enum], name: str, *, store_values: bool = Fals
     )
 
 
-__all__ = ["JSONType", "TIMESTAMP", "SQLModel", "enum_type", "timestamp_field"]
+def stored_id(row: Any) -> int:
+    """The id of a stored row. Typed optional on the models (None until the
+    insert); once a row is read from or written to the database, it is set."""
+    if row.id is None:
+        raise ValueError(f"{type(row).__name__} has not been stored yet")
+    return int(row.id)
+
+
+__all__ = ["JSONType", "TIMESTAMP", "SQLModel", "enum_type", "stored_id", "timestamp_field"]

@@ -11,11 +11,14 @@ du frontend. Pour installer et lancer l'application, voir le
   Pydantic), PostgreSQL 17 via psycopg 3, migrations Alembic.
   Code dans `backend/app/`, routes sous le préfixe `/api` :
   - `api/` : l'assemblage des routers (`router.py`), un router par ressource
-    (`routes/`) et les dépendances communes (`deps.py`) ;
+    (`routes/`) et les dépendances communes (`deps.py` : l'utilisateur, la
+    session et le type de DD lus dans l'URL, droits vérifiés) ;
   - `core/` : le transverse (configuration, base, sécurité, cache, e-mail) ;
   - `engine/` : le moteur de réponses ;
-  - `services/` : la logique métier (authentification, droits, import de
-    questionnaires) ;
+  - `services/` : la logique métier et les accès à la base (`sessions`,
+    `answers`, `processing`, `vector_stores`, `dd_types`, `authz`, `auth`,
+    `file_parser`). Les services lèvent les erreurs de `core/exceptions.py` et
+    ne connaissent pas FastAPI ;
   - `exports/` : les exports PDF et Excel ;
   - `models/` et `schemas/`.
 - **Frontend** : React 18, Vite 4, Tailwind 3, axios et react-router. Code dans
@@ -315,18 +318,27 @@ Les fonctions communes sont dans **`services/authz.py`** : `user_is_admin`,
   créateur (`created_by IS NULL`) sont **partagés**. Tout utilisateur peut en
   créer. Seuls le propriétaire ou un administrateur peuvent les valider.
 - **Vector stores** : la liste est filtrée par `created_by`, et l'accès aux
-  fichiers est réservé au propriétaire. Les stores expirés ou introuvables chez
-  OpenAI sont retirés de la base.
+  fichiers est réservé au propriétaire.
+  - **Stores disparus chez OpenAI** : une lecture ne supprime rien. Un store
+    expiré ou introuvable apparaît avec le statut `expired` ou `missing`, et
+    `POST /vector-stores/refresh` (le bouton Rafraîchir) le retire de la base
+    avec ses assignations.
   - Les **assignations**, elles, se partagent : le store d'un collègue peut servir
     une session. La carte de la session lit donc le nom du store dans
-    l'assignation (`vector_store_name`), et non dans la liste filtrée.
+    l'assignation (`vector_store_name`), et non dans la liste filtrée. Toute
+    personne qui a accès à la session gère ses assignations.
   - **Portée d'une assignation** : `session_vector_stores.dd_type_id` désigne un
     type de DD précis, `NULL` toute la session.
-    `get_vector_store_ids_for_processing` donne la priorité à l'assignation
-    propre au type.
+    `processing.vector_store_ids_for` donne la priorité à l'assignation propre
+    au type.
+  - **Cache** : la liste des stores et les fichiers de chaque store sont gardés
+    cinq minutes (ils interrogent OpenAI). Toute modification vide l'ensemble.
 - **Sociétés** : filtrées par `created_by`. Celles sans créateur sont partagées.
-- **`/processing`** (`start`, `pause`, `resume`, `progress`) : chaque endpoint
-  exige un utilisateur connecté et appelle `assert_session_access`.
+- **`/processing`** (`start`, `pause`, `resume`, `progress`) : la session et le
+  type de DD passent par les dépendances communes. Un type de DD privé d'un
+  autre utilisateur ne peut pas être lancé (404).
+- **Création d'une session** : seuls les types de DD que l'utilisateur voit
+  sont retenus.
 - Frontend : l'intercepteur de `services/api.js` gère les réponses 403. Les pages
   `/dd-types` et `/questions` sont ouvertes à tous les rôles.
 

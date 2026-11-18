@@ -16,8 +16,9 @@ Guide court pour un agent qui travaille sur Easy Diligence. Le reste est dans :
   - `core/` : le transverse (config, database, sécurité, cache, e-mail) ;
   - `engine/` : le moteur de réponses (`openai_client.py`, `processor.py`,
     `summarizer.py`) ;
-  - `services/` : la logique métier (authentification, droits, import de
-    questionnaires) ;
+  - `services/` : la logique métier et les accès à la base (sessions, réponses,
+    traitement, vector stores, droits, authentification, import). Une route lit
+    la requête, appelle un service et répond ;
   - `exports/` : les exports PDF et Excel ;
   - `models/` (SQLModel, une classe par table) et `schemas/` (Pydantic) ;
   - `alembic/` : les migrations de la base.
@@ -46,6 +47,14 @@ Guide court pour un agent qui travaille sur Easy Diligence. Le reste est dans :
   lever une exception de `core/exceptions.py`, dont le message est écrit pour
   l'utilisateur. Pour le reste, `logger.exception(...)` puis un message
   générique.
+- **Routes en `def` simple** : FastAPI les exécute dans un pool de threads.
+  Une `async def` qui appelle la base ou OpenAI, deux bibliothèques
+  synchrones, bloque tout le serveur. `async def` est réservé aux routes qui
+  lisent un fichier envoyé (`read_upload`) ; elles passent ensuite la suite au
+  pool avec `run_in_threadpool`.
+- **Une session ou un type de DD lus dans l'URL** passent par les dépendances
+  `get_accessible_session` et `get_visible_dd_type` de `api/deps.py`, qui
+  vérifient les droits.
 - **Authentification** : tout endpoint qui demande un utilisateur passe par
   `api/deps.py` (`get_current_active_user`, `get_current_admin_user`). Ne pas
   décoder un jeton ailleurs.

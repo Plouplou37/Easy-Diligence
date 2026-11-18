@@ -51,6 +51,29 @@
   pendant cinq minutes (cache).
 - La page d'administration ne pouvait changer ni le rôle ni le statut d'un
   utilisateur (méthode HTTP erronée).
+- L'export reprenait toutes les versions d'une réponse : une question
+  régénérée apparaissait deux fois dans le rapport. Il ne garde plus que la
+  version courante.
+- Un administrateur ou la personne assignée à une session ne pouvaient pas en
+  gérer les vector stores.
+- Une nouvelle session pouvait inclure les types de DD privés d'un autre
+  utilisateur. Un type de DD privé d'un autre ne peut plus être lancé.
+
+### Services
+
+- La logique et les accès à la base des réponses, des sessions, du traitement
+  et des vector stores passent dans `services/`. Les routes ne font plus que
+  lire la requête, appeler un service et répondre.
+- Les routes sont des fonctions simples : une route asynchrone qui appelait la
+  base ou OpenAI bloquait tout le serveur pendant l'appel.
+- La session et le type de DD lus dans l'URL passent par deux dépendances
+  communes, qui vérifient les droits.
+- Lire la liste des vector stores ne supprime plus rien : un store disparu
+  chez OpenAI apparaît comme `expired` ou `missing`, et le bouton Rafraîchir le
+  retire.
+- Supprimés, car en double : six variantes de l'historique d'une réponse
+  (`with-history`, `versions/{v}`, `original`, `history/{v}/raw`,
+  `by-execution`, `POST validate`) et `/dd-types/code/{code}`.
 
 ### Nettoyage
 

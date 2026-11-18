@@ -197,7 +197,7 @@ backend/              API FastAPI
     api/              router.py, routes/ (un router par ressource), deps.py
     core/             transverse : config, base, sécurité, cache, e-mail
     engine/           moteur de réponses : client OpenAI, traitement, synthèses
-    services/         logique métier : authentification, droits, import
+    services/         logique métier et accès à la base
     exports/          exports PDF et Excel
     models/           modèles SQLModel (une classe par table)
     schemas/          schémas Pydantic

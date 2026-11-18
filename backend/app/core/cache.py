@@ -1,13 +1,13 @@
-"""
-Redis caching service for API response optimization with in-memory fallback
+"""Cache of slow reads (Redis, or memory when Redis is unreachable).
+
+Only the vector store routes use it: their lists ask OpenAI about every store.
 """
 
-import hashlib
 import json
 import logging
 import threading
 import time
-from functools import wraps
+from collections.abc import Callable
 from typing import Any
 
 import redis
@@ -89,21 +89,6 @@ class CacheService:
             self.memory_cache = InMemoryCache()
             logger.info("In-memory cache enabled")
 
-    def _generate_cache_key(self, prefix: str, **kwargs) -> str:
-        """Generate cache key from prefix and parameters."""
-        # Extract vector_store_id if present for better cache key readability and pattern matching
-        vector_store_id = kwargs.get("vector_store_id", None)
-
-        # Create a copy without vector_store_id for hashing
-        remaining_params = {k: v for k, v in kwargs.items() if k != "vector_store_id"}
-        params_str = json.dumps(remaining_params, sort_keys=True)
-        params_hash = hashlib.md5(params_str.encode()).hexdigest()[:8]
-
-        # Include vector_store_id directly in key if present
-        if vector_store_id:
-            return f"{prefix}:{vector_store_id}:{params_hash}"
-        return f"{prefix}:{params_hash}"
-
     def get(self, key: str) -> Any | None:
         """Get value from cache."""
         if self.redis_available:
@@ -178,67 +163,18 @@ class CacheService:
 cache_service = CacheService()
 
 
-def cache_response(
-    prefix: str, ttl: int = 300, key_params: list | None = None, user_specific: bool = True
-):
+def cached(key: str, ttl: int, compute: Callable[[], Any]) -> Any:
+    """The value stored under `key`, or else `compute()`, stored for `ttl` seconds.
+
+    The value must be plain data (dicts, lists, strings, numbers): Redis keeps
+    it as JSON, dates turned into strings.
     """
-    Decorator for caching API responses.
-
-    Args:
-        prefix: Cache key prefix (e.g., 'sessions', 'companies')
-        ttl: Time to live in seconds (default: 5 minutes)
-        key_params: List of parameter names to include in cache key
-        user_specific: Whether to include user ID in cache key
-    """
-
-    def decorator(func):
-        @wraps(func)
-        async def wrapper(*args, **kwargs):
-            # Extract current user if user_specific caching
-            cache_key_params = {}
-
-            if user_specific and "current_user" in kwargs:
-                cache_key_params["user_id"] = kwargs["current_user"].id
-
-            # Include specified parameters in cache key
-            if key_params:
-                for param in key_params:
-                    if param in kwargs:
-                        cache_key_params[param] = kwargs[param]
-
-            # Generate cache key
-            cache_key = cache_service._generate_cache_key(prefix, **cache_key_params)
-
-            # Try to get from cache
-            cached_result = cache_service.get(cache_key)
-            if cached_result is not None:
-                logger.debug(f"Cache HIT for key: {cache_key}")
-                return cached_result
-            else:
-                logger.debug(f"Cache MISS for key: {cache_key}")
-
-            # Execute function and cache result
-            result = await func(*args, **kwargs)
-
-            # Pydantic models are stored as plain data.
-            if hasattr(result, "model_dump"):
-                cache_data = result.model_dump()
-            elif isinstance(result, list):
-                cache_data = [
-                    item.model_dump() if hasattr(item, "model_dump") else item for item in result
-                ]
-            else:
-                cache_data = result
-
-            # Cache the result
-            cache_service.set(cache_key, cache_data, ttl)
-            logger.debug(f"Cache SET for key: {cache_key} with TTL: {ttl}s")
-
-            return result
-
-        return wrapper
-
-    return decorator
+    hit = cache_service.get(key)
+    if hit is not None:
+        return hit
+    value = compute()
+    cache_service.set(key, value, ttl)
+    return value
 
 
 class CacheInvalidator:
@@ -247,6 +183,7 @@ class CacheInvalidator:
 
     @staticmethod
     def invalidate_vector_store_cache() -> int:
-        """Clear every vector store entry. The list's key does not carry store
-        ids, so clearing a single store's entries would leave it stale."""
+        """Clear every vector store entry (the lists and the files). The list's
+        key does not carry store ids, so clearing one store's entries would
+        leave the lists stale."""
         return cache_service.delete_pattern("vector_store*")

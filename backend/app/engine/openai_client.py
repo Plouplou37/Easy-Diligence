@@ -1,9 +1,9 @@
-import asyncio
 import json
 import logging
 import os
 import re
 import time
+from concurrent.futures import ThreadPoolExecutor
 from io import BytesIO
 from typing import Any
 
@@ -217,7 +217,7 @@ class OpenAIProcessor:
             ]
         }
 
-    async def create_vector_store(self, name: str, expires_after_days: int | None = None) -> str:
+    def create_vector_store(self, name: str, expires_after_days: int | None = None) -> str:
         """Create a vector store for document analysis with optional expiration policy"""
         try:
             params = {"name": name}
@@ -232,7 +232,7 @@ class OpenAIProcessor:
             logger.error(f"Error creating vector store: {e}")
             raise
 
-    async def upload_file(self, file_content: bytes, filename: str) -> str:
+    def upload_file(self, file_content: bytes, filename: str) -> str:
         """Upload a file to OpenAI for analysis"""
         try:
             file_tuple = (filename, BytesIO(file_content))
@@ -243,7 +243,7 @@ class OpenAIProcessor:
             logger.error(f"Error uploading file {filename}: {e}")
             raise
 
-    async def add_file_to_vector_store(
+    def add_file_to_vector_store(
         self, vector_store_id: str, file_id: str, chunking_strategy: dict[str, Any] | None = None
     ) -> dict[str, Any]:
         """Add a file to an existing vector store with optional chunking strategy"""
@@ -262,7 +262,7 @@ class OpenAIProcessor:
             logger.error(f"Error adding file to vector store: {e}")
             raise
 
-    async def wait_for_file_indexed(
+    def wait_for_file_indexed(
         self, vector_store_id: str, file_id: str, timeout: int = 30, interval: int = 2
     ) -> bool:
         """Best-effort wait until a vector store file is indexed (status 'completed').
@@ -285,7 +285,7 @@ class OpenAIProcessor:
             except Exception as e:
                 logger.warning(f"Error polling file {file_id} status: {e}")
                 return False
-            await asyncio.sleep(interval)
+            time.sleep(interval)
             elapsed += interval
         logger.warning(f"File {file_id} not indexed within {timeout}s (continuing anyway)")
         return False
@@ -1193,7 +1193,7 @@ Format your answers like a professional analyst responding to specific due dilig
 
     # === Vector Store Management Methods ===
 
-    async def get_vector_store_info(self, vector_store_id: str) -> dict[str, Any]:
+    def get_vector_store_info(self, vector_store_id: str) -> dict[str, Any]:
         """Get detailed information about a vector store including expiration"""
         try:
             logger.info(f"Retrieving vector store info for: {vector_store_id}")
@@ -1293,7 +1293,7 @@ Format your answers like a professional analyst responding to specific due dilig
             logger.error(f"Exception type: {type(e)}")
             raise
 
-    async def update_vector_store_name(self, vector_store_id: str, name: str) -> bool:
+    def update_vector_store_name(self, vector_store_id: str, name: str) -> bool:
         """Update the name of a vector store"""
         try:
             self.client.vector_stores.update(vector_store_id, name=name)
@@ -1302,16 +1302,14 @@ Format your answers like a professional analyst responding to specific due dilig
             logger.error(f"Error updating vector store name: {e}")
             raise
 
-    async def list_vector_store_files(self, vector_store_id: str) -> list[dict[str, Any]]:
+    def list_vector_store_files(self, vector_store_id: str) -> list[dict[str, Any]]:
         """List all files in a vector store with detailed information including attributes"""
         try:
             files = self.client.vector_stores.files.list(vector_store_id=vector_store_id, limit=100)
 
-            # Helper function to fetch file details in parallel
-            async def fetch_file_details(file_obj):
+            def fetch_file_details(file_obj):
                 try:
-                    # Run the synchronous API call in a thread pool
-                    file_details = await asyncio.to_thread(self.client.files.retrieve, file_obj.id)
+                    file_details = self.client.files.retrieve(file_obj.id)
                     return {
                         "id": file_obj.id,
                         "filename": file_details.filename,
@@ -1336,17 +1334,14 @@ Format your answers like a professional analyst responding to specific due dilig
                         else None,
                     }
 
-            # Fetch all file details in parallel using asyncio.gather
-            file_list = await asyncio.gather(
-                *[fetch_file_details(file_obj) for file_obj in files.data]
-            )
-
-            return list(file_list)
+            # One request per file: run them side by side.
+            with ThreadPoolExecutor(max_workers=8) as pool:
+                return list(pool.map(fetch_file_details, files.data))
         except Exception as e:
             logger.error(f"Error listing vector store files: {e}")
             raise
 
-    async def remove_file_from_vector_store(self, vector_store_id: str, file_id: str) -> bool:
+    def remove_file_from_vector_store(self, vector_store_id: str, file_id: str) -> bool:
         """Remove a file from a vector store"""
         try:
             self.client.vector_stores.files.delete(vector_store_id=vector_store_id, file_id=file_id)
@@ -1355,7 +1350,7 @@ Format your answers like a professional analyst responding to specific due dilig
             logger.error(f"Error removing file from vector store: {e}")
             raise
 
-    async def delete_vector_store(self, vector_store_id: str) -> bool:
+    def delete_vector_store(self, vector_store_id: str) -> bool:
         """Delete a vector store entirely"""
         try:
             self.client.vector_stores.delete(vector_store_id)
@@ -1364,7 +1359,7 @@ Format your answers like a professional analyst responding to specific due dilig
             logger.error(f"Error deleting vector store: {e}")
             raise
 
-    async def delete_file(self, file_id: str) -> bool:
+    def delete_file(self, file_id: str) -> bool:
         """Delete a file from OpenAI completely"""
         try:
             self.client.files.delete(file_id)
@@ -1373,7 +1368,7 @@ Format your answers like a professional analyst responding to specific due dilig
             logger.error(f"Error deleting file: {e}")
             raise
 
-    async def get_file(self, file_id: str) -> dict[str, Any]:
+    def get_file(self, file_id: str) -> dict[str, Any]:
         """Retrieve file information including expiration details"""
         try:
             file_obj = self.client.files.retrieve(file_id)
