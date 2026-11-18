@@ -2,6 +2,18 @@
 
 ## Non publié
 
+### Frontend : couches
+
+- Le code est rangé en Feature-Sliced Design (`app`, `pages`, `widgets`,
+  `features`, `entities`, `shared`), et le lint refuse un import qui remonte
+  les couches ou passe d'une tranche à sa voisine.
+- Une seule mise en page pour toutes les pages, une page 404, et `/login`
+  renvoie au tableau de bord quand on est déjà connecté.
+- Une session expirée renvoie à la page de connexion sans recharger
+  l'application.
+- Les types de DD sont chargés une fois et partagés : la page d'une session en
+  demandait la structure complète une fois par carte.
+
 ### Frontend : socle
 
 - Le frontend appelle l'API en relatif, sur `/api` : plus d'URL propre à une

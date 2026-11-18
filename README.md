@@ -205,13 +205,13 @@ backend/              API FastAPI
   scripts/            import et mise à jour de questionnaires
   tests/
 frontend/             application React (Vite, Tailwind)
-  src/
+  src/                Feature-Sliced Design, du haut vers le bas :
+    app/              routeur, fournisseurs (thème, connexion), styles globaux
     pages/            une page par route
-    features/         revue des réponses, questionnaires, vector stores
-    components/       composants partagés, dont components/ui
-    contexts/         connexion, thème
-    services/         client HTTP
-    utils/            statuts, libellés, formats
+    widgets/          blocs de page : mise en page, carte d'un type de DD
+    features/         actions de l'utilisateur
+    entities/         objets métier : appels d'API, modèle, petits composants
+    shared/           client HTTP, composants d'interface, utilitaires
 examples/             questionnaire d'exemple au format d'import
 docs/ARCHITECTURE.md  conception détaillée
 .github/workflows/    intégration continue

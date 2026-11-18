@@ -346,7 +346,7 @@ Les fonctions communes sont dans **`services/authz.py`** : `user_is_admin`,
   autre utilisateur ne peut pas être lancé (404).
 - **Création d'une session** : seuls les types de DD que l'utilisateur voit
   sont retenus.
-- Frontend : l'intercepteur de `services/api.js` gère les réponses 403. Les pages
+- Frontend : l'intercepteur de `shared/api/client.js` gère les réponses 403. Les pages
   `/dd-types` et `/questions` sont ouvertes à tous les rôles.
 
 ## Fonctionnalités
@@ -495,7 +495,7 @@ Le parser est `services/file_parser.py`, et un exemple se trouve dans
   identifiant), mais filtrer des réponses par section demande aussi le type de
   DD, et l'export suit l'ordre du questionnaire, pas celui des codes ;
 - le code est la référence affichée : par le badge de l'écran
-  (`utils/questionCode.js`), devant la question dans l'export PDF, et par
+  (`entities/dd-type/lib/questionCode.js`), devant la question dans l'export PDF, et par
   `scripts/update_questionnaire.py` pour l'alignement. Les trois lisent aussi
   l'ancienne forme, `A.01-_96323997` (référence, horodatage et nombre
   aléatoire).
@@ -533,9 +533,9 @@ Les scripts se lancent aussi depuis `backend/` : `uv run python scripts/<script>
 
 - **Thème** : `data-theme="light|dark"` sur `<html>`, posé avant le premier
   affichage par un script en ligne dans `index.html`. La préférence est stockée
-  dans `DD_THEME` (`light`, `dark` ou `system`). `contexts/ThemeContext.jsx`
+  dans `DD_THEME` (`light`, `dark` ou `system`). `shared/lib/theme/ThemeContext.jsx`
   expose `mode`, `resolvedTheme`, `setMode`, `darkMode` et `toggleDarkMode`.
-- **Les couleurs sont des variables CSS**, déclarées dans `src/index.css` (un bloc
+- **Les couleurs sont des variables CSS**, déclarées dans `src/app/styles/index.css` (un bloc
   par thème) et exposées par `tailwind.config.js` via `color-mix`, si bien que
   l'opacité Tailwind fonctionne (`bg-accent-blue/10`).
   - Les tokens : `bg-surface`, `bg-surface-bg`, `bg-surface-hover`,
@@ -544,21 +544,21 @@ Les scripts se lancent aussi depuis `backend/` : `uv run python scripts/<script>
     `accent-blue|green|deep|gold`, `primary-dark` et `bleu-atlantis`.
   - **Règle : aucune couleur de la palette Tailwind (gray, blue…) et aucune
     variante `dark:`.** Un token suit les deux thèmes tout seul.
-- **Classes maison** (`src/index.css`, dans `@layer components`, donc
+- **Classes maison** (`src/app/styles/index.css`, dans `@layer components`, donc
   surchargeables par les utilitaires) : `eyebrow`, `form-input`, `form-surface`,
   `pill-action`, `alert-*`, `live-indicator`, `hairline-gradient`, `rail-accent`,
   `side-gradient(-2)`, `gradient-grey-border-hover`, `analysis-link`,
   `modal-backdrop`, `navbar-spacing` et `bg-auth`.
   - `input-gradient-border` ne se combine jamais avec une classe
     `border-<couleur>`, car il lui faut sa bordure transparente.
-- **Recettes partagées** : `components/ui/styles.js` (`pageHeader`,
+- **Recettes partagées** : `shared/ui/styles.js` (`pageHeader`,
   `sectionHeader`, `panel`, `tableStyles`, `modalStyles`, `field`, `tabs`, `menu`,
   `emptyState`). Ce sont des chaînes de classes, pas des composants.
 - **Statuts** :
-  - `utils/statusStyles.js` est la **seule** correspondance entre un statut et son
+  - `shared/lib/status/statusStyles.js` est la **seule** correspondance entre un statut et son
     ton (neutral, info, warning, success, error, brand). `Badge` s'y branche.
-  - Les libellés sont dans `utils/statusLabels.js`.
-  - Le statut d'une session est calculé dans `utils/executionStatus.js`
+  - Les libellés sont dans `shared/lib/status/statusLabels.js`.
+  - Le statut d'une session est calculé dans `entities/execution/lib/executionStatus.js`
     (`getSessionStatus`, `getSessionProgress`), partagé par le tableau de bord et
     la page de session.
   - `under_review`, `validated` et `finalized` sont des états **terminaux**
@@ -569,7 +569,7 @@ Les scripts se lancent aussi depuis `backend/` : `uv run python scripts/<script>
     de couleur : l'ordre des feuilles de style déciderait alors du gagnant.
   - `LoadingSpinner` : en tailles lg et xl, le logo traversé par un reflet.
   - `Modal` : se ferme avec Échap.
-  - Dans `components/ui/` : `PageHeader`, `StatTile`, `EmptyState`,
+  - Dans `shared/ui/` : `PageHeader`, `StatTile`, `EmptyState`,
     `SearchInput` et `StatusBadge`.
 - **Gabarit** : toutes les pages utilisent `pageLayout.container` (`max-w-7xl`) et
   l'en-tête `PageHeader` (fil d'Ariane, titre, actions à droite). Les détails

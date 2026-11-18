@@ -24,7 +24,11 @@ Guide court pour un agent qui travaille sur Easy Diligence. Le reste est dans :
     renvoie (création, mise à jour, réponse). Les champs communs sont dans une
     classe de base ;
   - `alembic/` : les migrations de la base.
-- Frontend React dans `frontend/src/`.
+- Frontend React dans `frontend/src/`, en Feature-Sliced Design : `app` >
+  `pages` > `widgets` > `features` > `entities` > `shared`. Une couche n'importe
+  que les couches du dessous, et une tranche n'importe pas une autre tranche de
+  sa couche : `npm run lint` le vérifie (`eslint-plugin-boundaries`). D'une
+  tranche à l'autre, on passe par son `index.js` et par l'alias `@/`.
 - La configuration est lue par `backend/app/core/config.py`. Chaque variable est
   décrite dans `.env.template` : une variable ajoutée au code doit l'être aussi
   dans ce fichier.
