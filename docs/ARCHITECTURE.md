@@ -7,7 +7,8 @@ du frontend. Pour installer et lancer l'application, voir le
 
 ## Stack
 
-- **Backend** : FastAPI (Python 3.12), SQLAlchemy 2, MySQL 8 via PyMySQL.
+- **Backend** : FastAPI (Python 3.12), modèles SQLModel (SQLAlchemy 2 et
+  Pydantic), PostgreSQL 17 via psycopg 3, migrations Alembic.
   Code dans `backend/app/`, routes sous le préfixe `/api` :
   - `api/` : l'assemblage des routers (`router.py`), un router par ressource
     (`routes/`) et les dépendances communes (`deps.py`) ;
@@ -32,18 +33,41 @@ du frontend. Pour installer et lancer l'application, voir le
 
 ## Base de données
 
-- Les tables sont créées au démarrage par `Base.metadata.create_all`. Cette
-  fonction crée les tables manquantes mais **ne modifie pas** une table existante.
-- `backend/migrations/` contient les anciens correctifs SQL, appliqués à la main
-  sur une base existante. Une base neuve n'en a pas besoin.
-- ⚠️ **Autocommit au niveau du pilote.** `app/core/database.py` passe
-  `connect_args={'autocommit': True}` à PyMySQL, alors que
-  `sessionmaker(autocommit=False)` laisse croire à des transactions. Chaque
-  instruction est donc validée immédiatement, et `db.rollback()` n'annule rien.
-  - Une écriture en plusieurs requêtes qui échoue au milieu reste partielle.
-  - Un test qui compte sur un rollback pour « ne rien écrire » écrit bel et bien.
-    Les tests doivent utiliser un faux client et une fausse session, jamais une
-    vraie base.
+- **PostgreSQL**, configuré par `POSTGRES_*` ou `DATABASE_URL`
+  (`core/database_settings.py`). Les tests tournent sur SQLite en mémoire.
+- **Alembic possède le schéma** : `alembic upgrade head` crée la base puis
+  applique chaque évolution, sans toucher aux données. L'application ne crée
+  aucune table au démarrage.
+  - La migration `0001_initial_schema` crée toute la base. Elle a été générée
+    depuis les modèles puis relue. Elle reprend l'état final des anciens
+    correctifs SQL appliqués à la main sur la base MySQL : les index, les
+    cascades et les contraintes `CHECK`.
+  - `db/schema.sql` est le même schéma en un seul script SQL, régénéré avec
+    `alembic upgrade head --sql`.
+  - `alembic check` vérifie que les migrations correspondent aux modèles.
+  - Alembic ne lit que les réglages de la base (`DatabaseSettings`) : une
+    migration ne demande ni la clé OpenAI ni la clé JWT.
+- **Les modèles** (`models/`) sont en SQLModel : chaque table est à la fois un
+  modèle SQLAlchemy et un modèle Pydantic. `models/base.py` fixe :
+  - une **convention de nommage** des contraintes, pour que les migrations
+    puissent les retrouver par leur nom ;
+  - le type JSON (JSONB sous PostgreSQL) ;
+  - les dates en `TIMESTAMP WITH TIME ZONE`, remplies par la base ;
+  - les énumérations, stockées en texte avec une contrainte `CHECK` plutôt qu'en
+    type `ENUM` natif : ajouter un membre ne demande pas d'`ALTER TYPE`.
+- **Index** : PostgreSQL n'indexe pas les clés étrangères automatiquement,
+  contrairement à MySQL. Les colonnes de jointure sont donc indexées
+  explicitement dans les modèles.
+- **Requêtes typées** : SQLModel type les colonnes comme des valeurs Python. Pour
+  que mypy accepte un filtre, entourer la colonne de `col()` :
+  `.filter(col(User.id) == user_id)`.
+- **Transactions réelles** : rien n'est écrit avant `commit()`, et `rollback()`
+  annule tout depuis le dernier commit. La base MySQL d'origine forçait
+  l'autocommit au niveau du pilote, si bien que les rollbacks n'avaient aucun
+  effet.
+- **Adresses e-mail** : enregistrées et comparées en minuscules
+  (`schemas/user.py`, type `Email`). PostgreSQL compare le texte en tenant
+  compte de la casse.
 
 ## Modèle de données
 

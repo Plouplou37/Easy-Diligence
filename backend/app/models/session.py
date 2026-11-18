@@ -1,10 +1,17 @@
 import enum
+from datetime import datetime
+from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import Column, DateTime, Enum, ForeignKey, Integer, String, Text
-from sqlalchemy.orm import relationship
-from sqlalchemy.sql import func
+from sqlalchemy import Index, Text
+from sqlmodel import Field, Relationship
 
-from app.core.database import Base
+from app.models.base import SQLModel, enum_type, timestamp_field
+
+if TYPE_CHECKING:
+    from app.models.answer import DDAnswer
+    from app.models.company import Company
+    from app.models.execution import DDExecution
+    from app.models.user import User
 
 
 class SessionStatus(str, enum.Enum):
@@ -16,36 +23,38 @@ class SessionStatus(str, enum.Enum):
     PAUSED = "paused"
 
 
-class DDSession(Base):
+class DDSession(SQLModel, table=True):
     __tablename__ = "dd_sessions"
+    __table_args__ = (Index("ix_dd_sessions_company_status", "company_id", "status"),)
 
-    id = Column(Integer, primary_key=True, index=True)
-    session_code = Column(
-        String(50), unique=True, index=True, nullable=True
-    )  # Unique session identifier
-    company_id = Column(Integer, ForeignKey("companies.id"), nullable=False)
-    name = Column(String(255), nullable=False)
-    description = Column(Text, nullable=True)
-    status = Column(Enum(SessionStatus), default=SessionStatus.CREATED)
-    created_by = Column(
-        Integer, ForeignKey("users.id"), nullable=True
-    )  # User who created the session
-    assigned_to = Column(
-        Integer, ForeignKey("users.id"), nullable=True
-    )  # User assigned to work on it
+    id: int | None = Field(default=None, primary_key=True)
+    session_code: str | None = Field(default=None, max_length=50, unique=True, index=True)
+    company_id: int = Field(foreign_key="companies.id")
+    name: str = Field(max_length=255)
+    description: str | None = Field(default=None, sa_type=Text)
+    status: SessionStatus | None = Field(
+        default=SessionStatus.CREATED, sa_type=enum_type(SessionStatus, "session_status")
+    )
+    created_by: int | None = Field(default=None, foreign_key="users.id", index=True)
+    assigned_to: int | None = Field(default=None, foreign_key="users.id", index=True)
 
-    # DD type versioning - Sessions are bound to specific DD type configurations
-    # This ensures session isolation when DD types evolve
-    dd_types_json = Column(
-        Text, nullable=True
-    )  # JSON array of selected DD type IDs for this session
+    # DD types selected for this session: a JSON array of DD type ids. Binds the
+    # session to them even as the DD types evolve.
+    dd_types_json: str | None = Field(default=None, sa_type=Text)
 
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    created_at: datetime | None = timestamp_field()
+    updated_at: datetime | None = timestamp_field(updated=True)
 
-    # Relationships
-    company = relationship("Company", back_populates="sessions")
-    answers = relationship("DDAnswer", back_populates="session")
-    creator = relationship("User", back_populates="sessions_created", foreign_keys=[created_by])
-    assignee = relationship("User", back_populates="sessions_assigned", foreign_keys=[assigned_to])
-    executions = relationship("DDExecution", back_populates="session", cascade="all, delete-orphan")
+    company: Optional["Company"] = Relationship(back_populates="sessions")
+    answers: list["DDAnswer"] = Relationship(back_populates="session")
+    creator: Optional["User"] = Relationship(
+        back_populates="sessions_created",
+        sa_relationship_kwargs={"foreign_keys": "DDSession.created_by"},
+    )
+    assignee: Optional["User"] = Relationship(
+        back_populates="sessions_assigned",
+        sa_relationship_kwargs={"foreign_keys": "DDSession.assigned_to"},
+    )
+    executions: list["DDExecution"] = Relationship(
+        back_populates="session", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    )

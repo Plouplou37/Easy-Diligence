@@ -1,6 +1,7 @@
 from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
+from sqlmodel import col
 
 from app.core.exceptions import ConflictError
 from app.core.security import (
@@ -18,8 +19,8 @@ def _now() -> datetime:
 
 
 def authenticate_user(db: Session, email: str, password: str) -> User | None:
-    """Authenticate a user by email and password."""
-    user = db.query(User).filter(User.email == email).first()
+    """Authenticate a user by email (any case) and password."""
+    user = get_user_by_email(db, email)
     if not user:
         return None
     if not verify_password(password, user.password_hash):
@@ -37,7 +38,7 @@ def create_user(db: Session, profile: UserProfile, password: str, role: Role = "
     self-registration always passes the default."""
     existing_user = (
         db.query(User)
-        .filter((User.email == profile.email) | (User.username == profile.username))
+        .filter((col(User.email) == profile.email) | (col(User.username) == profile.username))
         .first()
     )
 
@@ -65,17 +66,17 @@ def create_user(db: Session, profile: UserProfile, password: str, role: Role = "
 
 def get_user(db: Session, user_id: int) -> User | None:
     """Get a user by ID."""
-    return db.query(User).filter(User.id == user_id).first()
+    return db.query(User).filter(col(User.id) == user_id).first()
 
 
 def get_user_by_email(db: Session, email: str) -> User | None:
-    """Get a user by email."""
-    return db.query(User).filter(User.email == email).first()
+    """Get a user by email, whatever its case: addresses are stored lowercase."""
+    return db.query(User).filter(col(User.email) == email.strip().lower()).first()
 
 
 def update_user(db: Session, user_id: int, user_update: dict) -> User | None:
     """Update user information."""
-    user = db.query(User).filter(User.id == user_id).first()
+    user = db.query(User).filter(col(User.id) == user_id).first()
     if not user:
         return None
 
@@ -92,7 +93,7 @@ def update_user(db: Session, user_id: int, user_update: dict) -> User | None:
 
 def change_password(db: Session, user_id: int, current_password: str, new_password: str) -> bool:
     """Change user password."""
-    user = db.query(User).filter(User.id == user_id).first()
+    user = db.query(User).filter(col(User.id) == user_id).first()
     if not user:
         return False
 
@@ -145,7 +146,7 @@ def rotate_user_session(
     """Swap a session's tokens after a refresh. False if the session is gone."""
     session = (
         db.query(UserSession)
-        .filter(UserSession.refresh_token_hash == hash_token(old_refresh_token))
+        .filter(col(UserSession.refresh_token_hash) == hash_token(old_refresh_token))
         .first()
     )
     if not session:
@@ -159,7 +160,7 @@ def rotate_user_session(
 
 def invalidate_user_sessions(db: Session, user_id: int) -> None:
     """Invalidate all sessions for a user (logout from all devices)."""
-    db.query(UserSession).filter(UserSession.user_id == user_id).delete()
+    db.query(UserSession).filter(col(UserSession.user_id) == user_id).delete()
     db.commit()
 
 
@@ -168,8 +169,8 @@ def validate_refresh_token(db: Session, refresh_token: str) -> User | None:
     session = (
         db.query(UserSession)
         .filter(
-            UserSession.refresh_token_hash == hash_token(refresh_token),
-            UserSession.expires_at > _now(),
+            col(UserSession.refresh_token_hash) == hash_token(refresh_token),
+            col(UserSession.expires_at) > _now(),
         )
         .first()
     )
@@ -177,7 +178,7 @@ def validate_refresh_token(db: Session, refresh_token: str) -> User | None:
     if not session:
         return None
 
-    return db.query(User).filter(User.id == session.user_id).first()
+    return db.query(User).filter(col(User.id) == session.user_id).first()
 
 
 # Admin functions
@@ -190,7 +191,7 @@ def get_all_users(db: Session, skip: int = 0, limit: int = 100) -> tuple[list[Us
 
 def update_user_role(db: Session, user_id: int, new_role: Role) -> bool:
     """Update user role. Returns True if successful."""
-    user = db.query(User).filter(User.id == user_id).first()
+    user = db.query(User).filter(col(User.id) == user_id).first()
     if not user:
         return False
 
@@ -202,7 +203,7 @@ def update_user_role(db: Session, user_id: int, new_role: Role) -> bool:
 
 def update_user_status(db: Session, user_id: int, is_active: bool) -> bool:
     """Update user active status. Returns True if successful."""
-    user = db.query(User).filter(User.id == user_id).first()
+    user = db.query(User).filter(col(User.id) == user_id).first()
     if not user:
         return False
 

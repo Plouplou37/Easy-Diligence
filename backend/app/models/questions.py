@@ -1,36 +1,51 @@
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text
-from sqlalchemy.orm import relationship
-from sqlalchemy.sql import func
+from datetime import datetime
+from typing import TYPE_CHECKING, Optional
 
-from app.core.database import Base
+from sqlalchemy import CheckConstraint, Index, Text
+from sqlmodel import Field, Relationship
+
+from app.models.base import SQLModel, timestamp_field
+
+if TYPE_CHECKING:
+    from app.models.dd_types import DDType
 
 
-class DDSection(Base):
+class DDSection(SQLModel, table=True):
     __tablename__ = "dd_sections"
+    __table_args__ = (
+        Index("ix_dd_sections_dd_type_order", "dd_type_id", "order_index"),
+        CheckConstraint("order_index >= 0", name="order_non_negative"),
+    )
 
-    id = Column(Integer, primary_key=True, index=True)
-    dd_type_id = Column(Integer, ForeignKey("dd_types.id"), nullable=False)
-    section_code = Column(String(50), nullable=False)
-    title = Column(String(255), nullable=False)
-    description = Column(Text, nullable=True)
-    order_index = Column(Integer, nullable=False, default=0)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    id: int | None = Field(default=None, primary_key=True)
+    dd_type_id: int = Field(foreign_key="dd_types.id")
+    section_code: str = Field(max_length=50)
+    title: str = Field(max_length=255)
+    # Theme context, sent to the model under the section title.
+    description: str | None = Field(default=None, sa_type=Text)
+    order_index: int = Field(default=0)
+    created_at: datetime | None = timestamp_field()
 
-    # Relationships
-    dd_type_obj = relationship("DDType", back_populates="sections")
-    questions = relationship("DDQuestion", back_populates="section", cascade="all, delete-orphan")
+    dd_type_obj: Optional["DDType"] = Relationship(back_populates="sections")
+    questions: list["DDQuestion"] = Relationship(
+        back_populates="section", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    )
 
 
-class DDQuestion(Base):
+class DDQuestion(SQLModel, table=True):
     __tablename__ = "dd_questions"
+    __table_args__ = (
+        Index("ix_dd_questions_section_order", "section_id", "order_index"),
+        CheckConstraint("order_index >= 0", name="order_non_negative"),
+    )
 
-    id = Column(Integer, primary_key=True, index=True)
-    section_id = Column(Integer, ForeignKey("dd_sections.id"), nullable=False)
-    question_code = Column(String(50), nullable=False)
-    question_text = Column(Text, nullable=False)
-    context_prompt = Column(Text, nullable=True)
-    order_index = Column(Integer, nullable=False, default=0)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    id: int | None = Field(default=None, primary_key=True)
+    section_id: int = Field(foreign_key="dd_sections.id")
+    question_code: str = Field(max_length=50)
+    question_text: str = Field(sa_type=Text)
+    # "Where to look": the sources to consult, sent to the model.
+    context_prompt: str | None = Field(default=None, sa_type=Text)
+    order_index: int = Field(default=0)
+    created_at: datetime | None = timestamp_field()
 
-    # Relationships
-    section = relationship("DDSection", back_populates="questions")
+    section: Optional["DDSection"] = Relationship(back_populates="questions")

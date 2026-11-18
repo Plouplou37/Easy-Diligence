@@ -9,7 +9,7 @@
 | Python | 3.12 | `backend/.python-version` |
 | uv | 0.9.17 ou plus récent | `backend/pyproject.toml` (`[tool.uv] required-version`) |
 | Node.js | 24 | `frontend/.nvmrc` |
-| MySQL | 8.0 | |
+| PostgreSQL | 17 | |
 | Modèle OpenAI | `gpt-5.6-luna` | `.env.template` (`OPENAI_MODEL`) |
 
 Les dépendances sont déclarées dans `backend/pyproject.toml` et

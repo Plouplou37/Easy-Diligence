@@ -13,13 +13,14 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
+from sqlmodel import SQLModel
 from typer.testing import CliRunner
 
 import app.cli as cli_module
 from app.api.routes import auth as auth_routes
 from app.api.uploads import read_upload
 from app.core.config import settings
-from app.core.database import Base, get_db
+from app.core.database import get_db
 from app.core.exceptions import NotFoundError
 from app.core.login_throttle import LoginThrottle
 from app.core.security import hash_token
@@ -34,10 +35,10 @@ def db_factory():
     engine = create_engine(
         "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
     )
-    Base.metadata.create_all(bind=engine)
+    SQLModel.metadata.create_all(bind=engine)
     factory = sessionmaker(autocommit=False, autoflush=False, bind=engine)
     yield factory
-    Base.metadata.drop_all(bind=engine)
+    SQLModel.metadata.drop_all(bind=engine)
     engine.dispose()
 
 
@@ -295,7 +296,6 @@ def test_upload_refuses_files_over_the_limit(monkeypatch):
 
 def test_create_admin_command(db_factory, monkeypatch):
     monkeypatch.setattr(cli_module, "SessionLocal", db_factory)
-    monkeypatch.setattr(cli_module, "engine", db_factory.kw["bind"])
     runner = CliRunner()
 
     result = runner.invoke(

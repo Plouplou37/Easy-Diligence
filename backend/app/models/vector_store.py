@@ -1,46 +1,46 @@
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text
-from sqlalchemy.orm import relationship
-from sqlalchemy.sql import func
+from datetime import datetime
+from typing import TYPE_CHECKING, Optional
 
-from app.core.database import Base
+from sqlalchemy import Text
+from sqlmodel import Field, Relationship
+
+from app.models.base import SQLModel, timestamp_field
+
+if TYPE_CHECKING:
+    from app.models.session import DDSession
+    from app.models.user import User
 
 
-class VectorStore(Base):
+class VectorStore(SQLModel, table=True):
+    """An OpenAI vector store we track. Only ownership and our own fields live
+    here; everything else is read from OpenAI."""
+
     __tablename__ = "vector_stores"
 
-    # Minimal tracking - all metadata fetched from OpenAI API
-    id = Column(String(255), primary_key=True, index=True)  # OpenAI vector store ID
-    name = Column(String(255), nullable=False)  # Vector store name
-    description = Column(Text, nullable=True)  # Our custom field (not in OpenAI)
-    created_by = Column(Integer, ForeignKey("users.id"), nullable=False)  # Ownership tracking
-    created_at = Column(DateTime(timezone=True), server_default=func.now())  # Our record tracking
-    updated_at = Column(
-        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
-    )  # Our record tracking
+    id: str = Field(primary_key=True, max_length=255)  # OpenAI vector store ID
+    name: str = Field(max_length=255)
+    description: str | None = Field(default=None, sa_type=Text)  # ours, not OpenAI's
+    created_by: int = Field(foreign_key="users.id", index=True)  # owner
+    created_at: datetime | None = timestamp_field()
+    updated_at: datetime | None = timestamp_field(updated=True)
 
-    # Relationships
-    creator = relationship("User")
-    session_assignments = relationship("SessionVectorStore", back_populates="vector_store")
+    creator: Optional["User"] = Relationship()
+    session_assignments: list["SessionVectorStore"] = Relationship(back_populates="vector_store")
 
 
-class SessionVectorStore(Base):
+class SessionVectorStore(SQLModel, table=True):
+    """A vector store assigned to a session: to one DD type, or to the whole
+    session when dd_type_id is NULL."""
+
     __tablename__ = "session_vector_stores"
 
-    id = Column(Integer, primary_key=True, index=True)
-    session_id = Column(Integer, ForeignKey("dd_sessions.id", ondelete="CASCADE"), nullable=False)
-    dd_type_id = Column(Integer, nullable=True)  # NULL = whole session, specific ID = DD type only
-    vector_store_id = Column(String(255), ForeignKey("vector_stores.id"), nullable=False)
-    assigned_at = Column(DateTime(timezone=True), server_default=func.now())
-    assigned_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    id: int | None = Field(default=None, primary_key=True)
+    session_id: int = Field(foreign_key="dd_sessions.id", ondelete="CASCADE", index=True)
+    dd_type_id: int | None = Field(default=None)  # NULL = whole session
+    vector_store_id: str = Field(max_length=255, foreign_key="vector_stores.id", index=True)
+    assigned_at: datetime | None = timestamp_field()
+    assigned_by: int = Field(foreign_key="users.id")
 
-    # Relationships
-    session = relationship("DDSession")
-    vector_store = relationship("VectorStore", back_populates="session_assignments")
-    assignee = relationship("User")
-
-    # Constraints: unique assignment per session/dd_type combination
-    __table_args__ = (
-        # This ensures no duplicate assignments
-        # Either session-wide (dd_type_code IS NULL) or dd_type-specific
-        # UniqueConstraint('session_id', 'dd_type_code', name='unique_session_dd_type_vector_store')
-    )
+    session: Optional["DDSession"] = Relationship()
+    vector_store: Optional["VectorStore"] = Relationship(back_populates="session_assignments")
+    assignee: Optional["User"] = Relationship()

@@ -1,21 +1,20 @@
 import enum
+from datetime import datetime
+from typing import TYPE_CHECKING, Any, Optional
 
-from sqlalchemy import (
-    JSON,
-    Boolean,
-    Column,
-    DateTime,
-    Enum,
-    Float,
-    ForeignKey,
-    Integer,
-    String,
-    Text,
-)
-from sqlalchemy.orm import relationship
-from sqlalchemy.sql import func
+from sqlalchemy import CheckConstraint, Index, Text
+from sqlmodel import Field, Relationship
 
-from app.core.database import Base
+from app.models.base import TIMESTAMP, JSONType, SQLModel, enum_type, timestamp_field
+
+if TYPE_CHECKING:
+    from app.models.answer_history import DDAnswerHistory
+    from app.models.dd_types import DDType
+    from app.models.execution import DDExecution
+    from app.models.questions import DDQuestion, DDSection
+    from app.models.response import DDResponse
+    from app.models.session import DDSession
+    from app.models.user import User
 
 
 class AnswerStatus(str, enum.Enum):
@@ -56,70 +55,91 @@ class ErrorType(str, enum.Enum):
     UNKNOWN = "unknown"  # Unknown error type
 
 
-class DDAnswer(Base):
+class DDAnswer(SQLModel, table=True):
     __tablename__ = "dd_answers"
-
-    id = Column(Integer, primary_key=True, index=True)
-    session_id = Column(Integer, ForeignKey("dd_sessions.id", ondelete="CASCADE"), nullable=False)
-    execution_id = Column(
-        Integer, ForeignKey("dd_executions.id", ondelete="CASCADE"), nullable=True
+    __table_args__ = (
+        # The dashboard counts the current answers of every session by status.
+        Index("ix_dd_answers_session_current_status", "session_id", "is_current", "status"),
+        Index("ix_dd_answers_execution_status", "execution_id", "status"),
+        CheckConstraint(
+            "confidence_score IS NULL OR (confidence_score >= 0 AND confidence_score <= 1)",
+            name="confidence_range",
+        ),
+        CheckConstraint("tokens_used >= 0", name="tokens_non_negative"),
     )
 
-    # Database legacy fields (NOT NULL in database)
-    section_code = Column(String(50), nullable=False)
-    question_code = Column(String(50), nullable=False)
+    id: int | None = Field(default=None, primary_key=True)
+    session_id: int = Field(foreign_key="dd_sessions.id", ondelete="CASCADE")
+    execution_id: int | None = Field(
+        default=None, foreign_key="dd_executions.id", ondelete="CASCADE"
+    )
 
-    # Proper foreign key relationships for referential integrity
-    section_id = Column(
-        Integer, ForeignKey("dd_sections.id"), nullable=True
-    )  # Proper section reference
-    question_id = Column(
-        Integer, ForeignKey("dd_questions.id"), nullable=True
-    )  # Proper question reference
-    dd_type_id = Column(
-        Integer, ForeignKey("dd_types.id"), nullable=True
-    )  # Proper DD type reference
+    # Codes copied from the question at answer time (required).
+    section_code: str = Field(max_length=50)
+    question_code: str = Field(max_length=50)
+
+    # References to the questionnaire
+    section_id: int | None = Field(default=None, foreign_key="dd_sections.id", index=True)
+    question_id: int | None = Field(default=None, foreign_key="dd_questions.id", index=True)
+    dd_type_id: int | None = Field(default=None, foreign_key="dd_types.id", index=True)
 
     # Version control fields
-    version = Column(Integer, default=1)
-    is_current = Column(Boolean, default=True)
-    status = Column(Enum(AnswerStatus), default=AnswerStatus.NEEDS_REVIEW)
-    edited_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    edited_at = Column(DateTime(timezone=True), nullable=True)
+    version: int | None = Field(default=1)
+    is_current: bool | None = Field(default=True)
+    status: AnswerStatus | None = Field(
+        default=AnswerStatus.NEEDS_REVIEW, sa_type=enum_type(AnswerStatus, "answer_status")
+    )
+    edited_by: int | None = Field(default=None, foreign_key="users.id")
+    edited_at: datetime | None = Field(default=None, sa_type=TIMESTAMP)
 
     # Answer content
-    answer_text = Column(Text, nullable=True)
-    sources = Column(JSON, nullable=True)  # JSON of source documents/references
-    confidence_score = Column(Float, nullable=True)  # AI confidence in the answer
+    answer_text: str | None = Field(default=None, sa_type=Text)
+    sources: Any | None = Field(default=None, sa_type=JSONType)  # documents and web references
+    confidence_score: float | None = Field(default=None)  # no longer filled; kept for history
 
     # Processing metadata
-    tokens_used = Column(Integer, default=0)
+    tokens_used: int | None = Field(default=0)
 
-    # ISSUE #7 FIX: Track which OpenAI response generated this answer
-    # This enables proper context chain tracking on retries
-    response_id = Column(String(255), ForeignKey("dd_responses.response_id"), nullable=True)
+    # The OpenAI response that produced this answer: keeps the context chain
+    # right when a question is retried.
+    response_id: str | None = Field(
+        default=None,
+        max_length=255,
+        foreign_key="dd_responses.response_id",
+        ondelete="SET NULL",
+        index=True,
+    )
 
     # Error tracking for robust retry logic
-    retry_count = Column(Integer, default=0)
-    error_type = Column(
-        Enum(ErrorType, values_callable=lambda x: [e.value for e in x]), nullable=True
-    )  # Categorized error type
-    error_message = Column(Text, nullable=True)  # Detailed error message
-    last_error_at = Column(DateTime(timezone=True), nullable=True)  # When last error occurred
+    retry_count: int | None = Field(default=0)
+    error_type: ErrorType | None = Field(
+        default=None, sa_type=enum_type(ErrorType, "error_type", store_values=True)
+    )
+    error_message: str | None = Field(default=None, sa_type=Text)
+    last_error_at: datetime | None = Field(default=None, sa_type=TIMESTAMP)
 
     # Timestamps
-    answered_at = Column(DateTime(timezone=True), nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    answered_at: datetime | None = Field(default=None, sa_type=TIMESTAMP)
+    created_at: datetime | None = timestamp_field()
+    updated_at: datetime | None = timestamp_field(updated=True)
 
-    # Relationships
-    session = relationship("DDSession", back_populates="answers")
-    execution = relationship("DDExecution", back_populates="answers")
-    section = relationship("DDSection", foreign_keys=[section_id])
-    question = relationship("DDQuestion", foreign_keys=[question_id])
-    dd_type_obj = relationship("DDType", foreign_keys=[dd_type_id])
-    editor = relationship("User", foreign_keys=[edited_by])
-    response = relationship(
-        "DDResponse", foreign_keys=[response_id]
-    )  # ISSUE #7 FIX: Link to OpenAI response
-    history = relationship("DDAnswerHistory", back_populates="answer", cascade="all, delete-orphan")
+    session: Optional["DDSession"] = Relationship(back_populates="answers")
+    execution: Optional["DDExecution"] = Relationship(back_populates="answers")
+    section: Optional["DDSection"] = Relationship(
+        sa_relationship_kwargs={"foreign_keys": "DDAnswer.section_id"}
+    )
+    question: Optional["DDQuestion"] = Relationship(
+        sa_relationship_kwargs={"foreign_keys": "DDAnswer.question_id"}
+    )
+    dd_type_obj: Optional["DDType"] = Relationship(
+        sa_relationship_kwargs={"foreign_keys": "DDAnswer.dd_type_id"}
+    )
+    editor: Optional["User"] = Relationship(
+        sa_relationship_kwargs={"foreign_keys": "DDAnswer.edited_by"}
+    )
+    response: Optional["DDResponse"] = Relationship(
+        sa_relationship_kwargs={"foreign_keys": "DDAnswer.response_id"}
+    )
+    history: list["DDAnswerHistory"] = Relationship(
+        back_populates="answer", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    )

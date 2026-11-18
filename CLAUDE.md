@@ -19,7 +19,8 @@ Guide court pour un agent qui travaille sur Easy Diligence. Le reste est dans :
   - `services/` : la logique métier (authentification, droits, import de
     questionnaires) ;
   - `exports/` : les exports PDF et Excel ;
-  - `models/` (SQLAlchemy) et `schemas/` (Pydantic).
+  - `models/` (SQLModel, une classe par table) et `schemas/` (Pydantic) ;
+  - `alembic/` : les migrations de la base.
 - Frontend React dans `frontend/src/`.
 - La configuration est lue par `backend/app/core/config.py`. Chaque variable est
   décrite dans `.env.template` : une variable ajoutée au code doit l'être aussi
@@ -33,10 +34,14 @@ Guide court pour un agent qui travaille sur Easy Diligence. Le reste est dans :
   utilisent des noms fictifs (« Example Asia Fund »). Les fichiers de charte
   restent dans `branding/`, et les vrais questionnaires dans `questionnaires/` :
   les deux dossiers sont ignorés par git.
-- **Ne jamais lancer de test contre une vraie base.** `db.rollback()` n'annule
-  rien, à cause de l'autocommit du pilote (voir `docs/ARCHITECTURE.md`). Les
-  réglages de test de `pyproject.toml` (pytest-env) imposent une base SQLite
-  en mémoire et une fausse clé OpenAI : ne pas les retirer.
+- **Ne jamais lancer de test contre une vraie base.** Les réglages de test de
+  `pyproject.toml` (pytest-env) imposent une base SQLite en mémoire et une
+  fausse clé OpenAI : ne pas les retirer.
+- **Schéma de la base** : toute modification passe par le modèle
+  (`app/models/`), puis par une migration Alembic générée avec
+  `uv run alembic revision --autogenerate`, **relue**, puis par la régénération
+  de `db/schema.sql`. Ne jamais modifier une migration déjà publiée, en ajouter
+  une nouvelle. Ne jamais remettre de `create_all` dans l'application.
 - **Erreurs** : ne jamais renvoyer `str(e)` au client. Pour une erreur attendue,
   lever une exception de `core/exceptions.py`, dont le message est écrit pour
   l'utilisateur. Pour le reste, `logger.exception(...)` puis un message

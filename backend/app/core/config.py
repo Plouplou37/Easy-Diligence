@@ -1,34 +1,21 @@
-from pathlib import Path
 from typing import Literal
 
-from pydantic import SecretStr, ValidationError, field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import SecretStr, field_validator
 
-# backend/.env, wherever the process is started from. Environment variables
-# win over this file (that is how Docker and the tests configure the app).
-ENV_FILE = Path(__file__).resolve().parents[2] / ".env"
+from app.core.database_settings import (  # noqa: F401  (ConfigurationError re-exported)
+    ConfigurationError,
+    DatabaseSettings,
+    load_settings,
+)
 
 # Shortest JWT signing key accepted: 32 characters. `openssl rand -hex 32`
 # gives 64.
 _JWT_SECRET_MIN_LENGTH = 32
 
 
-class ConfigurationError(RuntimeError):
-    """The settings are missing or invalid; the message lists every problem."""
-
-
-class Settings(BaseSettings):
-    model_config = SettingsConfigDict(
-        env_file=ENV_FILE,
-        env_file_encoding="utf-8",
-        case_sensitive=False,
-        extra="ignore",
-    )
-
+class Settings(DatabaseSettings):
     # --- Required secrets: no default, the application refuses to start
     # without them. SecretStr keeps them out of logs and reprs.
-    # Form: mysql+pymysql://<user>:<password>@<host>:3306/<database>
-    database_url: SecretStr
     openai_api_key: SecretStr
     jwt_secret_key: SecretStr
 
@@ -150,7 +137,7 @@ class Settings(BaseSettings):
     # Empty means no banner; a path to a missing file is logged and ignored.
     brand_banner_path: str = ""
 
-    @field_validator("database_url", "openai_api_key")
+    @field_validator("openai_api_key")
     @classmethod
     def _not_empty(cls, value: SecretStr) -> SecretStr:
         if not value.get_secret_value().strip():
@@ -173,20 +160,4 @@ class Settings(BaseSettings):
         return [ext.lower().lstrip(".") for ext in value]
 
 
-def _load_settings() -> Settings:
-    """Build the settings, turning a validation failure into one clear message."""
-    try:
-        return Settings()
-    except ValidationError as exc:
-        problems = []
-        for error in exc.errors():
-            name = ".".join(str(part) for part in error["loc"]).upper()
-            reason = "required" if error["type"] == "missing" else error["msg"]
-            problems.append(f"  - {name}: {reason}")
-        raise ConfigurationError(
-            "Invalid configuration. Set these variables in backend/.env or in the "
-            "environment (see .env.template):\n" + "\n".join(problems)
-        ) from None
-
-
-settings = _load_settings()
+settings = load_settings(Settings)

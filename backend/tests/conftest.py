@@ -5,8 +5,10 @@ from httpx import AsyncClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
+from sqlmodel import SQLModel
 
-from app.core.database import Base, get_db
+import app.models  # noqa: F401  (every table in SQLModel.metadata)
+from app.core.database import get_db
 from app.core.security import get_password_hash
 from app.main import app
 from app.models.company import Company
@@ -27,9 +29,9 @@ TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engin
 @pytest.fixture
 def test_db():
     """Create test database tables and clean up after test."""
-    Base.metadata.create_all(bind=engine)
+    SQLModel.metadata.create_all(bind=engine)
     yield
-    Base.metadata.drop_all(bind=engine)
+    SQLModel.metadata.drop_all(bind=engine)
 
 
 def override_get_db():

@@ -38,7 +38,7 @@ attendant, l'application se lance à la main.
 - [uv](https://docs.astral.sh/uv/) 0.9.17 ou plus récent. Il installe lui-même
   Python 3.12 au besoin (`backend/.python-version`) ;
 - Node.js 24, avec npm (`frontend/.nvmrc`) ;
-- un serveur MySQL 8 ;
+- un serveur PostgreSQL 17 ;
 - une clé d'API OpenAI.
 
 ### 1. Configuration
@@ -47,8 +47,9 @@ attendant, l'application se lance à la main.
 cp .env.template backend/.env
 ```
 
-Dans `backend/.env`, renseigner au minimum `DATABASE_URL`, `OPENAI_API_KEY` et
-`JWT_SECRET_KEY`. Chaque variable est décrite dans le fichier.
+Dans `backend/.env`, renseigner au minimum `POSTGRES_PASSWORD` (avec
+`POSTGRES_HOST=localhost` en local), `OPENAI_API_KEY` et `JWT_SECRET_KEY`.
+Chaque variable est décrite dans le fichier.
 
 Créer ensuite `frontend/.env`, avec une seule ligne :
 
@@ -58,15 +59,21 @@ VITE_API_URL=http://localhost:8000
 
 ### 2. Base de données
 
-Créer une base vide et son utilisateur :
+Créer l'utilisateur et la base, avec les valeurs de `backend/.env` :
 
 ```sql
-CREATE DATABASE easy_diligence CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER 'easy_diligence'@'localhost' IDENTIFIED BY '<mot de passe>';
-GRANT ALL PRIVILEGES ON easy_diligence.* TO 'easy_diligence'@'localhost';
+CREATE USER easy_diligence WITH PASSWORD '<mot de passe>';
+CREATE DATABASE easy_diligence OWNER easy_diligence;
 ```
 
-Les tables sont créées au premier démarrage du backend.
+Puis créer les tables, depuis `backend/` :
+
+```bash
+uv run alembic upgrade head
+```
+
+La même commande applique, plus tard, les migrations ajoutées au fil des
+versions, sans toucher aux données.
 
 ### 3. Backend
 
@@ -127,6 +134,25 @@ Le dossier `frontend/dist/` est un site statique à servir tel quel, avec un
 renvoi de toutes les routes vers `index.html`. Le backend se lance alors sans
 `--reload`.
 
+## Faire évoluer la base
+
+Le schéma est décrit par les modèles (`backend/app/models/`, en SQLModel) et
+versionné par Alembic (`backend/alembic/versions/`). Pour un changement de
+structure, depuis `backend/` :
+
+```bash
+# 1. modifier le modèle, puis générer la migration
+uv run alembic revision --autogenerate -m "ajoute la colonne X"
+# 2. relire le fichier produit dans alembic/versions/, puis l'appliquer
+uv run alembic upgrade head
+# 3. régénérer le script SQL complet du schéma
+uv run alembic upgrade head --sql > db/schema.sql
+```
+
+`db/schema.sql` crée toute la base PostgreSQL d'un coup, pour qui veut s'en
+passer d'Alembic. `uv run alembic check` vérifie que les migrations
+correspondent aux modèles.
+
 ## Tests et qualité
 
 ```bash
@@ -170,9 +196,10 @@ backend/              API FastAPI
     engine/           moteur de réponses : client OpenAI, traitement, synthèses
     services/         logique métier : authentification, droits, import
     exports/          exports PDF et Excel
-    models/           modèles SQLAlchemy
+    models/           modèles SQLModel (une classe par table)
     schemas/          schémas Pydantic
-  migrations/         anciens correctifs SQL appliqués à la main
+  alembic/            migrations de la base (Alembic)
+  db/schema.sql       script SQL complet du schéma, généré
   scripts/            import et mise à jour de questionnaires
   tests/
 frontend/             application React (Vite, Tailwind)

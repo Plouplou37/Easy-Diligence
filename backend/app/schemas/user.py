@@ -1,18 +1,22 @@
 from datetime import datetime
-from typing import Literal, get_args
+from typing import Annotated, Literal, get_args
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+from pydantic import AfterValidator, BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 from app.core.validation import validate_password_strength
 
 Role = Literal["admin", "analyst"]
 ROLES = get_args(Role)
 
+# Email addresses are stored and compared lowercase: PostgreSQL compares text
+# case-sensitively, so Jane@x.com and jane@x.com would otherwise be two accounts.
+Email = Annotated[EmailStr, AfterValidator(lambda value: value.strip().lower())]
+
 
 class UserProfile(BaseModel):
     """What a person says about themselves, without any privilege."""
 
-    email: EmailStr
+    email: Email
     username: str = Field(..., min_length=3, max_length=30, pattern="^[a-zA-Z0-9._-]+$")
     full_name: str | None = None
     company: str | None = None
@@ -53,7 +57,7 @@ class UserUpdate(BaseModel):
     full_name: str | None = None
     company: str | None = None
     phone: str | None = None
-    email: EmailStr | None = None
+    email: Email | None = None
 
 
 class UserInDB(UserBase):
@@ -72,7 +76,7 @@ class User(UserInDB):
 
 
 class UserLogin(BaseModel):
-    email: EmailStr
+    email: Email
     password: str
 
 
@@ -106,7 +110,7 @@ class PasswordChange(BaseModel):
 
 
 class PasswordReset(BaseModel):
-    email: EmailStr
+    email: Email
 
 
 class PasswordResetConfirm(BaseModel):

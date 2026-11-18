@@ -7,9 +7,10 @@ import re
 
 import typer
 from pydantic import ValidationError
+from sqlalchemy.exc import OperationalError, ProgrammingError
 
 import app.models  # noqa: F401  (registers every mapper before the first query)
-from app.core.database import Base, SessionLocal, engine
+from app.core.database import SessionLocal
 from app.core.exceptions import ConflictError
 from app.schemas.user import UserCreate
 from app.services.auth import create_user
@@ -55,14 +56,18 @@ def create_admin(
             typer.echo(f"Invalid {field}: {error['msg']}", err=True)
         raise typer.Exit(code=1) from None
 
-    # Same as the API's startup: a fresh database gets its tables first.
-    Base.metadata.create_all(bind=engine)
-
     db = SessionLocal()
     try:
         user = create_user(db, user_create, password=user_create.password, role="admin")
     except ConflictError as exc:
         typer.echo(f"Error: {exc.message}", err=True)
+        raise typer.Exit(code=1) from None
+    except (OperationalError, ProgrammingError):
+        typer.echo(
+            "Error: the database cannot be reached, or its tables do not exist yet. "
+            "Create them with: uv run alembic upgrade head",
+            err=True,
+        )
         raise typer.Exit(code=1) from None
     finally:
         db.close()

@@ -18,10 +18,12 @@ dependencies = [
     # Web Framework
     "fastapi>=0.115",
     "uvicorn[standard]>=0.30",
-    # Database
+    # Database: PostgreSQL through psycopg 3; models are SQLModel (SQLAlchemy +
+    # Pydantic); the schema is versioned with Alembic.
     "sqlalchemy>=2.0.23,<2.1",
-    "pymysql>=1.1.1",
-    "cryptography>=46",  # MySQL 8 authentication (caching_sha2_password)
+    "sqlmodel>=0.0.24",
+    "psycopg[binary]>=3.2",
+    "alembic>=1.14",
     # AI
     # Pinned: the engine (Responses API parameters, compaction via extra_body)
     # was tuned and measured on this exact SDK version.
@@ -106,6 +108,8 @@ ignore = [
 
 [tool.ruff.lint.isort]
 known-first-party = ["app"]
+# The library, not backend/alembic/ (the migrations folder of the same name).
+known-third-party = ["alembic"]
 
 # --- Mypy -------------------------------------------------------------------------
 
@@ -119,10 +123,9 @@ warn_redundant_casts = true
 no_implicit_optional = true
 plugins = ["pydantic.mypy"]
 
-# Not checked yet. Nearly every error here comes from the models being declared
-# with Column(...), which mypy cannot type: a module leaves this list once the
-# models move to Mapped[...] (with the Alembic migration) or once it is
-# reworked into services. New modules never go in it.
+# Not checked yet: older modules, left out until they are reworked into
+# services. The models themselves are typed (SQLModel). New modules never go
+# in this list.
 [[tool.mypy.overrides]]
 module = [
     "app.api.routes.answers",
@@ -143,9 +146,6 @@ module = [
     "app.engine.processor",
     "app.engine.summarizer",
     "app.exports.answers",
-    "app.models.answer",
-    "app.models.session",
-    "app.services.auth",
     "app.services.authz",
     "app.services.file_parser",
 ]
@@ -185,7 +185,7 @@ env = [
 source = ["app"]
 omit = [
     "*/tests/*",
-    "*/migrations/*",
+    "*/alembic/*",
     "*/__pycache__/*",
 ]
 

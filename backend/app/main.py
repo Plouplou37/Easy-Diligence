@@ -1,5 +1,4 @@
 import logging
-from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -8,7 +7,6 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from app.api.router import api_router
 from app.core.config import settings
-from app.core.database import Base, engine
 from app.core.exceptions import (
     AppError,
     ConflictError,
@@ -30,12 +28,6 @@ ERROR_STATUS = {
     TooManyRequestsError: 429,
     ExternalServiceError: 502,
 }
-
-
-@asynccontextmanager
-async def lifespan(_app: FastAPI):
-    Base.metadata.create_all(bind=engine)
-    yield
 
 
 class UnhandledErrorMiddleware:
@@ -77,7 +69,6 @@ class UnhandledErrorMiddleware:
 app = FastAPI(
     title=settings.app_name,
     debug=settings.debug,
-    lifespan=lifespan,
     docs_url="/docs" if settings.docs_enabled else None,
     redoc_url="/redoc" if settings.docs_enabled else None,
     openapi_url="/openapi.json" if settings.docs_enabled else None,

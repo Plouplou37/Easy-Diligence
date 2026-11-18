@@ -2,6 +2,21 @@
 
 ## Non publié
 
+### Base de données
+
+- PostgreSQL 17 remplace MySQL, via psycopg 3. La connexion se configure par
+  `POSTGRES_*` ou `DATABASE_URL`.
+- Les modèles passent en SQLModel.
+- Alembic gère le schéma : la migration initiale crée toute la base, et
+  `db/schema.sql` en donne le script SQL complet. Les anciens correctifs SQL
+  appliqués à la main sont supprimés, et l'application ne crée plus ses tables
+  au démarrage.
+- Les transactions sont réelles : un `rollback()` annule désormais vraiment.
+- Les clés étrangères sont indexées, et les statuts stockés en texte avec une
+  contrainte de contrôle.
+- Les adresses e-mail sont enregistrées et comparées en minuscules.
+- Il n'y a pas de reprise des données de l'ancienne base MySQL.
+
 ### Outillage
 
 - Le projet backend s'appelle `easy-diligence`, en version 0.1.0, et passe à

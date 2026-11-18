@@ -1,32 +1,41 @@
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text
-from sqlalchemy.orm import relationship
-from sqlalchemy.sql import func
+from datetime import datetime
+from typing import TYPE_CHECKING, Optional
 
-from app.core.database import Base
+from sqlalchemy import Text
+from sqlmodel import Field, Relationship
+
+from app.models.base import SQLModel, timestamp_field
+
+if TYPE_CHECKING:
+    from app.models.session import DDSession
+    from app.models.user import User
 
 
-class Company(Base):
+class Company(SQLModel, table=True):
     __tablename__ = "companies"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id: int | None = Field(default=None, primary_key=True)
     # The DD subject: the fund / product under review.
-    name = Column(String(255), nullable=False, index=True)
-    website_url = Column(String(500), nullable=True)
-    description = Column(Text, nullable=True)
+    name: str = Field(max_length=255, index=True)
+    website_url: str | None = Field(default=None, max_length=500)
+    description: str | None = Field(default=None, sa_type=Text)
 
     # The company running that fund. Kept apart from `name` so the engine can
     # tell the model which entity a question is about instead of guessing --
     # web search quality depends on it. NULL when unknown.
-    management_company_name = Column(String(255), nullable=True)
-    management_company_website = Column(String(500), nullable=True)
-    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
-    updated_at = Column(
-        DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
-    )
+    management_company_name: str | None = Field(default=None, max_length=255)
+    management_company_website: str | None = Field(default=None, max_length=500)
+    created_by: int | None = Field(default=None, foreign_key="users.id", index=True)
+    updated_by: int | None = Field(default=None, foreign_key="users.id", index=True)
+    created_at: datetime | None = timestamp_field(nullable=False)
+    updated_at: datetime | None = timestamp_field(updated=True, nullable=False)
 
-    # Relationships
-    sessions = relationship("DDSession", back_populates="company")
-    creator = relationship("User", foreign_keys=[created_by], back_populates="companies_created")
-    updater = relationship("User", foreign_keys=[updated_by])
+    sessions: list["DDSession"] = Relationship(back_populates="company")
+    creator: Optional["User"] = Relationship(
+        back_populates="companies_created",
+        sa_relationship_kwargs={"foreign_keys": "Company.created_by"},
+    )
+    updater: Optional["User"] = Relationship(
+        back_populates="companies_updated",
+        sa_relationship_kwargs={"foreign_keys": "Company.updated_by"},
+    )
