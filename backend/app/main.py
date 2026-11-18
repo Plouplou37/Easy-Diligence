@@ -16,7 +16,9 @@ from app.core.exceptions import (
     PermissionDeniedError,
     TooManyRequestsError,
 )
+from app.core.logging_setup import configure_logging
 
+configure_logging(settings.log_level)
 logger = logging.getLogger(__name__)
 
 # HTTP status of each business error (core/exceptions.py).

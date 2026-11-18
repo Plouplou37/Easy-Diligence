@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class QuestionResponse(BaseModel):
@@ -8,8 +8,7 @@ class QuestionResponse(BaseModel):
     context_prompt: str | None
     order_index: int
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class SectionResponse(BaseModel):
@@ -20,8 +19,7 @@ class SectionResponse(BaseModel):
     order_index: int
     questions: list[QuestionResponse]
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class DDTypeDetailResponse(BaseModel):
@@ -33,8 +31,7 @@ class DDTypeDetailResponse(BaseModel):
     is_validated: bool
     sections: list[SectionResponse] = []
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class QuestionCreate(BaseModel):

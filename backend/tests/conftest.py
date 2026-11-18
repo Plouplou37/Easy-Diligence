@@ -286,9 +286,9 @@ class FakeVectorStoreClient:
 @pytest.fixture
 def fake_vector_stores(monkeypatch):
     """Replace OpenAIProcessor wherever the vector store routes look it up."""
-    from app.api.routes.vector_stores import core, files, search
+    from app.api.routes.vector_stores import core, files
 
     FakeVectorStoreClient.calls = []
-    for module in (core, files, search):
+    for module in (core, files):
         monkeypatch.setattr(module, "OpenAIProcessor", FakeVectorStoreClient)
     return FakeVectorStoreClient

@@ -1,36 +1,23 @@
-"""
-Shared validation utilities for the application.
-"""
+"""Password rules, shared by registration, password change and reset."""
 
 import re
 
+# bcrypt only reads the first 72 bytes of a password, and bcrypt >= 5 refuses
+# longer ones outright: capping the length means a password is never silently cut.
+BCRYPT_MAX_PASSWORD_BYTES = 72
+
 
 def validate_password_strength(password: str) -> str:
-    """
-    Validate password strength according to application requirements.
+    """Return the password if it is strong enough, raise ValueError otherwise.
 
-    Requirements:
-    - At least 8 characters long
-    - Contains at least one uppercase letter
-    - Contains at least one lowercase letter
-    - Contains at least one digit
-    - At most 72 bytes once encoded: bcrypt reads no further, and would
-      otherwise compare only the start of a longer password
-
-    Args:
-        password: The password string to validate
-
-    Returns:
-        The validated password string
-
-    Raises:
-        ValueError: If password doesn't meet requirements
+    At least 8 characters, at most 72 bytes once encoded, with an uppercase
+    letter, a lowercase letter and a digit.
     """
     if len(password) < 8:
         raise ValueError("Password must be at least 8 characters long")
 
-    if len(password.encode("utf-8")) > 72:
-        raise ValueError("Password must be at most 72 bytes long")
+    if len(password.encode("utf-8")) > BCRYPT_MAX_PASSWORD_BYTES:
+        raise ValueError(f"Password must be at most {BCRYPT_MAX_PASSWORD_BYTES} bytes long")
 
     if not re.search(r"[A-Z]", password):
         raise ValueError("Password must contain at least one uppercase letter")

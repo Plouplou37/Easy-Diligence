@@ -262,7 +262,7 @@ async def update_question(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Question not found")
 
     # Update fields if provided
-    update_data = question_update.dict(exclude_unset=True)
+    update_data = question_update.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(question, field, value)
 
@@ -364,7 +364,7 @@ async def update_section(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Section not found")
 
     # Update fields if provided
-    update_data = section_update.dict(exclude_unset=True)
+    update_data = section_update.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(section, field, value)
 

@@ -2,23 +2,10 @@ import json
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, ConfigDict, field_validator
 
 from app.core.pagination import PaginatedResponse
 from app.models.answer import AnswerStatus
-
-# Validator handles flexible sources parsing
-
-
-class AnswerCreate(BaseModel):
-    session_id: int
-    execution_id: int | None = None
-    section_id: int | None = None
-    question_id: int | None = None
-    dd_type_id: int | None = None
-    answer_text: str | None = None
-    sources: dict[str, Any] | None = None
-    confidence_score: float | None = None
 
 
 class AnswerUpdate(BaseModel):
@@ -44,6 +31,8 @@ class AnswerUpdate(BaseModel):
 
 
 class AnswerResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     session_id: int
     execution_id: int | None
@@ -101,19 +90,15 @@ class AnswerResponse(BaseModel):
             return v
         return {"value": str(v)}
 
-    class Config:
-        from_attributes = True
-
 
 class AnswerWithHistory(BaseModel):
     """Answer with its complete history"""
 
+    model_config = ConfigDict(from_attributes=True)
+
     answer: AnswerResponse
     history: list[dict[str, Any]] = []
     validations: list[dict[str, Any]] = []
-
-    class Config:
-        from_attributes = True
 
 
 # Paginated response types

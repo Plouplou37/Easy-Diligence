@@ -63,33 +63,7 @@ class PaginatedResponse(BaseModel, Generic[T]):
     items: list[T]
     meta: PaginationMeta
 
-    @classmethod
-    def from_query(
-        cls, query: Query, params: PaginationParams, items: list[T]
-    ) -> "PaginatedResponse[T]":
-        """Create paginated response from SQLAlchemy query and items"""
-        total_items = query.count()
-        meta = PaginationMeta.from_params(params, total_items)
-
-        return cls(items=items, meta=meta)
-
 
 def paginate_query(query: Query, params: PaginationParams) -> Query:
     """Apply pagination to SQLAlchemy query"""
     return query.offset(params.offset).limit(params.limit)
-
-
-def get_pagination_info(total_items: int, page: int = 1, limit: int = 50) -> dict[str, Any]:
-    """Get pagination information dict (legacy support)"""
-    params = PaginationParams(page=page, limit=limit)
-    meta = PaginationMeta.from_params(params, total_items)
-
-    return {
-        "page": meta.page,
-        "limit": meta.limit,
-        "total_items": meta.total_items,
-        "total_pages": meta.total_pages,
-        "has_next": meta.has_next,
-        "has_previous": meta.has_previous,
-        "offset": params.offset,
-    }

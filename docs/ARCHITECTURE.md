@@ -297,6 +297,10 @@ cassé.
     CORS, si bien que même une 500 porte les en-têtes CORS.
 - **Documentation de l'API** : `/docs`, `/redoc` et `/openapi.json` ne sont
   servis que si `DOCS_ENABLED=true`.
+- **Journaux** (`core/logging_setup.py`) : l'application écrit à partir de
+  `LOG_LEVEL` (INFO par défaut), les bibliothèques tierces à partir de WARNING.
+  Un utilisateur y est désigné par son identifiant, jamais par son adresse
+  e-mail ou son nom.
 
 ## Cloisonnement par utilisateur
 

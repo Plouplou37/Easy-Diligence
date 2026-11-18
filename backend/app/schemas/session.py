@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from app.core.pagination import PaginatedResponse
 from app.models.session import SessionStatus
@@ -39,8 +39,7 @@ class SessionResponse(BaseModel):
     in_progress_executions: int = 0
     validated_executions: int = 0
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
     @classmethod
     def from_db_model(cls, session_db):
@@ -76,18 +75,6 @@ class SessionStatusResponse(BaseModel):
     status: SessionStatus
     progress: list[dict]  # Will contain progress for each DD type
     executions: list[dict[str, Any]] = []  # Execution status for each DD type
-
-
-class SessionWithExecutions(BaseModel):
-    """Session with detailed execution information"""
-
-    session: SessionResponse
-    executions: list[dict[str, Any]] = []
-    session_dd_types: list[dict[str, Any]] = []
-    validation_stats: dict[str, Any] = {}
-
-    class Config:
-        from_attributes = True
 
 
 # Paginated response types

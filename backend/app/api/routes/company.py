@@ -2,7 +2,6 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_active_user
-from app.core.cache import CacheInvalidator
 from app.core.database import get_db
 from app.models.company import Company
 from app.models.user import User
@@ -35,9 +34,6 @@ async def create_company(
     db.commit()
     db.refresh(db_company)
 
-    # Invalidate company caches after creating new company
-    CacheInvalidator.invalidate_company_cache()
-
     return db_company
 
 
@@ -54,12 +50,6 @@ async def list_companies(
     return companies
 
 
-@router.get("/auth-test")
-async def test_auth_endpoint_moved(current_user: User = Depends(get_current_active_user)):
-    """Test endpoint to verify authentication is working - moved before parametrized route"""
-    return {"message": "Authentication working", "user": current_user.email}
-
-
 @router.get("/{company_id}", response_model=CompanyResponse)
 async def get_company(
     company_id: int,
@@ -67,7 +57,7 @@ async def get_company(
     current_user: User = Depends(get_current_active_user),
 ):
     """Get a specific company"""
-    company = db.query(Company).filter(Company.id == company_id).first()
+    company = db.get(Company, company_id)
     if not company:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Company not found")
     # Per-user isolation: non-admins can only view their own / shared companies
@@ -83,7 +73,7 @@ async def update_company(
     current_user: User = Depends(get_current_active_user),
 ):
     """Update a company"""
-    company = db.query(Company).filter(Company.id == company_id).first()
+    company = db.get(Company, company_id)
     if not company:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Company not found")
 
@@ -99,8 +89,5 @@ async def update_company(
 
     db.commit()
     db.refresh(company)
-
-    # Invalidate company caches after updating
-    CacheInvalidator.invalidate_company_cache()
 
     return company

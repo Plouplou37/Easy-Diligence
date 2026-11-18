@@ -77,15 +77,6 @@ def _custom_id_for(section_id: int) -> str:
     return f"{_CUSTOM_ID_PREFIX}{section_id}"
 
 
-def _section_id_from(custom_id: str) -> int | None:
-    if not custom_id.startswith(_CUSTOM_ID_PREFIX):
-        return None
-    try:
-        return int(custom_id[len(_CUSTOM_ID_PREFIX) :])
-    except ValueError:
-        return None
-
-
 def _upsert_summary(
     db: Session, session_id: int, dd_type_id: int, section_id, text: str
 ) -> DDSummary:

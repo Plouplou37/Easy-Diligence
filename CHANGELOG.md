@@ -47,6 +47,23 @@
 
 - L'export Excel plantait pour toute réponse qui avait des sources.
 - La modification d'un vector store échouait toujours.
+- Après la modification d'un vector store, la liste montrait l'ancienne version
+  pendant cinq minutes (cache).
+- La page d'administration ne pouvait changer ni le rôle ni le statut d'un
+  utilisateur (méthode HTTP erronée).
+
+### Nettoyage
+
+- Supprimés, car aucun écran ne les appelait et plusieurs plantaient : les
+  endpoints `/executions` et `/documents`, la recherche dans un vector store et
+  `/company/auth-test`, avec leurs schémas.
+- Supprimés aussi : les méthodes sans appelant du client OpenAI et des
+  utilitaires, et les invalidations de cache qui ne visaient aucune donnée
+  mise en cache.
+- Code Pydantic v2 partout (`ConfigDict`, `model_validate`, `model_dump`), et
+  `datetime.utcnow()` remplacé.
+- Les journaux de l'application sont configurés (`LOG_LEVEL`) : sous uvicorn,
+  ses messages d'information étaient perdus.
 
 ### Structure du backend
 

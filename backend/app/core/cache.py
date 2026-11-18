@@ -56,11 +56,8 @@ class InMemoryCache:
         import fnmatch
 
         with self._lock:
-            all_keys = list(self._cache.keys())
-            keys_to_delete = [k for k in all_keys if fnmatch.fnmatch(k, pattern)]
-            logger.info(
-                f"Cache pattern '{pattern}' - Found {len(all_keys)} total keys, deleting {len(keys_to_delete)} matching keys: {keys_to_delete}"
-            )
+            keys_to_delete = [k for k in self._cache if fnmatch.fnmatch(k, pattern)]
+            logger.debug("Cache: %d keys match %r", len(keys_to_delete), pattern)
             for key in keys_to_delete:
                 del self._cache[key]
             return len(keys_to_delete)
@@ -70,15 +67,6 @@ class InMemoryCache:
         with self._lock:
             self._cache.clear()
             return True
-
-    def cleanup_expired(self):
-        """Remove expired entries from cache."""
-        with self._lock:
-            now = time.time()
-            expired_keys = [k for k, v in self._cache.items() if now > v["expires_at"]]
-            for key in expired_keys:
-                del self._cache[key]
-            return len(expired_keys)
 
 
 class CacheService:
@@ -232,21 +220,13 @@ def cache_response(
             # Execute function and cache result
             result = await func(*args, **kwargs)
 
-            # Convert result to dict if it's a Pydantic model or similar
+            # Pydantic models are stored as plain data.
             if hasattr(result, "model_dump"):
                 cache_data = result.model_dump()
-            elif hasattr(result, "dict"):
-                cache_data = result.dict()
             elif isinstance(result, list):
-                # Handle list of models
-                cache_data = []
-                for item in result:
-                    if hasattr(item, "model_dump"):
-                        cache_data.append(item.model_dump())
-                    elif hasattr(item, "dict"):
-                        cache_data.append(item.dict())
-                    else:
-                        cache_data.append(item)
+                cache_data = [
+                    item.model_dump() if hasattr(item, "model_dump") else item for item in result
+                ]
             else:
                 cache_data = result
 
@@ -261,52 +241,12 @@ def cache_response(
     return decorator
 
 
-def invalidate_cache_pattern(pattern: str):
-    """Utility function to invalidate cache by pattern."""
-    return cache_service.delete_pattern(pattern)
-
-
-# Cache invalidation helpers for common operations
 class CacheInvalidator:
-    """Helper class for cache invalidation patterns."""
+    """Only the vector store routes are cached (the list and each store's files,
+    which both call OpenAI)."""
 
     @staticmethod
-    def invalidate_user_cache(user_id: int):
-        """Invalidate all cache entries for a specific user."""
-        return invalidate_cache_pattern(f"*:*user_id*{user_id}*")
-
-    @staticmethod
-    def invalidate_session_cache(session_id: int = None):
-        """Invalidate session-related cache entries."""
-        if session_id:
-            return invalidate_cache_pattern(f"session*:*{session_id}*")
-        else:
-            return invalidate_cache_pattern("session*")
-
-    @staticmethod
-    def invalidate_company_cache():
-        """Invalidate company-related cache entries."""
-        return invalidate_cache_pattern("company*")
-
-    @staticmethod
-    def invalidate_dd_types_cache():
-        """Invalidate DD types cache entries."""
-        count = invalidate_cache_pattern("dd_type*")
-        logger.info(f"Invalidated {count} DD types cache entries")
-        return count
-
-    @staticmethod
-    def invalidate_vector_store_cache(vector_store_id: str = None):
-        """Invalidate vector store cache entries."""
-        if vector_store_id:
-            return invalidate_cache_pattern(f"vector_store*:{vector_store_id}:*")
-        else:
-            return invalidate_cache_pattern("vector_store*")
-
-    @staticmethod
-    def invalidate_execution_cache(session_id: int = None):
-        """Invalidate execution-related cache entries."""
-        if session_id:
-            return invalidate_cache_pattern(f"execution*:*{session_id}*")
-        else:
-            return invalidate_cache_pattern("execution*")
+    def invalidate_vector_store_cache() -> int:
+        """Clear every vector store entry. The list's key does not carry store
+        ids, so clearing a single store's entries would leave it stale."""
+        return cache_service.delete_pattern("vector_store*")

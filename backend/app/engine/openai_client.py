@@ -290,15 +290,6 @@ class OpenAIProcessor:
         logger.warning(f"File {file_id} not indexed within {timeout}s (continuing anyway)")
         return False
 
-    async def check_vector_store_status(self, vector_store_id: str) -> list[dict[str, Any]]:
-        """Check the status of files in a vector store"""
-        try:
-            result = self.client.vector_stores.files.list(vector_store_id=vector_store_id)
-            return result.data
-        except Exception as e:
-            logger.error(f"Error checking vector store status: {e}")
-            raise
-
     def build_question_request(
         self,
         question_text: str,
@@ -1302,25 +1293,6 @@ Format your answers like a professional analyst responding to specific due dilig
             logger.error(f"Exception type: {type(e)}")
             raise
 
-    async def update_vector_store_expiration(
-        self, vector_store_id: str, expires_after_days: int | None = None
-    ) -> bool:
-        """Update the expiration policy of a vector store"""
-        try:
-            params = {}
-
-            if expires_after_days:
-                params["expires_after"] = {"anchor": "last_active_at", "days": expires_after_days}
-            else:
-                # Remove expiration policy
-                params["expires_after"] = None
-
-            self.client.vector_stores.update(vector_store_id, **params)
-            return True
-        except Exception as e:
-            logger.error(f"Error updating vector store expiration: {e}")
-            raise
-
     async def update_vector_store_name(self, vector_store_id: str, name: str) -> bool:
         """Update the name of a vector store"""
         try:
@@ -1328,17 +1300,6 @@ Format your answers like a professional analyst responding to specific due dilig
             return True
         except Exception as e:
             logger.error(f"Error updating vector store name: {e}")
-            raise
-
-    async def update_vector_store_metadata(
-        self, vector_store_id: str, metadata: dict[str, Any]
-    ) -> bool:
-        """Update the metadata of a vector store"""
-        try:
-            self.client.vector_stores.update(vector_store_id, metadata=metadata)
-            return True
-        except Exception as e:
-            logger.error(f"Error updating vector store metadata: {e}")
             raise
 
     async def list_vector_store_files(self, vector_store_id: str) -> list[dict[str, Any]]:
@@ -1359,7 +1320,7 @@ Format your answers like a professional analyst responding to specific due dilig
                         "status": getattr(file_obj, "status", "completed"),
                         "usage_bytes": getattr(file_obj, "usage_bytes", 0),
                         "attributes": getattr(file_obj, "attributes", {}),
-                        "last_error": file_obj.last_error.dict()
+                        "last_error": file_obj.last_error.model_dump()
                         if hasattr(file_obj, "last_error") and file_obj.last_error
                         else None,
                     }
@@ -1370,7 +1331,7 @@ Format your answers like a professional analyst responding to specific due dilig
                         "filename": f"File {file_obj.id}",
                         "status": getattr(file_obj, "status", "unknown"),
                         "attributes": getattr(file_obj, "attributes", {}),
-                        "last_error": file_obj.last_error.dict()
+                        "last_error": file_obj.last_error.model_dump()
                         if hasattr(file_obj, "last_error") and file_obj.last_error
                         else None,
                     }
@@ -1428,77 +1389,4 @@ Format your answers like a professional analyst responding to specific due dilig
             }
         except Exception as e:
             logger.error(f"Error retrieving file {file_id}: {e}")
-            raise
-
-    async def filter_vector_store_files(
-        self,
-        vector_store_id: str,
-        filename_filter: str = None,
-        attribute_filters: dict[str, Any] = None,
-        max_results: int = 50,
-    ) -> dict[str, Any]:
-        """Filter files in a vector store by filename and attributes"""
-        try:
-            logger.info(f"Filtering files in vector store {vector_store_id}")
-
-            # Get all files in the vector store
-            all_files = await self.list_vector_store_files(vector_store_id)
-
-            filtered_files = []
-
-            for file_info in all_files:
-                # Apply filename filter (case-insensitive partial match)
-                if filename_filter:
-                    filename = file_info.get("filename", "").lower()
-                    if filename_filter.lower() not in filename:
-                        continue
-
-                # Apply attribute filters (exact match)
-                if attribute_filters:
-                    file_attributes = file_info.get("attributes", {})
-                    match = True
-                    for key, value in attribute_filters.items():
-                        if key not in file_attributes or str(file_attributes[key]) != str(value):
-                            match = False
-                            break
-                    if not match:
-                        continue
-
-                # Convert file info to search result format for consistency
-                filter_result = {
-                    "file_id": file_info.get("id"),
-                    "filename": file_info.get("filename"),
-                    "score": 1.0,  # No relevance scoring for filtering
-                    "attributes": file_info.get("attributes", {}),
-                    "content": [],  # Content not included in filter results
-                    "size_bytes": file_info.get("size_bytes", 0),
-                    "status": file_info.get("status", "unknown"),
-                    "created_at": file_info.get("created_at"),
-                }
-
-                filtered_files.append(filter_result)
-
-                # Limit results
-                if len(filtered_files) >= max_results:
-                    break
-
-            # Sort by filename for consistent results
-            filtered_files.sort(key=lambda x: x.get("filename", "").lower())
-
-            filter_results = {
-                "search_query": filename_filter or "(filtered)",
-                "data": filtered_files,
-                "has_more": False,  # We don't implement pagination for filtering
-                "next_page": None,
-                "total_files": len(all_files),
-                "filtered_count": len(filtered_files),
-            }
-
-            logger.info(
-                f"Filter returned {len(filtered_files)} files out of {len(all_files)} total"
-            )
-            return filter_results
-
-        except Exception as e:
-            logger.error(f"Error filtering vector store files {vector_store_id}: {e}")
             raise

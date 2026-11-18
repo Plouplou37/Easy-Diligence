@@ -13,11 +13,6 @@ import jwt
 
 from app.core.config import settings
 
-# bcrypt only reads the first 72 bytes of a password; bcrypt >= 5 refuses
-# longer ones outright. The password rules (core/validation.py) cap the length
-# so a user never sets a password that would be silently cut.
-BCRYPT_MAX_PASSWORD_BYTES = 72
-
 PASSWORD_RESET_EXPIRE_HOURS = 24
 
 

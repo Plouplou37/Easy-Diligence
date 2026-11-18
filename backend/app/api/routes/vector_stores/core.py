@@ -5,7 +5,6 @@ Basic create, read, update, delete functionality
 
 import asyncio
 import logging
-from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -139,8 +138,6 @@ async def create_vector_store(
             name=vector_store.name,
             description=vector_store.description,
             created_by=current_user.id,
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
         )
 
         db.add(db_vector_store)
@@ -264,12 +261,11 @@ async def update_vector_store(
         if update_data.description is not None:
             vector_store.description = update_data.description
 
-        vector_store.updated_at = datetime.utcnow()
         db.commit()
         db.refresh(vector_store)
 
         # Invalidate cache
-        CacheInvalidator.invalidate_vector_store_cache(vector_store_id)
+        CacheInvalidator.invalidate_vector_store_cache()
 
         # Get current OpenAI status
         openai_store = await openai_processor.get_vector_store_info(vector_store_id)
@@ -322,7 +318,7 @@ async def refresh_single_vector_store_cache(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vector store not found")
 
     try:
-        CacheInvalidator.invalidate_vector_store_cache(vector_store_id)
+        CacheInvalidator.invalidate_vector_store_cache()
         return {"message": f"Cache cleared for vector store {vector_store_id}"}
     except Exception as e:
         logger.error(f"Failed to clear cache for store {vector_store_id}: {e}")
@@ -369,7 +365,7 @@ async def delete_vector_store(
         db.commit()
 
         # Invalidate cache
-        CacheInvalidator.invalidate_vector_store_cache(vector_store_id)
+        CacheInvalidator.invalidate_vector_store_cache()
 
         return {"message": "Vector store deleted successfully"}
 

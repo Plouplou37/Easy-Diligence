@@ -28,6 +28,8 @@ class Settings(DatabaseSettings):
     # App
     app_name: str = "Easy Diligence"
     debug: bool = False
+    # Level of the application's own logs (third-party libraries: WARNING and up).
+    log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
     # Interactive API docs (/docs, /redoc, /openapi.json). Off unless asked for:
     # they describe every endpoint to whoever can reach the server.
     docs_enabled: bool = False
@@ -158,6 +160,11 @@ class Settings(DatabaseSettings):
     @classmethod
     def _normalise_extensions(cls, value: list[str]) -> list[str]:
         return [ext.lower().lstrip(".") for ext in value]
+
+    @field_validator("log_level", mode="before")
+    @classmethod
+    def _upper_log_level(cls, value: object) -> object:
+        return value.strip().upper() if isinstance(value, str) else value
 
 
 settings = load_settings(Settings)

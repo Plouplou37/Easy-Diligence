@@ -2,18 +2,12 @@ import json
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, field_validator
-
-
-class AnswerHistoryCreate(BaseModel):
-    answer_id: int
-    version: int
-    content: str
-    sources: dict[str, Any] | None = None
-    edit_reason: str | None = None
+from pydantic import BaseModel, ConfigDict, field_validator
 
 
 class AnswerHistoryResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     answer_id: int
     version: int
@@ -44,33 +38,13 @@ class AnswerHistoryResponse(BaseModel):
             return v
         return {"value": str(v)}
 
-    class Config:
-        from_attributes = True
-
 
 class AnswerVersionHistory(BaseModel):
     """Complete version history for an answer"""
+
+    model_config = ConfigDict(from_attributes=True)
 
     answer_id: int
     current_version: int
     versions: list[AnswerHistoryResponse]
     total_versions: int
-
-    class Config:
-        from_attributes = True
-
-
-class VersionComparison(BaseModel):
-    """Compare two versions of an answer"""
-
-    answer_id: int
-    version_a: int
-    version_b: int
-    content_a: str
-    content_b: str
-    sources_a: dict[str, Any] | None
-    sources_b: dict[str, Any] | None
-    editor_a: str | None
-    editor_b: str | None
-    created_a: datetime
-    created_b: datetime

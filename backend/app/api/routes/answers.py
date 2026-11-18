@@ -443,9 +443,9 @@ async def get_answer_statistics(
     )
 
     # Recent activity (last 7 days)
-    from datetime import datetime, timedelta
+    from datetime import UTC, datetime, timedelta
 
-    seven_days_ago = datetime.utcnow() - timedelta(days=7)
+    seven_days_ago = datetime.now(UTC) - timedelta(days=7)
 
     recent_answers = (
         scoped().filter(DDAnswer.created_at >= seven_days_ago, DDAnswer.is_current == True).count()
@@ -724,7 +724,7 @@ async def update_answer(
     db.commit()
     db.refresh(answer)
 
-    return AnswerResponse.from_orm(answer)
+    return AnswerResponse.model_validate(answer)
 
 
 @router.post("/{answer_id}/regenerate", response_model=AnswerResponse)
@@ -810,7 +810,7 @@ async def regenerate_answer(
         # Upload + attach (same pattern as the vector-store file endpoint)
         file_id = await openai_processor.upload_file(content, file.filename)
         await openai_processor.add_file_to_vector_store(store_id, file_id)
-        CacheInvalidator.invalidate_vector_store_cache(store_id)
+        CacheInvalidator.invalidate_vector_store_cache()
         # Best-effort wait for indexing so file_search can see it on first try
         await openai_processor.wait_for_file_indexed(store_id, file_id, timeout=30)
 
@@ -838,7 +838,7 @@ async def regenerate_answer(
         logger.exception("Failed to regenerate answer %s", answer_id)
         raise HTTPException(status_code=500, detail="Failed to regenerate answer")  # noqa: B904
 
-    return AnswerResponse.from_orm(updated)
+    return AnswerResponse.model_validate(updated)
 
 
 @router.patch("/{answer_id}/status", response_model=AnswerResponse)
@@ -961,7 +961,7 @@ async def validate_answer(
     db.commit()
     db.refresh(answer)
 
-    return AnswerResponse.from_orm(answer)
+    return AnswerResponse.model_validate(answer)
 
 
 @router.post("/{answer_id}/revert", response_model=AnswerResponse)
@@ -1023,7 +1023,7 @@ async def revert_answer(
     db.commit()
     db.refresh(answer)
 
-    return AnswerResponse.from_orm(answer)
+    return AnswerResponse.model_validate(answer)
 
 
 @router.get("/{answer_id}/history", response_model=AnswerVersionHistory)
@@ -1046,7 +1046,7 @@ async def get_answer_history(
     # Convert to response format
     history_responses = []
     for entry in history_entries:
-        history_response = AnswerHistoryResponse.from_orm(entry)
+        history_response = AnswerHistoryResponse.model_validate(entry)
         if entry.editor:
             history_response.editor_name = entry.editor.username
         history_responses.append(history_response)
@@ -1117,7 +1117,7 @@ async def get_answer_with_history(
     answer = get_answer_with_access(answer_id, db, current_user)
 
     # Get answer response
-    answer_response = AnswerResponse.from_orm(answer)
+    answer_response = AnswerResponse.model_validate(answer)
 
     # Get history
     history_entries = (

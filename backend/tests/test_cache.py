@@ -7,7 +7,7 @@ falls back to memory and a test can never write into a real Redis.
 import time
 from types import SimpleNamespace
 
-from app.core.cache import CacheInvalidator, CacheService, cache_response
+from app.core.cache import CacheInvalidator, CacheService, cache_response, cache_service
 
 
 def test_set_get_delete():
@@ -46,10 +46,13 @@ def test_delete_by_pattern():
     assert cache.get("user:456:sessions") == {"data": 3}
 
 
-def test_invalidators_do_not_fail():
-    assert CacheInvalidator.invalidate_session_cache() >= 0
-    assert CacheInvalidator.invalidate_company_cache() >= 0
-    assert CacheInvalidator.invalidate_dd_types_cache() >= 0
+def test_vector_store_invalidation_clears_every_store_entry():
+    cache_service.set("vector_stores:abc123", ["the list"])
+    cache_service.set("vector_store_files:vs_1:def456", ["a file"])
+    cache_service.set("other:1", "kept")
+    assert CacheInvalidator.invalidate_vector_store_cache() == 2
+    assert cache_service.get("vector_stores:abc123") is None
+    assert cache_service.get("other:1") == "kept"
 
 
 def test_unserialisable_value_is_refused_quietly():

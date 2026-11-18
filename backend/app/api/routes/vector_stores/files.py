@@ -90,7 +90,7 @@ async def upload_file_to_vector_store(
         result = await openai_processor.add_file_to_vector_store(vector_store_id, file_id)
 
         # Invalidate cache for this vector store
-        CacheInvalidator.invalidate_vector_store_cache(vector_store_id)
+        CacheInvalidator.invalidate_vector_store_cache()
 
         return {
             "file_id": file_id,
@@ -124,7 +124,7 @@ async def delete_file_from_vector_store(
         await openai_processor.delete_file(file_id)
 
         # Invalidate cache for this vector store
-        CacheInvalidator.invalidate_vector_store_cache(vector_store_id)
+        CacheInvalidator.invalidate_vector_store_cache()
 
         return {"message": "File deleted successfully"}
 

@@ -8,7 +8,6 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_active_user
-from app.core.cache import CacheInvalidator
 from app.core.database import get_db
 from app.core.pagination import PaginationParams, paginate_query
 from app.models.company import Company
@@ -109,9 +108,6 @@ async def create_session(
     db.add(db_session)
     db.commit()
     db.refresh(db_session)
-
-    # Invalidate session caches after creating new session
-    CacheInvalidator.invalidate_session_cache()
 
     # Initialize progress for selected DD types (or all active if none specified)
     if session.dd_type_ids:
@@ -590,9 +586,6 @@ async def delete_session(
     # (dd_answers, dd_executions, session_vector_stores, and their children)
     db.delete(session)
     db.commit()
-
-    # Invalidate session caches after deletion
-    CacheInvalidator.invalidate_session_cache()
 
     return {
         "message": "Session deleted successfully",

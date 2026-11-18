@@ -83,6 +83,18 @@ def test_rename(client, db, analyst, make_store, auth_headers, fake_vector_store
     assert db.get(VectorStore, "vs_1").description == "Updated"
 
 
+def test_the_list_shows_a_rename_at_once(
+    client, analyst, make_store, auth_headers, fake_vector_stores
+):
+    """The list is cached for five minutes: a change must clear it."""
+    make_store(analyst, "vs_1", name="Old name")
+    headers = auth_headers(analyst)
+    assert client.get("/api/vector-stores/", headers=headers).json()[0]["name"] == "Old name"
+
+    client.patch("/api/vector-stores/vs_1", json={"name": "New name"}, headers=headers)
+    assert client.get("/api/vector-stores/", headers=headers).json()[0]["name"] == "New name"
+
+
 def test_delete_removes_the_store_and_its_assignments(
     client, db, analyst, make_store, make_dd_session, auth_headers, fake_vector_stores
 ):

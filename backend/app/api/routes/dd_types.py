@@ -243,7 +243,7 @@ async def update_dd_type(
             )
 
     # Update fields
-    update_data = dd_type_update.dict(exclude_unset=True)
+    update_data = dd_type_update.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(dd_type, field, value)
 
