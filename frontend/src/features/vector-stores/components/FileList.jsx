@@ -1,11 +1,9 @@
 import React from 'react';
-import { DocumentIcon, TrashIcon, CogIcon, ClockIcon } from '@heroicons/react/24/outline';
+import { DocumentIcon, TrashIcon, ClockIcon } from '@heroicons/react/24/outline';
 import { formatBytes } from '../utils/formatters';
-import { LoadingSpinner, Button, Badge, emptyState, tableStyles } from '../../../components/ui';
+import { LoadingSpinner, Button, emptyState, tableStyles } from '../../../components/ui';
 
-// Force scrollbar visibility
-
-const FileList = ({ files, loading, onRemoveFile, onEditAttributes }) => {
+const FileList = ({ files, loading, onRemoveFile }) => {
   if (loading) {
     return (
       <div className="flex justify-center items-center py-8">
@@ -37,9 +35,6 @@ const FileList = ({ files, loading, onRemoveFile, onEditAttributes }) => {
             <th className={tableStyles.th}>
               Created
             </th>
-            <th className={tableStyles.th}>
-              Attributes
-            </th>
             <th className={tableStyles.thRight}>
               Actions
             </th>
@@ -65,24 +60,8 @@ const FileList = ({ files, loading, onRemoveFile, onEditAttributes }) => {
                   {new Date(file.created_at * 1000).toLocaleDateString()}
                 </div>
               </td>
-              <td className={tableStyles.td}>
-                {file.attributes && Object.keys(file.attributes).length > 0 ? (
-                  <Badge variant="info">
-                    {Object.keys(file.attributes).length} attrs
-                  </Badge>
-                ) : (
-                  <span className="text-content-muted">None</span>
-                )}
-              </td>
               <td className={tableStyles.tdRight}>
                 <div className="flex items-center justify-end space-x-2">
-                  <Button
-                    onClick={() => onEditAttributes(file)}
-                    variant="ghost"
-                    size="sm"
-                    icon={CogIcon}
-                    title="Edit attributes"
-                  />
                   <Button
                     onClick={() => onRemoveFile(file.id)}
                     variant="danger"

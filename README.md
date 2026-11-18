@@ -52,11 +52,9 @@ Dans `backend/.env`, renseigner au minimum `POSTGRES_PASSWORD` (avec
 `POSTGRES_HOST=localhost` en local), `OPENAI_API_KEY` et `JWT_SECRET_KEY`.
 Chaque variable est décrite dans le fichier.
 
-Créer ensuite `frontend/.env`, avec une seule ligne :
-
-```
-VITE_API_URL=http://localhost:8000
-```
+Le frontend n'a pas besoin de `.env` : il appelle l'API sur `/api`, et en
+développement le serveur de Vite transmet ces appels au backend, sur
+`http://localhost:8000` (réglable par `VITE_API_PROXY` dans `frontend/.env`).
 
 ### 2. Base de données
 
@@ -179,7 +177,8 @@ leurs en-têtes d'authentification, des données de départ (sociétés, types d
 DD, sessions) et un faux client OpenAI pour les vector stores. Le moteur de
 réponses est testé avec un faux client lui aussi (`tests/test_processing.py`).
 
-ESLint signale de nombreux problèmes dans le code existant du frontend.
+ESLint signale encore des problèmes dans le code existant du frontend (85 à
+l'étape 4.1, contre 576 avant) : ils se résorbent au fil de sa réorganisation.
 
 **Contrôles automatiques** :
 - **À chaque commit**, des hooks pre-commit lancent ruff et cherchent les

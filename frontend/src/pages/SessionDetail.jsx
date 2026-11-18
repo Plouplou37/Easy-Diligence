@@ -199,7 +199,7 @@ const SessionDetail = () => {
   const handleExportPdf = async () => {
     setExporting(true);
     try {
-      const res = await answersAPI.export(sessionIdentifier, 'pdf');
+      const res = await answersAPI.export(sessionIdentifier);
       downloadBlob(res.data, `session-${sessionIdentifier}-DD_Report.pdf`);
     } catch (error) {
       toast.error('Export failed. Please try again.');

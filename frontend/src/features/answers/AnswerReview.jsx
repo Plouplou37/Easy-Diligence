@@ -183,7 +183,7 @@ const AnswerReview = () => {
     setExportOpen(false);
     setExporting(true);
     try {
-      const res = await answersAPI.export(sessionId, 'pdf');
+      const res = await answersAPI.export(sessionId);
       downloadBlob(res.data, `session-${sessionId}-DD_Report.pdf`);
     } catch (error) {
       console.error('Failed to export answers:', error);

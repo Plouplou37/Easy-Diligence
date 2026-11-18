@@ -2,6 +2,22 @@
 
 ## Non publié
 
+### Frontend : socle
+
+- Le frontend appelle l'API en relatif, sur `/api` : plus d'URL propre à une
+  machine. En développement, le serveur de Vite transmet ces appels au backend
+  (`VITE_API_PROXY`, `http://localhost:8000` par défaut) ; `VITE_API_URL`
+  disparaît.
+- Vite 8, react-router 7 et ESLint 9 ; plus aucune faille connue dans le code
+  livré au navigateur (18 avant, dont 14 « high »).
+- L'authentification passe par le client HTTP commun. Un mot de passe erroné
+  affiche le message de l'API au lieu de recharger la page.
+- Supprimés : la modification des « attributs » d'un fichier de vector store
+  (l'endpoint n'existait pas), les fichiers et appels d'API morts, et les
+  dépendances inutilisées (`rehype-mermaid`, `react-dropzone`,
+  `tailwind-scrollbar`).
+- L'alias `@/` désigne `frontend/src`.
+
 ### Base de données
 
 - PostgreSQL 17 remplace MySQL, via psycopg 3. La connexion se configure par

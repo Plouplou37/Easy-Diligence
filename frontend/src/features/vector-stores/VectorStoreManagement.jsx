@@ -13,7 +13,6 @@ import Modal from '../../components/Modal';
 import { Button, EmptyState, LoadingSpinner, PageHeader, field, pageLayout, panel, sectionHeader } from '../../components/ui';
 import VectorStoreList from './components/VectorStoreList';
 import FileList from './components/FileList';
-import AttributesEditor from './components/AttributesEditor';
 import FileUploadModal from './components/FileUploadModal';
 import { useVectorStores } from './hooks/useVectorStores';
 import { useFileUpload } from './hooks/useFileUpload';
@@ -24,7 +23,6 @@ import { vectorStoresAPI } from '../../services/api';
 const VectorStoreManagement = () => {
   const [selectedStore, setSelectedStore] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showAttributesModal, setShowAttributesModal] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [createForm, setCreateForm] = useState({
@@ -74,13 +72,6 @@ const VectorStoreManagement = () => {
     if (success) {
       setShowCreateModal(false);
       setCreateForm({ name: '', description: '', expires_after_days: 30 });
-    }
-  };
-
-  const handleSaveAttributes = async () => {
-    const success = await fileManagement.saveAttributes();
-    if (success) {
-      setShowAttributesModal(false);
     }
   };
 
@@ -253,11 +244,6 @@ const VectorStoreManagement = () => {
                           files={fileManagement.files}
                           loading={fileManagement.filesLoading}
                           onRemoveFile={fileManagement.removeFile}
-                          onEditAttributes={(file) => {
-                            // Selecting the file alone never opened the editor.
-                            fileManagement.editFileAttributes(file);
-                            setShowAttributesModal(true);
-                          }}
                         />
                       </div>
                     </div>
@@ -327,17 +313,6 @@ const VectorStoreManagement = () => {
             </div>
           </form>
         </Modal>
-
-        <AttributesEditor
-          show={showAttributesModal}
-          file={fileManagement.selectedFile}
-          attributes={fileManagement.attributesForm}
-          onAdd={fileManagement.addAttribute}
-          onChange={fileManagement.changeAttribute}
-          onRemove={fileManagement.removeAttribute}
-          onSave={handleSaveAttributes}
-          onCancel={() => setShowAttributesModal(false)}
-        />
 
         <FileUploadModal
           show={showUploadModal}

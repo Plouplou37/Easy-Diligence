@@ -23,7 +23,7 @@ du frontend. Pour installer et lancer l'application, voir le
   - `models/` : une table par fichier, avec ses formes d'API : une classe de
     base porte les champs et leurs limites, la table, le formulaire de création
     et la réponse en héritent.
-- **Frontend** : React 18, Vite 4, Tailwind 3, axios et react-router. Code dans
+- **Frontend** : React 18, Vite 8, Tailwind 3, axios et react-router 7. Code dans
   `frontend/src/`.
 - **LLM** : l'API **Responses** d'OpenAI (`client.responses.create`). Le modèle
   est choisi par `OPENAI_MODEL`. `openai_client.is_reasoning_model()` adapte les

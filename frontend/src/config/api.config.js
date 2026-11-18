@@ -1,2 +1,3 @@
-export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8001';
-export const API_URL = `${API_BASE_URL}/api`;
+// The API is called on the frontend's own origin, at /api: the Vite proxy
+// forwards it in development (vite.config.js), nginx in Docker.
+export const API_URL = '/api';
