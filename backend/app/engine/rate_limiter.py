@@ -33,25 +33,32 @@ class RateLimiter:
         delays: list[tuple[str, float]] = []
 
         if settings.inter_question_delay_seconds > 0:
-            delays.append((
-                "delai entre questions",
-                float(settings.inter_question_delay_seconds),
-            ))
+            delays.append(
+                (
+                    "delai entre questions",
+                    float(settings.inter_question_delay_seconds),
+                )
+            )
 
-        if (settings.high_token_sleep_seconds > 0
-                and tokens_used > settings.token_threshold):
-            delays.append((
-                f"forte consommation ({tokens_used} tokens)",
-                float(settings.high_token_sleep_seconds),
-            ))
+        if settings.high_token_sleep_seconds > 0 and tokens_used > settings.token_threshold:
+            delays.append(
+                (
+                    f"forte consommation ({tokens_used} tokens)",
+                    float(settings.high_token_sleep_seconds),
+                )
+            )
 
-        if (settings.batch_sleep_minutes > 0
-                and settings.max_questions_per_batch > 0
-                and self.questions_processed % settings.max_questions_per_batch == 0):
-            delays.append((
-                f"lot de {settings.max_questions_per_batch} questions",
-                settings.batch_sleep_minutes * 60.0,
-            ))
+        if (
+            settings.batch_sleep_minutes > 0
+            and settings.max_questions_per_batch > 0
+            and self.questions_processed % settings.max_questions_per_batch == 0
+        ):
+            delays.append(
+                (
+                    f"lot de {settings.max_questions_per_batch} questions",
+                    settings.batch_sleep_minutes * 60.0,
+                )
+            )
 
         return delays
 

@@ -10,12 +10,15 @@ class ExecutionCreate(BaseModel):
     session_id: int
     dd_type_id: int
 
+
 class ExecutionUpdate(BaseModel):
     status: ExecutionStatus | None = None
     conversation_id: str | None = None
 
+
 class ExecutionValidate(BaseModel):
     validation_comments: str | None = None
+
 
 class ExecutionResponse(BaseModel):
     id: int
@@ -40,6 +43,7 @@ class ExecutionResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
 
 class ExecutionSummary(BaseModel):
     id: int

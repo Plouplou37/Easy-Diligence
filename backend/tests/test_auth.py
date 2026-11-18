@@ -44,8 +44,7 @@ class TestAuthentication:
         user = create_test_user(email="test@example.com", password="testpass123")
 
         response = await async_client.post(
-            "/api/auth/login",
-            data={"username": user.email, "password": "testpass123"}
+            "/api/auth/login", data={"username": user.email, "password": "testpass123"}
         )
 
         assert response.status_code == 200
@@ -57,8 +56,7 @@ class TestAuthentication:
     async def test_login_endpoint_invalid_credentials(self, async_client: AsyncClient):
         """Test login with invalid credentials."""
         response = await async_client.post(
-            "/api/auth/login",
-            data={"username": "nonexistent@example.com", "password": "wrongpass"}
+            "/api/auth/login", data={"username": "nonexistent@example.com", "password": "wrongpass"}
         )
 
         assert response.status_code == 401
@@ -70,7 +68,7 @@ class TestAuthentication:
         user_data = {
             "email": "newuser@example.com",
             "username": "newuser",
-            "password": "newpass123"
+            "password": "newpass123",
         }
 
         response = await async_client.post("/api/auth/register", json=user_data)
@@ -89,7 +87,7 @@ class TestAuthentication:
         user_data = {
             "email": "existing@example.com",
             "username": "newuser",
-            "password": "newpass123"
+            "password": "newpass123",
         }
 
         response = await async_client.post("/api/auth/register", json=user_data)

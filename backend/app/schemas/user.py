@@ -11,6 +11,7 @@ ROLES = get_args(Role)
 
 class UserProfile(BaseModel):
     """What a person says about themselves, without any privilege."""
+
     email: EmailStr
     username: str = Field(..., min_length=3, max_length=30, pattern="^[a-zA-Z0-9._-]+$")
     full_name: str | None = None
@@ -24,6 +25,7 @@ class UserBase(UserProfile):
 
 class UserCreate(UserBase):
     """Server-side creation, role included (the create-admin command, tests)."""
+
     password: str = Field(..., min_length=8)
 
     @field_validator("password")
@@ -36,6 +38,7 @@ class UserRegister(UserProfile):
     """Self-registration. There is no role field, and unknown fields are
     refused: a request carrying "role" gets a 422 instead of being trusted.
     A registered account is always an analyst."""
+
     model_config = ConfigDict(extra="forbid")
 
     password: str = Field(..., min_length=8)
@@ -82,6 +85,7 @@ class Token(BaseModel):
 class RefreshRequest(BaseModel):
     """Body of POST /auth/refresh: the token travels in the body, never in the
     URL, where proxies and server logs would record it."""
+
     refresh_token: str
 
 

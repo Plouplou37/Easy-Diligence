@@ -12,6 +12,7 @@ class AnswerHistoryCreate(BaseModel):
     sources: dict[str, Any] | None = None
     edit_reason: str | None = None
 
+
 class AnswerHistoryResponse(BaseModel):
     id: int
     answer_id: int
@@ -25,7 +26,7 @@ class AnswerHistoryResponse(BaseModel):
     # Relationships
     editor_name: str | None = None
 
-    @field_validator('sources', mode='before')
+    @field_validator("sources", mode="before")
     @classmethod
     def parse_sources(cls, v):
         """Parse sources from string/list to appropriate format"""
@@ -46,8 +47,10 @@ class AnswerHistoryResponse(BaseModel):
     class Config:
         from_attributes = True
 
+
 class AnswerVersionHistory(BaseModel):
     """Complete version history for an answer"""
+
     answer_id: int
     current_version: int
     versions: list[AnswerHistoryResponse]
@@ -56,8 +59,10 @@ class AnswerVersionHistory(BaseModel):
     class Config:
         from_attributes = True
 
+
 class VersionComparison(BaseModel):
     """Compare two versions of an answer"""
+
     answer_id: int
     version_a: int
     version_b: int

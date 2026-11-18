@@ -1,6 +1,7 @@
 """
 Utility functions for common operations
 """
+
 import re
 import secrets
 import string
@@ -102,7 +103,7 @@ def validate_email(email: str) -> bool:
         return False
 
     # Basic email regex pattern (doesn't allow leading dot)
-    email_pattern = r'^[a-zA-Z0-9][a-zA-Z0-9._%+-]*@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    email_pattern = r"^[a-zA-Z0-9][a-zA-Z0-9._%+-]*@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
     return bool(re.match(email_pattern, email))
 
 
@@ -118,15 +119,15 @@ def generate_unique_code(name: str, user_id: int) -> str:
         str: Generated unique code
     """
     # Take first 3 letters of name (uppercase)
-    name_part = ''.join(name.split())[:3].upper()
+    name_part = "".join(name.split())[:3].upper()
     if not name_part:
-        name_part = 'GEN'
+        name_part = "GEN"
 
     # Add user identifier
     user_part = str(user_id)[-2:].zfill(2)
 
     # Add random suffix for uniqueness
-    random_part = ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(4))
+    random_part = "".join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(4))
 
     # Combine: NAME-USER-RANDOM
     return f"{name_part}-{user_part}-{random_part}"

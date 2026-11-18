@@ -2,6 +2,7 @@
 
 No FastAPI here: callers turn a None or False result into the HTTP answer.
 """
+
 import hashlib
 import hmac
 import secrets
@@ -30,6 +31,7 @@ def _now() -> datetime:
 
 # --- Passwords -------------------------------------------------------------
 
+
 def get_password_hash(password: str) -> str:
     """Hash a password with bcrypt."""
     return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("ascii")
@@ -45,6 +47,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 
 # --- Stored token fingerprints ---------------------------------------------
+
 
 def hash_token(token: str) -> str:
     """SHA-256 of a token, as stored in user_sessions instead of the token."""
@@ -63,13 +66,15 @@ def _password_fingerprint(password_hash: str) -> str:
 
 # --- JWT -------------------------------------------------------------------
 
+
 def _encode(payload: dict) -> str:
     # A random "jti" makes every token unique. Without it a JWT is
     # deterministic: two tokens issued in the same second for the same user
     # were identical, so a rotated refresh token stayed valid and two logins in
     # one second collided on the unique access-token column.
-    return jwt.encode({**payload, "jti": secrets.token_urlsafe(16)}, _secret(),
-                      algorithm=settings.jwt_algorithm)
+    return jwt.encode(
+        {**payload, "jti": secrets.token_urlsafe(16)}, _secret(), algorithm=settings.jwt_algorithm
+    )
 
 
 def decode_token(token: str) -> dict | None:
@@ -119,12 +124,14 @@ def refresh_token_expiry() -> datetime:
 
 def create_password_reset_token(email: str, password_hash: str) -> str:
     """Create a single-use password reset token (see _password_fingerprint)."""
-    return _encode({
-        "email": email,
-        "fp": _password_fingerprint(password_hash),
-        "type": "password_reset",
-        "exp": _now() + timedelta(hours=PASSWORD_RESET_EXPIRE_HOURS),
-    })
+    return _encode(
+        {
+            "email": email,
+            "fp": _password_fingerprint(password_hash),
+            "type": "password_reset",
+            "exp": _now() + timedelta(hours=PASSWORD_RESET_EXPIRE_HOURS),
+        }
+    )
 
 
 def read_password_reset_token(token: str) -> dict | None:

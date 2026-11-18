@@ -35,9 +35,11 @@ def authenticate_user(db: Session, email: str, password: str) -> User | None:
 def create_user(db: Session, profile: UserProfile, password: str, role: Role = "analyst") -> User:
     """Create a user. The role is the caller's decision, never the request's:
     self-registration always passes the default."""
-    existing_user = db.query(User).filter(
-        (User.email == profile.email) | (User.username == profile.username)
-    ).first()
+    existing_user = (
+        db.query(User)
+        .filter((User.email == profile.email) | (User.username == profile.username))
+        .first()
+    )
 
     if existing_user:
         if existing_user.email == profile.email:
@@ -112,9 +114,14 @@ def set_password(db: Session, user: User, new_password: str) -> None:
     db.commit()
 
 
-def create_user_session(db: Session, user_id: int, access_token: str, refresh_token: str,
-                        ip_address: str | None = None,
-                        user_agent: str | None = None) -> UserSession:
+def create_user_session(
+    db: Session,
+    user_id: int,
+    access_token: str,
+    refresh_token: str,
+    ip_address: str | None = None,
+    user_agent: str | None = None,
+) -> UserSession:
     """Record a login. Only the tokens' SHA-256 is stored."""
     session = UserSession(
         user_id=user_id,
@@ -132,12 +139,15 @@ def create_user_session(db: Session, user_id: int, access_token: str, refresh_to
     return session
 
 
-def rotate_user_session(db: Session, old_refresh_token: str,
-                        access_token: str, refresh_token: str) -> bool:
+def rotate_user_session(
+    db: Session, old_refresh_token: str, access_token: str, refresh_token: str
+) -> bool:
     """Swap a session's tokens after a refresh. False if the session is gone."""
-    session = db.query(UserSession).filter(
-        UserSession.refresh_token_hash == hash_token(old_refresh_token)
-    ).first()
+    session = (
+        db.query(UserSession)
+        .filter(UserSession.refresh_token_hash == hash_token(old_refresh_token))
+        .first()
+    )
     if not session:
         return False
     session.access_token_hash = hash_token(access_token)
@@ -155,10 +165,14 @@ def invalidate_user_sessions(db: Session, user_id: int) -> None:
 
 def validate_refresh_token(db: Session, refresh_token: str) -> User | None:
     """Return the user of a live session holding this refresh token."""
-    session = db.query(UserSession).filter(
-        UserSession.refresh_token_hash == hash_token(refresh_token),
-        UserSession.expires_at > _now(),
-    ).first()
+    session = (
+        db.query(UserSession)
+        .filter(
+            UserSession.refresh_token_hash == hash_token(refresh_token),
+            UserSession.expires_at > _now(),
+        )
+        .first()
+    )
 
     if not session:
         return None

@@ -15,6 +15,7 @@ class DDSummary(Base):
     One current summary per (session, dd_type, section) scope; regeneration
     overwrites the row in place. Summaries are editable by hand before export.
     """
+
     __tablename__ = "dd_summaries"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -35,7 +36,9 @@ class DDSummary(Base):
     editor = relationship("User")
 
     __table_args__ = (
-        UniqueConstraint("session_id", "dd_type_id", "section_id", name="unique_session_ddtype_section_summary"),
+        UniqueConstraint(
+            "session_id", "dd_type_id", "section_id", name="unique_session_ddtype_section_summary"
+        ),
     )
 
 
@@ -53,6 +56,7 @@ class DDSummaryBatch(Base):
 
     One row per (session, dd_type): relaunching replaces the previous job.
     """
+
     __tablename__ = "dd_summary_batches"
 
     id = Column(Integer, primary_key=True, index=True)

@@ -7,6 +7,7 @@ receives a file reads it with read_upload.
 The size is checked while reading, after the multipart parser has received the
 body; the reverse proxy in front of the API should cap the body size as well.
 """
+
 from collections.abc import Iterable
 from pathlib import PurePath
 
@@ -30,8 +31,11 @@ async def read_upload(file: UploadFile, allowed_extensions: Iterable[str] | None
 
     `allowed_extensions` defaults to settings.allowed_extensions.
     """
-    allowed = sorted(settings.allowed_extensions if allowed_extensions is None
-                     else (ext.lower() for ext in allowed_extensions))
+    allowed = sorted(
+        settings.allowed_extensions
+        if allowed_extensions is None
+        else (ext.lower() for ext in allowed_extensions)
+    )
     if file_extension(file.filename) not in allowed:
         raise HTTPException(
             status_code=400,

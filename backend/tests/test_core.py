@@ -1,4 +1,3 @@
-
 import pytest
 
 from app.core.security import get_password_hash, verify_password
@@ -73,7 +72,7 @@ class TestModelValidation:
             username="modeluser",
             hashed_password=get_password_hash("testpass"),
             role="user",
-            is_active=True
+            is_active=True,
         )
 
         db.add(user)
@@ -99,7 +98,7 @@ class TestModelValidation:
         company = Company(
             name="Model Test Company",
             website_url="https://modeltest.com",
-            description="Testing company model"
+            description="Testing company model",
         )
 
         db.add(company)
@@ -134,7 +133,7 @@ class TestDatabaseConstraints:
             username="user1",
             hashed_password=get_password_hash("pass1"),
             role="user",
-            is_active=True
+            is_active=True,
         )
         db.add(user1)
         db.commit()
@@ -145,7 +144,7 @@ class TestDatabaseConstraints:
             username="user2",
             hashed_password=get_password_hash("pass2"),
             role="user",
-            is_active=True
+            is_active=True,
         )
         db.add(user2)
 
@@ -165,7 +164,7 @@ class TestDatabaseConstraints:
 
         company = Company(
             name=None,  # Missing required field
-            website_url="https://test.com"
+            website_url="https://test.com",
         )
 
         db.add(company)

@@ -9,6 +9,7 @@ import pandas as pd
 
 class FileParsingError(Exception):
     """Custom exception for file parsing errors"""
+
     pass
 
 
@@ -21,7 +22,7 @@ class DDTypeFileParser:
         Generate section code following existing pattern:
         First 6 chars of title + 6-digit timestamp + 2-digit random
         """
-        title_prefix = title.upper().replace(' ', '').replace('_', '')[:6]
+        title_prefix = title.upper().replace(" ", "").replace("_", "")[:6]
         timestamp = str(int(time.time()))[-6:]
         random_suffix = str(random.randint(10, 99))
         return f"{title_prefix}_{timestamp}{random_suffix}"
@@ -33,9 +34,13 @@ class DDTypeFileParser:
         First 6 chars of question + section timestamp + 2-digit random
         """
         # Extract first few words from question text
-        question_prefix = ''.join(question_text.split()[:2]).upper().replace(' ', '').replace('_', '')[:6]
+        question_prefix = (
+            "".join(question_text.split()[:2]).upper().replace(" ", "").replace("_", "")[:6]
+        )
         # Use section's timestamp part for consistency
-        section_timestamp = section_code.split('_')[1][:6] if '_' in section_code else str(int(time.time()))[-6:]
+        section_timestamp = (
+            section_code.split("_")[1][:6] if "_" in section_code else str(int(time.time()))[-6:]
+        )
         random_suffix = str(random.randint(10, 99))
         return f"{question_prefix}_{section_timestamp}{random_suffix}"
 
@@ -51,7 +56,9 @@ class DDTypeFileParser:
         update_questionnaire.py, the PDF export and the frontend badge all read
         the reference back from it.
         """
-        section_timestamp = section_code.split('_')[1][:6] if '_' in section_code else str(int(time.time()))[-6:]
+        section_timestamp = (
+            section_code.split("_")[1][:6] if "_" in section_code else str(int(time.time()))[-6:]
+        )
         random_suffix = str(random.randint(10, 99))
         return f"{reference.strip().upper()[:20]}-_{section_timestamp}{random_suffix}"
 
@@ -70,7 +77,9 @@ class DDTypeFileParser:
             section_order = 0
             question_order = 0
 
-            for row_num, row in enumerate(worksheet.iter_rows(min_row=2, values_only=True), start=2):
+            for row_num, row in enumerate(
+                worksheet.iter_rows(min_row=2, values_only=True), start=2
+            ):
                 section_name = row[0] if len(row) > 0 and row[0] else None
                 question_text = row[1] if len(row) > 1 and row[1] else None
 
@@ -85,23 +94,27 @@ class DDTypeFileParser:
 
                     section_code = self.generate_section_code(section_name)
                     current_section = {
-                        'title': str(section_name).strip(),
-                        'section_code': section_code,
-                        'description': None,
-                        'order_index': section_order,
-                        'questions': []
+                        "title": str(section_name).strip(),
+                        "section_code": section_code,
+                        "description": None,
+                        "order_index": section_order,
+                        "questions": [],
                     }
                     section_order += 1
                     question_order = 0
 
                 # Add question to current section
                 if question_text and current_section:
-                    question_code = self.generate_question_code(str(question_text), current_section['section_code'])
-                    current_section['questions'].append({
-                        'question_text': str(question_text).strip(),
-                        'question_code': question_code,
-                        'order_index': question_order
-                    })
+                    question_code = self.generate_question_code(
+                        str(question_text), current_section["section_code"]
+                    )
+                    current_section["questions"].append(
+                        {
+                            "question_text": str(question_text).strip(),
+                            "question_code": question_code,
+                            "order_index": question_order,
+                        }
+                    )
                     question_order += 1
                 elif question_text and not current_section:
                     raise FileParsingError(f"Question found without section at row {row_num}")
@@ -128,10 +141,10 @@ class DDTypeFileParser:
         """
         try:
             # Try different encodings
-            for encoding in ['utf-8', 'utf-8-sig', 'latin1', 'cp1252']:
+            for encoding in ["utf-8", "utf-8-sig", "latin1", "cp1252"]:
                 try:
                     content = file_content.decode(encoding)
-                    df = pd.read_csv(BytesIO(content.encode('utf-8')))
+                    df = pd.read_csv(BytesIO(content.encode("utf-8")))
                     break
                 except (UnicodeDecodeError, pd.errors.ParserError):
                     continue
@@ -147,8 +160,14 @@ class DDTypeFileParser:
             question_order = 0
 
             for index, row in df.iterrows():
-                section_name = row.iloc[0] if pd.notna(row.iloc[0]) and str(row.iloc[0]).strip() else None
-                question_text = row.iloc[1] if len(row) > 1 and pd.notna(row.iloc[1]) and str(row.iloc[1]).strip() else None
+                section_name = (
+                    row.iloc[0] if pd.notna(row.iloc[0]) and str(row.iloc[0]).strip() else None
+                )
+                question_text = (
+                    row.iloc[1]
+                    if len(row) > 1 and pd.notna(row.iloc[1]) and str(row.iloc[1]).strip()
+                    else None
+                )
 
                 # Skip empty rows
                 if not section_name and not question_text:
@@ -161,23 +180,27 @@ class DDTypeFileParser:
 
                     section_code = self.generate_section_code(str(section_name))
                     current_section = {
-                        'title': str(section_name).strip(),
-                        'section_code': section_code,
-                        'description': None,
-                        'order_index': section_order,
-                        'questions': []
+                        "title": str(section_name).strip(),
+                        "section_code": section_code,
+                        "description": None,
+                        "order_index": section_order,
+                        "questions": [],
                     }
                     section_order += 1
                     question_order = 0
 
                 # Add question to current section
                 if question_text and current_section:
-                    question_code = self.generate_question_code(str(question_text), current_section['section_code'])
-                    current_section['questions'].append({
-                        'question_text': str(question_text).strip(),
-                        'question_code': question_code,
-                        'order_index': question_order
-                    })
+                    question_code = self.generate_question_code(
+                        str(question_text), current_section["section_code"]
+                    )
+                    current_section["questions"].append(
+                        {
+                            "question_text": str(question_text).strip(),
+                            "question_code": question_code,
+                            "order_index": question_order,
+                        }
+                    )
                     question_order += 1
                 elif question_text and not current_section:
                     raise FileParsingError(f"Question found without section at row {index + 2}")
@@ -207,7 +230,7 @@ class DDTypeFileParser:
         ]
         """
         try:
-            content = file_content.decode('utf-8')
+            content = file_content.decode("utf-8")
             data = json.loads(content)
 
             if not isinstance(data, list):
@@ -219,22 +242,24 @@ class DDTypeFileParser:
                 if not isinstance(section_data, dict):
                     raise FileParsingError(f"Section {section_order + 1} must be an object")
 
-                section_name = section_data.get('section')
-                questions = section_data.get('questions', [])
+                section_name = section_data.get("section")
+                questions = section_data.get("questions", [])
 
                 if not section_name:
                     raise FileParsingError(f"Section {section_order + 1} missing 'section' field")
 
                 if not isinstance(questions, list):
-                    raise FileParsingError(f"Questions for section '{section_name}' must be an array")
+                    raise FileParsingError(
+                        f"Questions for section '{section_name}' must be an array"
+                    )
 
                 section_code = self.generate_section_code(str(section_name))
                 section = {
-                    'title': str(section_name).strip(),
-                    'section_code': section_code,
-                    'description': section_data.get('description'),
-                    'order_index': section_order,
-                    'questions': []
+                    "title": str(section_name).strip(),
+                    "section_code": section_code,
+                    "description": section_data.get("description"),
+                    "order_index": section_order,
+                    "questions": [],
                 }
 
                 for question_order, entry in enumerate(questions):
@@ -245,9 +270,9 @@ class DDTypeFileParser:
                     # numbering (ref). With strings only, re-importing a file would
                     # push them back in.
                     if isinstance(entry, dict):
-                        question_text = entry.get('text') or entry.get('question_text')
-                        context_prompt = (entry.get('context_prompt') or '').strip() or None
-                        reference = (entry.get('ref') or '').strip() or None
+                        question_text = entry.get("text") or entry.get("question_text")
+                        context_prompt = (entry.get("context_prompt") or "").strip() or None
+                        reference = (entry.get("ref") or "").strip() or None
                     else:
                         question_text = entry
                         context_prompt = None
@@ -257,17 +282,23 @@ class DDTypeFileParser:
                         continue
 
                     if reference:
-                        question_code = self.generate_question_code_from_reference(reference, section_code)
+                        question_code = self.generate_question_code_from_reference(
+                            reference, section_code
+                        )
                     else:
-                        question_code = self.generate_question_code(str(question_text), section_code)
-                    section['questions'].append({
-                        'question_text': str(question_text).strip(),
-                        'question_code': question_code,
-                        'order_index': question_order,
-                        'context_prompt': context_prompt
-                    })
+                        question_code = self.generate_question_code(
+                            str(question_text), section_code
+                        )
+                    section["questions"].append(
+                        {
+                            "question_text": str(question_text).strip(),
+                            "question_code": question_code,
+                            "order_index": question_order,
+                            "context_prompt": context_prompt,
+                        }
+                    )
 
-                if section['questions']:  # Only add sections with questions
+                if section["questions"]:  # Only add sections with questions
                     sections.append(section)
 
             if not sections:
@@ -306,14 +337,16 @@ class DDTypeFileParser:
         """
         filename_lower = filename.lower()
 
-        if filename_lower.endswith('.xlsx') or filename_lower.endswith('.xls'):
+        if filename_lower.endswith(".xlsx") or filename_lower.endswith(".xls"):
             return self.parse_excel(file_content)
-        elif filename_lower.endswith('.csv'):
+        elif filename_lower.endswith(".csv"):
             return self.parse_csv(file_content)
-        elif filename_lower.endswith('.json'):
+        elif filename_lower.endswith(".json"):
             return self.parse_json(file_content)
         else:
-            raise FileParsingError("Unsupported file format. Supported formats: .xlsx, .xls, .csv, .json")
+            raise FileParsingError(
+                "Unsupported file format. Supported formats: .xlsx, .xls, .csv, .json"
+            )
 
     def validate_parsed_data(self, sections: list[dict]) -> tuple[bool, list[str]]:
         """
@@ -333,32 +366,38 @@ class DDTypeFileParser:
 
         for i, section in enumerate(sections):
             # Validate section structure
-            required_fields = ['title', 'section_code', 'order_index', 'questions']
+            required_fields = ["title", "section_code", "order_index", "questions"]
             for field in required_fields:
                 if field not in section:
                     errors.append(f"Section {i + 1}: Missing required field '{field}'")
 
             # Check for duplicate section codes
-            if section.get('section_code') in section_codes:
-                errors.append(f"Section {i + 1}: Duplicate section code '{section.get('section_code')}'")
+            if section.get("section_code") in section_codes:
+                errors.append(
+                    f"Section {i + 1}: Duplicate section code '{section.get('section_code')}'"
+                )
             else:
-                section_codes.append(section.get('section_code'))
+                section_codes.append(section.get("section_code"))
 
             # Validate questions
-            if not section.get('questions'):
+            if not section.get("questions"):
                 errors.append(f"Section '{section.get('title', i + 1)}': No questions found")
             else:
-                for j, question in enumerate(section['questions']):
+                for j, question in enumerate(section["questions"]):
                     # Validate question structure
-                    required_q_fields = ['question_text', 'question_code', 'order_index']
+                    required_q_fields = ["question_text", "question_code", "order_index"]
                     for field in required_q_fields:
                         if field not in question:
-                            errors.append(f"Section '{section.get('title')}', Question {j + 1}: Missing required field '{field}'")
+                            errors.append(
+                                f"Section '{section.get('title')}', Question {j + 1}: Missing required field '{field}'"
+                            )
 
                     # Check for duplicate question codes
-                    if question.get('question_code') in question_codes:
-                        errors.append(f"Section '{section.get('title')}', Question {j + 1}: Duplicate question code '{question.get('question_code')}'")
+                    if question.get("question_code") in question_codes:
+                        errors.append(
+                            f"Section '{section.get('title')}', Question {j + 1}: Duplicate question code '{question.get('question_code')}'"
+                        )
                     else:
-                        question_codes.append(question.get('question_code'))
+                        question_codes.append(question.get("question_code"))
 
         return len(errors) == 0, errors

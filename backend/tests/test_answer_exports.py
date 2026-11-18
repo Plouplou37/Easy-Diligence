@@ -2,6 +2,7 @@
 Test suite for answer export functionality
 Validates that PDF/Excel exports work after modularization
 """
+
 from datetime import datetime
 from unittest.mock import MagicMock, patch
 
@@ -17,8 +18,13 @@ from app.models.session import DDSession
 from app.models.user import User
 
 
-def _make_answer(i=0, sources='[{"type": "document", "content": "Test source"}]',
-                 section_code=None, status=AnswerStatus.COMPLETED, confidence=0.9):
+def _make_answer(
+    i=0,
+    sources='[{"type": "document", "content": "Test source"}]',
+    section_code=None,
+    status=AnswerStatus.COMPLETED,
+    confidence=0.9,
+):
     """Build a DDAnswer with related question/section/dd_type mocks.
 
     Question text lives on the DDQuestion relationship and the section title on
@@ -27,21 +33,21 @@ def _make_answer(i=0, sources='[{"type": "document", "content": "Test source"}]'
     """
     answer = DDAnswer(
         id=i + 1,
-        question_code=f"Q{i+1}",
-        answer_text=f"Test Answer {i+1}",
-        section_code=section_code or f"SEC{i+1}",
+        question_code=f"Q{i + 1}",
+        answer_text=f"Test Answer {i + 1}",
+        section_code=section_code or f"SEC{i + 1}",
         confidence_score=confidence,
         status=status,
         tokens_used=100,
         created_at=datetime.utcnow(),
         sources=sources,
     )
-    answer.dd_type_obj = MagicMock(name=f"DD Type {i+1}")
-    answer.dd_type_obj.name = f"DD Type {i+1}"
+    answer.dd_type_obj = MagicMock(name=f"DD Type {i + 1}")
+    answer.dd_type_obj.name = f"DD Type {i + 1}"
     answer.question = MagicMock()
-    answer.question.question_text = f"Test Question {i+1}?"
+    answer.question.question_text = f"Test Question {i + 1}?"
     answer.section = MagicMock()
-    answer.section.title = f"Section {i+1}"
+    answer.section.title = f"Section {i + 1}"
     return answer
 
 
@@ -56,7 +62,7 @@ class TestAnswerExporter:
             name="Test Session",
             description="Test Description",
             company=company,
-            created_at=datetime.utcnow()
+            created_at=datetime.utcnow(),
         )
 
     @pytest.fixture
@@ -79,7 +85,10 @@ class TestAnswerExporter:
         response = AnswerExporter.generate_excel_report(mock_session, mock_answers)
 
         # Assertions
-        assert response.media_type == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        assert (
+            response.media_type
+            == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
         assert "attachment" in response.headers["Content-Disposition"]
         assert "Test Session_DD_Report.xlsx" in response.headers["Content-Disposition"]
         assert len(response.body) > 0  # Should have Excel content
@@ -97,7 +106,10 @@ class TestAnswerExporter:
         response = AnswerExporter.generate_excel_report(mock_session, [])
 
         # Should still generate an Excel with session info
-        assert response.media_type == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        assert (
+            response.media_type
+            == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
         assert len(response.body) > 0
 
     def test_pdf_report_handles_json_sources(self, mock_session):
@@ -116,8 +128,10 @@ class TestAnswerExporter:
     def _table(columns, rows=5):
         """A markdown table with one short column and long ones, as the model writes."""
         header = ["Period"] + [f"Very long column heading number {c}" for c in range(1, columns)]
-        body = [["Q1"] + ["A rather long cell value that weighs heavily"] * (columns - 1)
-                for _ in range(rows)]
+        body = [
+            ["Q1"] + ["A rather long cell value that weighs heavily"] * (columns - 1)
+            for _ in range(rows)
+        ]
         lines = [header, ["---"] * columns] + body
         return "\n".join("| " + " | ".join(line) + " |" for line in lines)
 
@@ -145,7 +159,7 @@ class TestAnswerExporter:
         """Test Excel generation with malformed source JSON"""
         answer = _make_answer(
             0,
-            sources='invalid json',  # Malformed JSON
+            sources="invalid json",  # Malformed JSON
             status=AnswerStatus.NEEDS_REVIEW,
             confidence=0.7,
         )
@@ -153,7 +167,10 @@ class TestAnswerExporter:
         response = AnswerExporter.generate_excel_report(mock_session, [answer])
 
         # Should handle malformed JSON gracefully
-        assert response.media_type == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        assert (
+            response.media_type
+            == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
         assert len(response.body) > 0
 
 
@@ -181,17 +198,27 @@ class TestAnswerExportEndpoint:
             name="Test Export Session",
             description="Test Description",
             company=company,
-            created_at=datetime.utcnow()
+            created_at=datetime.utcnow(),
         )
 
     @pytest.fixture
     def mock_answers(self):
         return [_make_answer(i, section_code="SEC1", confidence=0.85) for i in range(2)]
 
-    @patch('app.api.routes.answers.get_db')
-    @patch('app.api.deps.get_current_active_user')
-    @patch('app.exports.answers.AnswerExporter.generate_pdf_report')
-    def test_export_session_answers_pdf(self, mock_pdf_export, mock_auth, mock_db_dep, client, mock_db, mock_user, mock_session, mock_answers):
+    @patch("app.api.routes.answers.get_db")
+    @patch("app.api.deps.get_current_active_user")
+    @patch("app.exports.answers.AnswerExporter.generate_pdf_report")
+    def test_export_session_answers_pdf(
+        self,
+        mock_pdf_export,
+        mock_auth,
+        mock_db_dep,
+        client,
+        mock_db,
+        mock_user,
+        mock_session,
+        mock_answers,
+    ):
         """Test PDF export endpoint"""
         # Setup mocks
         mock_auth.return_value = mock_user
@@ -212,10 +239,20 @@ class TestAnswerExportEndpoint:
         assert response.status_code == 200
         mock_pdf_export.assert_called_once_with(mock_session, mock_answers)
 
-    @patch('app.api.routes.answers.get_db')
-    @patch('app.api.deps.get_current_active_user')
-    @patch('app.exports.answers.AnswerExporter.generate_excel_report')
-    def test_export_session_answers_excel(self, mock_excel_export, mock_auth, mock_db_dep, client, mock_db, mock_user, mock_session, mock_answers):
+    @patch("app.api.routes.answers.get_db")
+    @patch("app.api.deps.get_current_active_user")
+    @patch("app.exports.answers.AnswerExporter.generate_excel_report")
+    def test_export_session_answers_excel(
+        self,
+        mock_excel_export,
+        mock_auth,
+        mock_db_dep,
+        client,
+        mock_db,
+        mock_user,
+        mock_session,
+        mock_answers,
+    ):
         """Test Excel export endpoint"""
         # Setup mocks
         mock_auth.return_value = mock_user
@@ -225,7 +262,9 @@ class TestAnswerExportEndpoint:
 
         # Mock Excel response
         mock_excel_response = MagicMock()
-        mock_excel_response.media_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        mock_excel_response.media_type = (
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
         mock_excel_response.body = b"Excel content"
         mock_excel_export.return_value = mock_excel_response
 
@@ -236,8 +275,8 @@ class TestAnswerExportEndpoint:
         assert response.status_code == 200
         mock_excel_export.assert_called_once_with(mock_session, mock_answers)
 
-    @patch('app.api.routes.answers.get_db')
-    @patch('app.api.deps.get_current_active_user')
+    @patch("app.api.routes.answers.get_db")
+    @patch("app.api.deps.get_current_active_user")
     def test_export_session_not_found(self, mock_auth, mock_db_dep, client, mock_db, mock_user):
         """Test export with non-existent session"""
         # Setup mocks
@@ -252,9 +291,11 @@ class TestAnswerExportEndpoint:
         assert response.status_code == 404
         assert "not found" in response.json()["detail"]
 
-    @patch('app.api.routes.answers.get_db')
-    @patch('app.api.deps.get_current_active_user')
-    def test_export_no_answers(self, mock_auth, mock_db_dep, client, mock_db, mock_user, mock_session):
+    @patch("app.api.routes.answers.get_db")
+    @patch("app.api.deps.get_current_active_user")
+    def test_export_no_answers(
+        self, mock_auth, mock_db_dep, client, mock_db, mock_user, mock_session
+    ):
         """Test export with no answers"""
         # Setup mocks
         mock_auth.return_value = mock_user
@@ -269,9 +310,11 @@ class TestAnswerExportEndpoint:
         assert response.status_code == 404
         assert "No answers found" in response.json()["detail"]
 
-    @patch('app.api.routes.answers.get_db')
-    @patch('app.api.deps.get_current_active_user')
-    def test_export_invalid_format(self, mock_auth, mock_db_dep, client, mock_db, mock_user, mock_session, mock_answers):
+    @patch("app.api.routes.answers.get_db")
+    @patch("app.api.deps.get_current_active_user")
+    def test_export_invalid_format(
+        self, mock_auth, mock_db_dep, client, mock_db, mock_user, mock_session, mock_answers
+    ):
         """Test export with invalid format"""
         # Setup mocks
         mock_auth.return_value = mock_user
@@ -302,9 +345,11 @@ class TestAnswerAPICompatibility:
     def mock_user(self):
         return User(id=1, email="test@example.com", username="testuser", role="user")
 
-    @patch('app.api.routes.answers.get_db')
-    @patch('app.api.deps.get_current_active_user')
-    def test_answer_list_endpoint_still_works(self, mock_auth, mock_db_dep, client, mock_db, mock_user):
+    @patch("app.api.routes.answers.get_db")
+    @patch("app.api.deps.get_current_active_user")
+    def test_answer_list_endpoint_still_works(
+        self, mock_auth, mock_db_dep, client, mock_db, mock_user
+    ):
         """Test that main answer list endpoint is unaffected by export extraction"""
         # Setup mocks
         mock_auth.return_value = mock_user
@@ -333,9 +378,11 @@ class TestAnswerAPICompatibility:
         assert data["answers"] == []
         assert data["pagination"]["total_items"] == 0
 
-    @patch('app.api.routes.answers.get_db')
-    @patch('app.api.deps.get_current_active_user')
-    def test_answer_stats_endpoint_still_works(self, mock_auth, mock_db_dep, client, mock_db, mock_user):
+    @patch("app.api.routes.answers.get_db")
+    @patch("app.api.deps.get_current_active_user")
+    def test_answer_stats_endpoint_still_works(
+        self, mock_auth, mock_db_dep, client, mock_db, mock_user
+    ):
         """Test that answer stats endpoint is unaffected"""
         # Setup mocks
         mock_auth.return_value = mock_user

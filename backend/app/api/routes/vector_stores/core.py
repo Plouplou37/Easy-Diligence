@@ -2,6 +2,7 @@
 Vector Store Core CRUD Operations
 Basic create, read, update, delete functionality
 """
+
 import asyncio
 import logging
 from datetime import datetime
@@ -25,8 +26,7 @@ router = APIRouter()
 @router.get("/", response_model=list[VectorStoreResponse])
 @cache_response(prefix="vector_stores", ttl=300, user_specific=True)
 async def list_vector_stores(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)
 ):
     """List vector stores visible to the current user (admins see all).
 
@@ -63,17 +63,19 @@ async def list_vector_stores(
                 continue
             # Other OpenAI errors: keep the store visible with an error status
             logger.warning(f"OpenAI error for vector store {store.id}: {error}")
-            response.append(VectorStoreResponse(
-                id=store.id,
-                name=store.name,
-                description=store.description,
-                created_at=store.created_at,
-                updated_at=store.updated_at,
-                created_by=store.created_by,
-                file_count=0,
-                status="error",
-                total_bytes=0,
-            ))
+            response.append(
+                VectorStoreResponse(
+                    id=store.id,
+                    name=store.name,
+                    description=store.description,
+                    created_at=store.created_at,
+                    updated_at=store.updated_at,
+                    created_by=store.created_by,
+                    file_count=0,
+                    status="error",
+                    total_bytes=0,
+                )
+            )
             continue
 
         store_status = info.get("status", "unknown")
@@ -82,30 +84,33 @@ async def list_vector_stores(
             stale_ids.append(store.id)
             continue
 
-        response.append(VectorStoreResponse(
-            id=store.id,
-            name=store.name,
-            description=store.description,
-            created_at=store.created_at,
-            updated_at=store.updated_at,
-            created_by=store.created_by,
-            file_count=info.get("file_counts", {}).get("total", 0),
-            status=store_status,
-            total_bytes=info.get("usage_bytes", 0),
-            expires_at=info.get("expires_at"),
-            expires_after_days=info.get("expires_after_days"),
-            last_active_at=info.get("last_active_at"),
-        ))
+        response.append(
+            VectorStoreResponse(
+                id=store.id,
+                name=store.name,
+                description=store.description,
+                created_at=store.created_at,
+                updated_at=store.updated_at,
+                created_by=store.created_by,
+                file_count=info.get("file_counts", {}).get("total", 0),
+                status=store_status,
+                total_bytes=info.get("usage_bytes", 0),
+                expires_at=info.get("expires_at"),
+                expires_after_days=info.get("expires_after_days"),
+                last_active_at=info.get("last_active_at"),
+            )
+        )
 
     # Remove stale rows (deleted or expired in OpenAI) to keep MySQL in sync
     if stale_ids:
         from app.models.vector_store import SessionVectorStore
+
         db.query(SessionVectorStore).filter(
             SessionVectorStore.vector_store_id.in_(stale_ids)
         ).delete(synchronize_session=False)
-        db.query(VectorStore).filter(
-            VectorStore.id.in_(stale_ids)
-        ).delete(synchronize_session=False)
+        db.query(VectorStore).filter(VectorStore.id.in_(stale_ids)).delete(
+            synchronize_session=False
+        )
         db.commit()
         CacheInvalidator.invalidate_vector_store_cache()
         logger.info(f"Removed {len(stale_ids)} stale vector store(s) during sync")
@@ -117,7 +122,7 @@ async def list_vector_stores(
 async def create_vector_store(
     vector_store: VectorStoreCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user),
 ):
     """Create a new vector store"""
     try:
@@ -125,8 +130,7 @@ async def create_vector_store(
 
         # Create in OpenAI first
         openai_store_id = await openai_processor.create_vector_store(
-            name=vector_store.name,
-            expires_after_days=30
+            name=vector_store.name, expires_after_days=30
         )
 
         # Create in database
@@ -136,7 +140,7 @@ async def create_vector_store(
             description=vector_store.description,
             created_by=current_user.id,
             created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow()
+            updated_at=datetime.utcnow(),
         )
 
         db.add(db_vector_store)
@@ -155,7 +159,7 @@ async def create_vector_store(
             created_by=db_vector_store.created_by,
             file_count=0,
             status="completed",
-            total_bytes=0
+            total_bytes=0,
         )
 
     except Exception:
@@ -163,7 +167,7 @@ async def create_vector_store(
         logger.exception("Failed to create vector store")
         raise HTTPException(  # noqa: B904
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to create vector store"
+            detail="Failed to create vector store",
         )
 
 
@@ -171,25 +175,17 @@ async def create_vector_store(
 async def get_vector_store(
     vector_store_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user),
 ):
     """Get a specific vector store"""
-    vector_store = db.query(VectorStore).filter(
-        VectorStore.id == vector_store_id
-    ).first()
+    vector_store = db.query(VectorStore).filter(VectorStore.id == vector_store_id).first()
 
     if not vector_store:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Vector store not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vector store not found")
 
     # Per-user isolation: non-admins can only view their own vector stores
     if not user_is_admin(current_user) and vector_store.created_by != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Vector store not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vector store not found")
 
     try:
         openai_processor = OpenAIProcessor()
@@ -207,7 +203,7 @@ async def get_vector_store(
             total_bytes=openai_store.get("usage_bytes", 0),
             expires_at=openai_store.get("expires_at"),
             expires_after_days=openai_store.get("expires_after_days"),
-            last_active_at=openai_store.get("last_active_at")
+            last_active_at=openai_store.get("last_active_at"),
         )
 
     except Exception as e:
@@ -218,8 +214,7 @@ async def get_vector_store(
             db.delete(vector_store)
             db.commit()
             raise HTTPException(  # noqa: B904
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Vector store no longer exists"
+                status_code=status.HTTP_404_NOT_FOUND, detail="Vector store no longer exists"
             )
 
         # For other errors (like OpenAI 500), return DB data with error status
@@ -236,7 +231,7 @@ async def get_vector_store(
             total_bytes=0,
             expires_at=None,
             expires_after_days=None,
-            last_active_at=None
+            last_active_at=None,
         )
 
 
@@ -245,31 +240,23 @@ async def update_vector_store(
     vector_store_id: str,
     update_data: VectorStoreUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user),
 ):
     """Update a vector store"""
-    vector_store = db.query(VectorStore).filter(
-        VectorStore.id == vector_store_id
-    ).first()
+    vector_store = db.query(VectorStore).filter(VectorStore.id == vector_store_id).first()
 
     # Per-user isolation: only the owner (or an admin) may modify/delete
     if not vector_store or (
         not user_is_admin(current_user) and vector_store.created_by != current_user.id
     ):
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Vector store not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vector store not found")
 
     try:
         openai_processor = OpenAIProcessor()
 
         # Update in OpenAI if name is being changed
         if update_data.name and update_data.name != vector_store.name:
-            await openai_processor.modify_vector_store(
-                vector_store_id,
-                name=update_data.name
-            )
+            await openai_processor.modify_vector_store(vector_store_id, name=update_data.name)
 
         # Update in database
         if update_data.name:
@@ -296,7 +283,7 @@ async def update_vector_store(
             created_by=vector_store.created_by,
             file_count=openai_store.get("file_counts", {}).get("total", 0),
             status=openai_store.get("status", "unknown"),
-            total_bytes=openai_store.get("usage_bytes", 0)
+            total_bytes=openai_store.get("usage_bytes", 0),
         )
 
     except Exception:
@@ -304,14 +291,12 @@ async def update_vector_store(
         logger.exception("Failed to update vector store")
         raise HTTPException(  # noqa: B904
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to update vector store"
+            detail="Failed to update vector store",
         )
 
 
 @router.post("/refresh")
-async def refresh_vector_stores_cache(
-    current_user: User = Depends(get_current_active_user)
-):
+async def refresh_vector_stores_cache(current_user: User = Depends(get_current_active_user)):
     """Manually refresh all vector stores cache"""
     try:
         CacheInvalidator.invalidate_vector_store_cache()
@@ -320,8 +305,7 @@ async def refresh_vector_stores_cache(
         logger.error(f"Failed to clear cache: {e}")
         logger.exception("Failed to clear cache")
         raise HTTPException(  # noqa: B904
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to clear cache"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to clear cache"
         )
 
 
@@ -329,18 +313,13 @@ async def refresh_vector_stores_cache(
 async def refresh_single_vector_store_cache(
     vector_store_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user),
 ):
     """Manually refresh cache for a specific vector store"""
-    vector_store = db.query(VectorStore).filter(
-        VectorStore.id == vector_store_id
-    ).first()
+    vector_store = db.query(VectorStore).filter(VectorStore.id == vector_store_id).first()
 
     if not vector_store:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Vector store not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vector store not found")
 
     try:
         CacheInvalidator.invalidate_vector_store_cache(vector_store_id)
@@ -349,8 +328,7 @@ async def refresh_single_vector_store_cache(
         logger.error(f"Failed to clear cache for store {vector_store_id}: {e}")
         logger.exception("Failed to clear cache")
         raise HTTPException(  # noqa: B904
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to clear cache"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to clear cache"
         )
 
 
@@ -358,21 +336,16 @@ async def refresh_single_vector_store_cache(
 async def delete_vector_store(
     vector_store_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user),
 ):
     """Delete a vector store"""
-    vector_store = db.query(VectorStore).filter(
-        VectorStore.id == vector_store_id
-    ).first()
+    vector_store = db.query(VectorStore).filter(VectorStore.id == vector_store_id).first()
 
     # Per-user isolation: only the owner (or an admin) may modify/delete
     if not vector_store or (
         not user_is_admin(current_user) and vector_store.created_by != current_user.id
     ):
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Vector store not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vector store not found")
 
     try:
         openai_processor = OpenAIProcessor()
@@ -386,6 +359,7 @@ async def delete_vector_store(
 
         # Remove session assignments
         from app.models.vector_store import SessionVectorStore
+
         db.query(SessionVectorStore).filter(
             SessionVectorStore.vector_store_id == vector_store_id
         ).delete()
@@ -404,5 +378,5 @@ async def delete_vector_store(
         logger.exception("Failed to delete vector store")
         raise HTTPException(  # noqa: B904
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to delete vector store"
+            detail="Failed to delete vector store",
         )

@@ -10,6 +10,7 @@ conftest.py imports the whole web app (and the .env it loads), so these run
 on their own:
     python -m pytest tests/test_citation_format.py --noconftest -p no:cacheprovider
 """
+
 from types import SimpleNamespace
 
 from app.engine.openai_client import (
@@ -19,7 +20,10 @@ from app.engine.openai_client import (
     documents_consulted,
 )
 
-PPM = {"file_id": "file-ppm", "filename": "1. PRIVATE PLACEMENT MEMORANDUM - Example Asia Fund Ltd.pdf"}
+PPM = {
+    "file_id": "file-ppm",
+    "filename": "1. PRIVATE PLACEMENT MEMORANDUM - Example Asia Fund Ltd.pdf",
+}
 DECK = {"file_id": "file-deck", "filename": "EAF Presentation 202606.pdf"}
 SUBS = {"file_id": "file-subs", "filename": "2a. SUBSCRIPTION DOCUMENTS FOR NON-U.S. INVESTORS.pdf"}
 RESULTS = [PPM, DECK, PPM, SUBS]  # file_search returns several chunks per file
@@ -31,15 +35,20 @@ def _names(sources):
 
 # --- documents_consulted -------------------------------------------------------
 
+
 def test_names_matched_without_number_or_extension():
-    answer = ("The PPM names the manager.\n\n"
-              "**Documents consulted:** PRIVATE PLACEMENT MEMORANDUM - Example Asia Fund Ltd; "
-              "EAF Presentation 202606.pdf")
+    answer = (
+        "The PPM names the manager.\n\n"
+        "**Documents consulted:** PRIVATE PLACEMENT MEMORANDUM - Example Asia Fund Ltd; "
+        "EAF Presentation 202606.pdf"
+    )
     assert _names(documents_consulted(answer, RESULTS)) == [PPM["filename"], DECK["filename"]]
 
 
 def test_bulleted_list_after_the_label():
-    answer = "Answer.\n\nDocuments consulted:\n- 2a. SUBSCRIPTION DOCUMENTS FOR NON-U.S. INVESTORS.pdf\n"
+    answer = (
+        "Answer.\n\nDocuments consulted:\n- 2a. SUBSCRIPTION DOCUMENTS FOR NON-U.S. INVESTORS.pdf\n"
+    )
     assert _names(documents_consulted(answer, RESULTS)) == [SUBS["filename"]]
 
 
@@ -67,20 +76,31 @@ def test_partial_word_is_not_a_match():
 
 # --- count_file_citations ------------------------------------------------------
 
+
 def test_counts_only_file_citations_in_messages():
-    response = {"output": [
-        {"type": "file_search_call", "results": [PPM]},
-        {"type": "message", "content": [{"annotations": [
-            {"type": "file_citation", "index": 10},
-            {"type": "url_citation", "start_index": 1, "end_index": 5},
-            {"type": "file_citation", "index": 42},
-        ]}]},
-    ]}
+    response = {
+        "output": [
+            {"type": "file_search_call", "results": [PPM]},
+            {
+                "type": "message",
+                "content": [
+                    {
+                        "annotations": [
+                            {"type": "file_citation", "index": 10},
+                            {"type": "url_citation", "start_index": 1, "end_index": 5},
+                            {"type": "file_citation", "index": 42},
+                        ]
+                    }
+                ],
+            },
+        ]
+    }
     assert count_file_citations(response) == 2
     assert count_file_citations({"output": None}) == 0
 
 
 # --- process_question ----------------------------------------------------------
+
 
 class FakeResponses:
     def __init__(self, replies):
@@ -96,14 +116,31 @@ def _reply(rid, text, annotations=(), results=(), tokens=100):
     output = []
     if results:
         output.append({"type": "file_search_call", "id": "fs_1", "results": list(results)})
-    output.append({"type": "message", "id": f"msg_{rid}", "role": "assistant",
-                   "content": [{"type": "output_text", "text": text, "annotations": list(annotations)}]})
-    dump = {"id": rid, "status": "completed", "model": "gpt-5.6-luna",
-            "output": output, "usage": {"total_tokens": tokens}}
+    output.append(
+        {
+            "type": "message",
+            "id": f"msg_{rid}",
+            "role": "assistant",
+            "content": [{"type": "output_text", "text": text, "annotations": list(annotations)}],
+        }
+    )
+    dump = {
+        "id": rid,
+        "status": "completed",
+        "model": "gpt-5.6-luna",
+        "output": output,
+        "usage": {"total_tokens": tokens},
+    }
     return SimpleNamespace(
-        id=rid, status="completed", model="gpt-5.6-luna", output_text=text, output=output,
+        id=rid,
+        status="completed",
+        model="gpt-5.6-luna",
+        output_text=text,
+        output=output,
         usage=SimpleNamespace(total_tokens=tokens, input_tokens=tokens - 10, output_tokens=10),
-        error=None, incomplete_details=None, model_dump=lambda: dump,
+        error=None,
+        incomplete_details=None,
+        model_dump=lambda: dump,
     )
 
 
@@ -131,10 +168,20 @@ def test_clean_answer_keeps_one_call_and_rebuilds_document_sources():
 
 
 def test_markers_despite_the_rule_ask_again_once_and_count_both_calls():
-    holed = _reply("resp_1", "Place of regis: Luxembourg",
-                   annotations=[{"type": "file_citation", "index": 14,
-                                 "file_id": "file-ppm", "filename": PPM["filename"]}],
-                   results=[PPM], tokens=120)
+    holed = _reply(
+        "resp_1",
+        "Place of regis: Luxembourg",
+        annotations=[
+            {
+                "type": "file_citation",
+                "index": 14,
+                "file_id": "file-ppm",
+                "filename": PPM["filename"],
+            }
+        ],
+        results=[PPM],
+        tokens=120,
+    )
     processor = _processor([holed, _reply("resp_2", CLEAN, results=[DECK], tokens=100)])
     result = processor.process_question("Q?", ["vs_1"])
     assert len(processor.client.responses.calls) == 2
@@ -144,11 +191,18 @@ def test_markers_despite_the_rule_ask_again_once_and_count_both_calls():
 
 
 def test_markers_twice_keep_the_second_answer_and_its_citations():
-    citation = {"type": "file_citation", "index": 3, "file_id": "file-ppm", "filename": PPM["filename"]}
-    processor = _processor([
-        _reply("resp_1", "abc", annotations=[citation], results=[PPM]),
-        _reply("resp_2", "def", annotations=[citation], results=[PPM]),
-    ])
+    citation = {
+        "type": "file_citation",
+        "index": 3,
+        "file_id": "file-ppm",
+        "filename": PPM["filename"],
+    }
+    processor = _processor(
+        [
+            _reply("resp_1", "abc", annotations=[citation], results=[PPM]),
+            _reply("resp_2", "def", annotations=[citation], results=[PPM]),
+        ]
+    )
     result = processor.process_question("Q?", ["vs_1"])
     assert len(processor.client.responses.calls) == 2
     assert result["answer"] == "def"
@@ -156,6 +210,7 @@ def test_markers_twice_keep_the_second_answer_and_its_citations():
 
 
 # --- prompt --------------------------------------------------------------------
+
 
 def test_rule_only_when_documents_are_attached():
     processor = _processor([])

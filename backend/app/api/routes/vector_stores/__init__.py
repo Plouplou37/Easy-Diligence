@@ -2,6 +2,7 @@
 Vector Store API - Modularized
 Combines all vector store functionality in focused modules
 """
+
 from fastapi import APIRouter
 
 from .core import router as core_router

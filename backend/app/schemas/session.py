@@ -56,16 +56,17 @@ class SessionResponse(BaseModel):
             updated_at=session_db.updated_at,
             created_by=session_db.created_by,
             assigned_to=session_db.assigned_to,
-            created_by_username=getattr(session_db, 'created_by_username', None),
+            created_by_username=getattr(session_db, "created_by_username", None),
             dd_types_json=session_db.dd_types_json,  # Explicitly include this field
-            total_executions=getattr(session_db, 'total_executions', 0),
-            completed_executions=getattr(session_db, 'completed_executions', 0),
-            in_progress_executions=getattr(session_db, 'in_progress_executions', 0),
-            validated_executions=getattr(session_db, 'validated_executions', 0),
-            company_name=session_db.company.name if getattr(session_db, 'company', None) else None,
+            total_executions=getattr(session_db, "total_executions", 0),
+            completed_executions=getattr(session_db, "completed_executions", 0),
+            in_progress_executions=getattr(session_db, "in_progress_executions", 0),
+            validated_executions=getattr(session_db, "validated_executions", 0),
+            company_name=session_db.company.name if getattr(session_db, "company", None) else None,
             management_company_name=(
                 session_db.company.management_company_name
-                if getattr(session_db, 'company', None) else None
+                if getattr(session_db, "company", None)
+                else None
             ),
         )
 
@@ -79,6 +80,7 @@ class SessionStatusResponse(BaseModel):
 
 class SessionWithExecutions(BaseModel):
     """Session with detailed execution information"""
+
     session: SessionResponse
     executions: list[dict[str, Any]] = []
     session_dd_types: list[dict[str, Any]] = []
@@ -91,21 +93,21 @@ class SessionWithExecutions(BaseModel):
 # Paginated response types
 class PaginatedSessionResponse(PaginatedResponse[SessionResponse]):
     """Paginated response for session lists"""
+
     pass
 
 
 class SessionListResponse(BaseModel):
     """Legacy session list response with pagination info"""
+
     sessions: list[SessionResponse]
     pagination: dict[str, Any]
     filters: dict[str, Any] | None = None
 
     @classmethod
     def from_paginated(
-        cls,
-        paginated: PaginatedSessionResponse,
-        filters: dict[str, Any] | None = None
-    ) -> 'SessionListResponse':
+        cls, paginated: PaginatedSessionResponse, filters: dict[str, Any] | None = None
+    ) -> "SessionListResponse":
         """Convert from paginated response to legacy format"""
         return cls(
             sessions=paginated.items,
@@ -115,7 +117,7 @@ class SessionListResponse(BaseModel):
                 "total_items": paginated.meta.total_items,
                 "total_pages": paginated.meta.total_pages,
                 "has_next": paginated.meta.has_next,
-                "has_previous": paginated.meta.has_previous
+                "has_previous": paginated.meta.has_previous,
             },
-            filters=filters
+            filters=filters,
         )

@@ -9,6 +9,7 @@ Usage:
 
 The whole import runs in one transaction: nothing is written if any step fails.
 """
+
 import sys
 
 sys.path.insert(0, ".")
@@ -60,19 +61,23 @@ def import_questionnaire(path: str, code: str, name: str, owner_id):
             db.flush()
 
             for question_data in section_data["questions"]:
-                db.add(DDQuestion(
-                    section_id=section.id,
-                    question_code=question_data["question_code"],
-                    question_text=question_data["question_text"],
-                    context_prompt=question_data.get("context_prompt"),
-                    order_index=question_data["order_index"],
-                ))
+                db.add(
+                    DDQuestion(
+                        section_id=section.id,
+                        question_code=question_data["question_code"],
+                        question_text=question_data["question_text"],
+                        context_prompt=question_data.get("context_prompt"),
+                        order_index=question_data["order_index"],
+                    )
+                )
                 n_questions += 1
 
         db.commit()
-        print(f"OK  id={dd_type.id}  code={dd_type.code}  "
-              f"sections={len(sections_data)}  questions={n_questions}  "
-              f"created_by={owner_id}")
+        print(
+            f"OK  id={dd_type.id}  code={dd_type.code}  "
+            f"sections={len(sections_data)}  questions={n_questions}  "
+            f"created_by={owner_id}"
+        )
     except Exception:
         db.rollback()
         raise

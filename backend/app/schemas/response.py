@@ -10,6 +10,7 @@ class ResponseCreate(BaseModel):
     previous_response_id: str | None = None
     openai_response: dict[str, Any]
 
+
 class ResponseResponse(BaseModel):
     id: int
     execution_id: int
@@ -24,8 +25,10 @@ class ResponseResponse(BaseModel):
     class Config:
         from_attributes = True
 
+
 class ConversationResponse(BaseModel):
     """Full conversation chain for an execution"""
+
     execution_id: int
     conversation_id: str
     responses: list[ResponseResponse]

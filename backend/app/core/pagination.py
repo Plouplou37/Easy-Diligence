@@ -1,17 +1,19 @@
 """
 Pagination utilities for API endpoints
 """
+
 from math import ceil
 from typing import Any, Generic, TypeVar
 
 from pydantic import BaseModel
 from sqlalchemy.orm import Query
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 class PaginationParams(BaseModel):
     """Standard pagination parameters"""
+
     page: int = 1
     limit: int = 50
 
@@ -32,6 +34,7 @@ class PaginationParams(BaseModel):
 
 class PaginationMeta(BaseModel):
     """Pagination metadata"""
+
     page: int
     limit: int
     total_items: int
@@ -40,11 +43,7 @@ class PaginationMeta(BaseModel):
     has_previous: bool
 
     @classmethod
-    def from_params(
-        cls,
-        params: PaginationParams,
-        total_items: int
-    ) -> 'PaginationMeta':
+    def from_params(cls, params: PaginationParams, total_items: int) -> "PaginationMeta":
         """Create pagination metadata from params and total count"""
         total_pages = ceil(total_items / params.limit) if params.limit > 0 else 0
 
@@ -54,22 +53,20 @@ class PaginationMeta(BaseModel):
             total_items=total_items,
             total_pages=total_pages,
             has_next=params.page < total_pages,
-            has_previous=params.page > 1
+            has_previous=params.page > 1,
         )
 
 
 class PaginatedResponse(BaseModel, Generic[T]):
     """Generic paginated response"""
+
     items: list[T]
     meta: PaginationMeta
 
     @classmethod
     def from_query(
-        cls,
-        query: Query,
-        params: PaginationParams,
-        items: list[T]
-    ) -> 'PaginatedResponse[T]':
+        cls, query: Query, params: PaginationParams, items: list[T]
+    ) -> "PaginatedResponse[T]":
         """Create paginated response from SQLAlchemy query and items"""
         total_items = query.count()
         meta = PaginationMeta.from_params(params, total_items)
@@ -82,11 +79,7 @@ def paginate_query(query: Query, params: PaginationParams) -> Query:
     return query.offset(params.offset).limit(params.limit)
 
 
-def get_pagination_info(
-    total_items: int,
-    page: int = 1,
-    limit: int = 50
-) -> dict[str, Any]:
+def get_pagination_info(total_items: int, page: int = 1, limit: int = 50) -> dict[str, Any]:
     """Get pagination information dict (legacy support)"""
     params = PaginationParams(page=page, limit=limit)
     meta = PaginationMeta.from_params(params, total_items)
@@ -98,5 +91,5 @@ def get_pagination_info(
         "total_pages": meta.total_pages,
         "has_next": meta.has_next,
         "has_previous": meta.has_previous,
-        "offset": params.offset
+        "offset": params.offset,
     }

@@ -11,6 +11,7 @@ class MessageCreate(BaseModel):
     content: str | None = None
     tool_calls: dict[str, Any] | None = None
 
+
 class MessageResponse(BaseModel):
     id: int
     response_id: str
@@ -23,8 +24,10 @@ class MessageResponse(BaseModel):
     class Config:
         from_attributes = True
 
+
 class MessagesResponse(BaseModel):
     """All messages for a response"""
+
     response_id: str
     messages: list[MessageResponse]
     total_messages: int

@@ -15,7 +15,7 @@ class User(Base):
     full_name = Column(String(255))
     company = Column(String(255))
     phone = Column(String(50))
-    role = Column(String(50), default='analyst')  # admin, analyst (schemas.user.Role)
+    role = Column(String(50), default="analyst")  # admin, analyst (schemas.user.Role)
     is_active = Column(Boolean, default=True)
     is_verified = Column(Boolean, default=False)
     last_login = Column(DateTime(timezone=True))
@@ -23,14 +23,24 @@ class User(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     # Relationships
-    sessions_created = relationship("DDSession", back_populates="creator", foreign_keys="DDSession.created_by")
-    sessions_assigned = relationship("DDSession", back_populates="assignee", foreign_keys="DDSession.assigned_to")
-    companies_created = relationship("Company", back_populates="creator", foreign_keys="Company.created_by")
-    companies_updated = relationship("Company", back_populates="updater", foreign_keys="Company.updated_by")
+    sessions_created = relationship(
+        "DDSession", back_populates="creator", foreign_keys="DDSession.created_by"
+    )
+    sessions_assigned = relationship(
+        "DDSession", back_populates="assignee", foreign_keys="DDSession.assigned_to"
+    )
+    companies_created = relationship(
+        "Company", back_populates="creator", foreign_keys="Company.created_by"
+    )
+    companies_updated = relationship(
+        "Company", back_populates="updater", foreign_keys="Company.updated_by"
+    )
+
 
 class UserSession(Base):
     """One login. Tokens are never stored: only their SHA-256 (security.hash_token),
     so a copy of this table cannot be replayed."""
+
     __tablename__ = "user_sessions"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -44,4 +54,3 @@ class UserSession(Base):
 
     # Relationships
     user = relationship("User")
-

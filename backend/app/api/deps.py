@@ -4,6 +4,7 @@ Every endpoint that needs a user goes through get_current_active_user (alias
 get_current_user) or the admin variant built on it: the token is decoded here
 only, and an inactive account is refused here only.
 """
+
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session

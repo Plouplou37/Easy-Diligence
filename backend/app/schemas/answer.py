@@ -26,7 +26,7 @@ class AnswerUpdate(BaseModel):
     edit_reason: str | None = None
     sources: dict[str, Any] | list[Any] | None = None
 
-    @field_validator('sources', mode='before')
+    @field_validator("sources", mode="before")
     @classmethod
     def parse_sources(cls, v):
         """Parse sources from string to dict/list if needed"""
@@ -81,7 +81,7 @@ class AnswerResponse(BaseModel):
     # OpenAI tracking
     openai_message_ids: list[str] = []
 
-    @field_validator('sources', mode='before')
+    @field_validator("sources", mode="before")
     @classmethod
     def parse_sources(cls, v):
         """Parse sources from string/list to appropriate format"""
@@ -107,6 +107,7 @@ class AnswerResponse(BaseModel):
 
 class AnswerWithHistory(BaseModel):
     """Answer with its complete history"""
+
     answer: AnswerResponse
     history: list[dict[str, Any]] = []
     validations: list[dict[str, Any]] = []
@@ -118,11 +119,13 @@ class AnswerWithHistory(BaseModel):
 # Paginated response types
 class PaginatedAnswerResponse(PaginatedResponse[AnswerResponse]):
     """Paginated response for answer lists"""
+
     pass
 
 
 class AnswerListResponse(BaseModel):
     """Answer list response with pagination and filter info"""
+
     answers: list[AnswerResponse]
     pagination: dict[str, Any]
     filters: dict[str, Any] | None = None
@@ -133,8 +136,8 @@ class AnswerListResponse(BaseModel):
         cls,
         paginated: PaginatedAnswerResponse,
         filters: dict[str, Any] | None = None,
-        stats: dict[str, Any] | None = None
-    ) -> 'AnswerListResponse':
+        stats: dict[str, Any] | None = None,
+    ) -> "AnswerListResponse":
         """Convert from paginated response to detailed format"""
         return cls(
             answers=paginated.items,
@@ -144,8 +147,8 @@ class AnswerListResponse(BaseModel):
                 "total_items": paginated.meta.total_items,
                 "total_pages": paginated.meta.total_pages,
                 "has_next": paginated.meta.has_next,
-                "has_previous": paginated.meta.has_previous
+                "has_previous": paginated.meta.has_previous,
             },
             filters=filters,
-            stats=stats
+            stats=stats,
         )

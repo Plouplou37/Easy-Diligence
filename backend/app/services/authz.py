@@ -29,6 +29,7 @@ def user_is_admin(user: User) -> bool:
 
 # --- Sessions (and session-scoped resources) -------------------------------
 
+
 def filter_sessions_for_user(query, user: User):
     """Restrict a DDSession query to sessions the user may see.
 
@@ -63,6 +64,7 @@ def assert_session_access(session: DDSession, user: User) -> None:
 
 # --- DD types --------------------------------------------------------------
 
+
 def filter_dd_types_for_user(query, user: User):
     """Restrict a DDType query to types the user may see.
 
@@ -84,11 +86,7 @@ def user_can_view_dd_type(dd_type: DDType, user: User) -> bool:
     """Whether the user may view a single DD type."""
     if user_is_admin(user):
         return True
-    return (
-        bool(dd_type.is_system)
-        or dd_type.created_by is None
-        or dd_type.created_by == user.id
-    )
+    return bool(dd_type.is_system) or dd_type.created_by is None or dd_type.created_by == user.id
 
 
 def assert_dd_type_view(dd_type: DDType, user: User) -> None:
@@ -124,6 +122,7 @@ def assert_dd_type_ownership(dd_type: DDType, user: User) -> None:
 
 
 # --- Companies (Asset Manager / Fund) --------------------------------------
+
 
 def filter_companies_for_user(query, user: User):
     """Restrict a Company query to companies the user may see.

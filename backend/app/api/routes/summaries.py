@@ -1,4 +1,3 @@
-
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -49,7 +48,9 @@ def _load_session_or_404(db: Session, session_id: int) -> DDSession:
     return session
 
 
-@router.post("/session/{session_identifier}/dd/{dd_type}/generate", response_model=list[DDSummaryResponse])
+@router.post(
+    "/session/{session_identifier}/dd/{dd_type}/generate", response_model=list[DDSummaryResponse]
+)
 async def generate_summaries(
     session_identifier: str,
     dd_type: str,
@@ -65,7 +66,10 @@ async def generate_summaries(
     return [_to_response(s) for s in summaries]
 
 
-@router.post("/session/{session_identifier}/dd/{dd_type}/generate/batch", response_model=DDSummaryBatchResponse)
+@router.post(
+    "/session/{session_identifier}/dd/{dd_type}/generate/batch",
+    response_model=DDSummaryBatchResponse,
+)
 async def generate_summaries_via_batch(
     session_identifier: str,
     dd_type: str,
@@ -96,7 +100,9 @@ async def generate_summaries_via_batch(
     )
 
 
-@router.get("/session/{session_identifier}/dd/{dd_type}/batch", response_model=DDSummaryBatchResponse)
+@router.get(
+    "/session/{session_identifier}/dd/{dd_type}/batch", response_model=DDSummaryBatchResponse
+)
 async def get_summary_batch_status(
     session_identifier: str,
     dd_type: str,
@@ -127,7 +133,9 @@ async def get_summary_batch_status(
     )
 
 
-@router.post("/session/{session_identifier}/dd/{dd_type}/batch/cancel", response_model=DDSummaryBatchResponse)
+@router.post(
+    "/session/{session_identifier}/dd/{dd_type}/batch/cancel", response_model=DDSummaryBatchResponse
+)
 async def cancel_summary_batch(
     session_identifier: str,
     dd_type: str,

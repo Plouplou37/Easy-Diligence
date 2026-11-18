@@ -9,7 +9,9 @@ class DDMessage(Base):
     __tablename__ = "dd_messages"
 
     id = Column(Integer, primary_key=True, index=True)
-    response_id = Column(String(255), ForeignKey("dd_responses.response_id", ondelete="CASCADE"), nullable=False)
+    response_id = Column(
+        String(255), ForeignKey("dd_responses.response_id", ondelete="CASCADE"), nullable=False
+    )
     message_index = Column(Integer, nullable=False)
     role = Column(String(50), nullable=False)
     content = Column(Text, nullable=True)
@@ -22,5 +24,5 @@ class DDMessage(Base):
 
     # Ensure unique message index per response
     __table_args__ = (
-        UniqueConstraint('response_id', 'message_index', name='uq_message_response_index'),
+        UniqueConstraint("response_id", "message_index", name="uq_message_response_index"),
     )

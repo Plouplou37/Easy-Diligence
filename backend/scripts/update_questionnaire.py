@@ -32,6 +32,7 @@ Usage:
 Exit code 1 on divergence, with nothing written. The update runs in one
 transaction: nothing is written if any step fails.
 """
+
 import json
 import re
 import sys
@@ -96,14 +97,17 @@ def load_sections(path: str) -> list:
     def one(question):
         if isinstance(question, dict):
             text = question.get("text") or question.get("question_text") or ""
-            return (str(text),
-                    (question.get("context_prompt") or "").strip(),
-                    (question.get("ref") or "").strip())
+            return (
+                str(text),
+                (question.get("context_prompt") or "").strip(),
+                (question.get("ref") or "").strip(),
+            )
         return str(question), "", ""
 
-    return [(str(entry["section"]).strip(),
-             [one(question) for question in entry["questions"]])
-            for entry in data]
+    return [
+        (str(entry["section"]).strip(), [one(question) for question in entry["questions"]])
+        for entry in data
+    ]
 
 
 def load_db_sections(db, dd_type_id: int) -> list:
@@ -112,15 +116,22 @@ def load_db_sections(db, dd_type_id: int) -> list:
     DDSection.questions has no order_by, so relying on it for a rank-based
     match would be trusting whatever order MySQL happens to return.
     """
-    sections = (db.query(DDSection)
-                .filter(DDSection.dd_type_id == dd_type_id)
-                .order_by(DDSection.order_index, DDSection.id)
-                .all())
-    return [(section, db.query(DDQuestion)
-             .filter(DDQuestion.section_id == section.id)
-             .order_by(DDQuestion.order_index, DDQuestion.id)
-             .all())
-            for section in sections]
+    sections = (
+        db.query(DDSection)
+        .filter(DDSection.dd_type_id == dd_type_id)
+        .order_by(DDSection.order_index, DDSection.id)
+        .all()
+    )
+    return [
+        (
+            section,
+            db.query(DDQuestion)
+            .filter(DDQuestion.section_id == section.id)
+            .order_by(DDQuestion.order_index, DDQuestion.id)
+            .all(),
+        )
+        for section in sections
+    ]
 
 
 def check_structure(db_sections, file_sections) -> list:
@@ -128,19 +139,22 @@ def check_structure(db_sections, file_sections) -> list:
     problems = []
 
     if len(db_sections) != len(file_sections):
-        problems.append(f"{len(db_sections)} sections en base contre "
-                        f"{len(file_sections)} dans le fichier")
+        problems.append(
+            f"{len(db_sections)} sections en base contre {len(file_sections)} dans le fichier"
+        )
 
     for rank, ((section, questions), (title, texts)) in enumerate(
-            zip(db_sections, file_sections, strict=False), 1):
+        zip(db_sections, file_sections, strict=False), 1
+    ):
         where = f"section {rank} '{section.title}'"
 
         if (section.title or "").strip() != title:
             problems.append(f"{where}: titre '{title}' dans le fichier")
 
         if len(questions) != len(texts):
-            problems.append(f"{where}: {len(questions)} questions en base "
-                            f"contre {len(texts)} dans le fichier")
+            problems.append(
+                f"{where}: {len(questions)} questions en base contre {len(texts)} dans le fichier"
+            )
             problems.extend(f"  {line}" for line in describe_gap(questions, texts))
             continue
 
@@ -192,11 +206,16 @@ def count_answers(db, questions) -> int:
     """
     if not questions:
         return 0
-    return (db.query(DDAnswer)
-            .filter(or_(DDAnswer.question_id.in_([q.id for q in questions]),
-                        DDAnswer.question_code.in_([q.question_code
-                                                    for q in questions])))
-            .count())
+    return (
+        db.query(DDAnswer)
+        .filter(
+            or_(
+                DDAnswer.question_id.in_([q.id for q in questions]),
+                DDAnswer.question_code.in_([q.question_code for q in questions]),
+            )
+        )
+        .count()
+    )
 
 
 def update_questionnaire(path: str, code: str, apply: bool, answered: bool) -> None:
@@ -210,8 +229,10 @@ def update_questionnaire(path: str, code: str, apply: bool, answered: bool) -> N
         file_sections = load_sections(path)
         total = sum(len(texts) for _, texts in file_sections)
 
-        print(f"DD type {dd_type.id} ({dd_type.code}): {len(db_sections)} sections, "
-              f"{sum(len(q) for _, q in db_sections)} questions")
+        print(
+            f"DD type {dd_type.id} ({dd_type.code}): {len(db_sections)} sections, "
+            f"{sum(len(q) for _, q in db_sections)} questions"
+        )
         print(f"Fichier {path}: {len(file_sections)} sections, {total} questions")
 
         problems = check_structure(db_sections, file_sections)
@@ -219,8 +240,10 @@ def update_questionnaire(path: str, code: str, apply: bool, answered: bool) -> N
             print("\nLa structure diverge, rien n'a ete ecrit:")
             for problem in problems:
                 print(f"  - {problem}")
-            raise SystemExit("\nCorriger le fichier, ou traiter l'ajout / la "
-                             "suppression de questions comme une operation a part.")
+            raise SystemExit(
+                "\nCorriger le fichier, ou traiter l'ajout / la "
+                "suppression de questions comme une operation a part."
+            )
 
         # A question changes if its text moved, or if the file carries sources
         # for a question that has none. Sources already in the database are left
@@ -242,8 +265,7 @@ def update_questionnaire(path: str, code: str, apply: bool, answered: bool) -> N
         for question, text, context in changed[:MAX_SHOWN]:
             print(describe_change(question, text))
             if context:
-                print(f"    + context_prompt: {context[:90]}"
-                      f"{'...' if len(context) > 90 else ''}")
+                print(f"    + context_prompt: {context[:90]}{'...' if len(context) > 90 else ''}")
         if len(changed) > MAX_SHOWN:
             print(f"  ... et {len(changed) - MAX_SHOWN} autres")
 
@@ -256,8 +278,10 @@ def update_questionnaire(path: str, code: str, apply: bool, answered: bool) -> N
             )
 
         if not apply:
-            print(f"\nDRY-RUN  {code}: {len(changed)}/{total} questions changeraient "
-                  f"(relancer avec --apply pour ecrire)")
+            print(
+                f"\nDRY-RUN  {code}: {len(changed)}/{total} questions changeraient "
+                f"(relancer avec --apply pour ecrire)"
+            )
             return
 
         for question, text, context in changed:
@@ -266,8 +290,10 @@ def update_questionnaire(path: str, code: str, apply: bool, answered: bool) -> N
                 question.context_prompt = context
 
         db.commit()
-        print(f"\nOK  {code}: {len(changed)}/{total} questions mises a jour "
-              f"(ids, codes et order_index inchanges)")
+        print(
+            f"\nOK  {code}: {len(changed)}/{total} questions mises a jour "
+            f"(ids, codes et order_index inchanges)"
+        )
     except Exception:
         db.rollback()
         raise
@@ -282,6 +308,4 @@ if __name__ == "__main__":
     args = [arg for arg in sys.argv[1:] if not arg.startswith("--")]
     if len(args) != 2 or flags - {"--apply", "--answered"}:
         raise SystemExit(__doc__)
-    update_questionnaire(args[0], args[1],
-                         apply="--apply" in flags,
-                         answered="--answered" in flags)
+    update_questionnaire(args[0], args[1], apply="--apply" in flags, answered="--answered" in flags)

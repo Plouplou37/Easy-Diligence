@@ -17,6 +17,7 @@ class ExecutionStatus(str, enum.Enum):
     VALIDATED = "validated"
     FINALIZED = "finalized"
 
+
 class DDExecution(Base):
     __tablename__ = "dd_executions"
 

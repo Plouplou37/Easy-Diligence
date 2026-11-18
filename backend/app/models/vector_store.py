@@ -14,11 +14,14 @@ class VectorStore(Base):
     description = Column(Text, nullable=True)  # Our custom field (not in OpenAI)
     created_by = Column(Integer, ForeignKey("users.id"), nullable=False)  # Ownership tracking
     created_at = Column(DateTime(timezone=True), server_default=func.now())  # Our record tracking
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())  # Our record tracking
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )  # Our record tracking
 
     # Relationships
     creator = relationship("User")
     session_assignments = relationship("SessionVectorStore", back_populates="vector_store")
+
 
 class SessionVectorStore(Base):
     __tablename__ = "session_vector_stores"

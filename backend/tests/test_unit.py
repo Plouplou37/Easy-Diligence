@@ -2,6 +2,7 @@
 Basic unit tests that don't require database setup.
 These tests focus on pure functions and core logic.
 """
+
 import pytest
 
 from app.core.security import create_access_token, get_password_hash, verify_password, verify_token
@@ -77,7 +78,7 @@ class TestUtilityFunctions:
             "user.name@domain.co.uk",
             "user+tag@example.net",
             "firstname.lastname@company.org",
-            "user123@test-domain.com"
+            "user123@test-domain.com",
         ]
 
         for email in valid_emails:
@@ -93,7 +94,7 @@ class TestUtilityFunctions:
             None,
             "user space@domain.com",
             "user@domain.",
-            ".user@domain.com"
+            ".user@domain.com",
         ]
 
         for email in invalid_emails:
@@ -120,8 +121,8 @@ class TestUtilityFunctions:
         parts = code.split("-")
         assert len(parts) == 3
         assert parts[0] == "TES"  # Name part
-        assert parts[1] == "42"   # User ID part
-        assert len(parts[2]) == 4 # Random part should be 4 chars
+        assert parts[1] == "42"  # User ID part
+        assert len(parts[2]) == 4  # Random part should be 4 chars
 
     def test_unique_code_different_for_same_input(self):
         """Test that same inputs produce different codes due to randomness."""

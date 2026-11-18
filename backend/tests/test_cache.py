@@ -1,6 +1,7 @@
 """
 Tests for API response caching functionality
 """
+
 import time
 
 import pytest
@@ -139,7 +140,9 @@ class TestCacheDecorator:
         call_count = 0
 
         @cache_response(prefix="parameterized", ttl=60, key_params=["important_param"])
-        async def parameterized_function(important_param: str, ignored_param: str, current_user=None):
+        async def parameterized_function(
+            important_param: str, ignored_param: str, current_user=None
+        ):
             nonlocal call_count
             call_count += 1
             return {"param": important_param, "ignored": ignored_param, "count": call_count}

@@ -17,6 +17,7 @@ Two paths share the same prompts and the same request body:
     so batching it too would chain a second 24h window: only stage 1 is batched
     and the final synthesis stays a synchronous call made at collection time.
 """
+
 import asyncio
 import logging
 
@@ -80,18 +81,24 @@ def _section_id_from(custom_id: str) -> int | None:
     if not custom_id.startswith(_CUSTOM_ID_PREFIX):
         return None
     try:
-        return int(custom_id[len(_CUSTOM_ID_PREFIX):])
+        return int(custom_id[len(_CUSTOM_ID_PREFIX) :])
     except ValueError:
         return None
 
 
-def _upsert_summary(db: Session, session_id: int, dd_type_id: int, section_id, text: str) -> DDSummary:
+def _upsert_summary(
+    db: Session, session_id: int, dd_type_id: int, section_id, text: str
+) -> DDSummary:
     """Create or overwrite the current summary for a (session, dd_type, section) scope."""
-    existing = db.query(DDSummary).filter(
-        DDSummary.session_id == session_id,
-        DDSummary.dd_type_id == dd_type_id,
-        DDSummary.section_id == section_id,
-    ).first()
+    existing = (
+        db.query(DDSummary)
+        .filter(
+            DDSummary.session_id == session_id,
+            DDSummary.dd_type_id == dd_type_id,
+            DDSummary.section_id == section_id,
+        )
+        .first()
+    )
     if existing:
         existing.summary_text = text
         existing.edited_by = None  # regenerated -> back to AI-generated
@@ -117,17 +124,19 @@ def _load_sections_with_answers(db: Session, session, dd_type_code: str):
         raise NotFoundError(f"DD type with code '{dd_type_code}' not found")
 
     # Current answers for this session + DD type, joined to section/question, ordered
-    answers = db.query(DDAnswer)\
-        .join(DDSection, DDAnswer.section_id == DDSection.id)\
-        .join(DDQuestion, DDAnswer.question_id == DDQuestion.id)\
+    answers = (
+        db.query(DDAnswer)
+        .join(DDSection, DDAnswer.section_id == DDSection.id)
+        .join(DDQuestion, DDAnswer.question_id == DDQuestion.id)
         .filter(
             DDAnswer.session_id == session.id,
             DDAnswer.dd_type_id == dd_type_obj.id,
             DDAnswer.is_current == True,
             DDAnswer.status != AnswerStatus.FAILED,
-        )\
-        .order_by(DDSection.order_index, DDQuestion.order_index)\
+        )
+        .order_by(DDSection.order_index, DDQuestion.order_index)
         .all()
+    )
 
     if not answers:
         raise InvalidRequestError("No current answers found for this session and DD type")
@@ -204,7 +213,9 @@ async def _generate_and_upsert_synthesis(
     return synthesis_row
 
 
-async def generate_summaries_for_dd_type(db: Session, session, dd_type_code: str) -> list[DDSummary]:
+async def generate_summaries_for_dd_type(
+    db: Session, session, dd_type_code: str
+) -> list[DDSummary]:
     """Generate (and persist) section summaries + the DD-type synthesis.
 
     Synchronous path: everything is produced within the request. Returns the list
@@ -221,15 +232,17 @@ async def generate_summaries_for_dd_type(db: Session, session, dd_type_code: str
         for section, section_answers in sections
     ]
 
-    section_texts = await asyncio.gather(*[
-        asyncio.to_thread(
-            processor.generate_summary,
-            SECTION_SYSTEM_PROMPT,
-            user_prompt,
-            SECTION_MAX_OUTPUT_TOKENS,
-        )
-        for _, user_prompt in section_prompts
-    ])
+    section_texts = await asyncio.gather(
+        *[
+            asyncio.to_thread(
+                processor.generate_summary,
+                SECTION_SYSTEM_PROMPT,
+                user_prompt,
+                SECTION_MAX_OUTPUT_TOKENS,
+            )
+            for _, user_prompt in section_prompts
+        ]
+    )
 
     upserted: list[DDSummary] = []
     section_summary_pairs = []  # (section, text) for synthesis prompt
@@ -269,14 +282,17 @@ def submit_section_summaries_batch(
     dd_type_obj, sections = _load_sections_with_answers(db, session, dd_type_code)
     company = _company_name(session)
 
-    existing = db.query(DDSummaryBatch).filter(
-        DDSummaryBatch.session_id == session.id,
-        DDSummaryBatch.dd_type_id == dd_type_obj.id,
-    ).first()
+    existing = (
+        db.query(DDSummaryBatch)
+        .filter(
+            DDSummaryBatch.session_id == session.id,
+            DDSummaryBatch.dd_type_id == dd_type_obj.id,
+        )
+        .first()
+    )
     if existing and existing.status in PENDING_BATCH_STATUSES:
         raise ConflictError(
-            f"A summary batch is already running for this DD type "
-            f"(status: {existing.status})"
+            f"A summary batch is already running for this DD type (status: {existing.status})"
         )
 
     processor = OpenAIProcessor()
@@ -331,10 +347,14 @@ async def collect_section_summaries_batch(
     if not dd_type_obj:
         raise NotFoundError(f"DD type with code '{dd_type_code}' not found")
 
-    row = db.query(DDSummaryBatch).filter(
-        DDSummaryBatch.session_id == session.id,
-        DDSummaryBatch.dd_type_id == dd_type_obj.id,
-    ).first()
+    row = (
+        db.query(DDSummaryBatch)
+        .filter(
+            DDSummaryBatch.session_id == session.id,
+            DDSummaryBatch.dd_type_id == dd_type_obj.id,
+        )
+        .first()
+    )
     if not row:
         return None, {"status": "none", "message": "No summary batch for this DD type"}
 
@@ -426,16 +446,19 @@ def cancel_section_summaries_batch(
     if not dd_type_obj:
         raise NotFoundError(f"DD type with code '{dd_type_code}' not found")
 
-    row = db.query(DDSummaryBatch).filter(
-        DDSummaryBatch.session_id == session.id,
-        DDSummaryBatch.dd_type_id == dd_type_obj.id,
-    ).first()
+    row = (
+        db.query(DDSummaryBatch)
+        .filter(
+            DDSummaryBatch.session_id == session.id,
+            DDSummaryBatch.dd_type_id == dd_type_obj.id,
+        )
+        .first()
+    )
     if not row:
         raise NotFoundError("No summary batch for this DD type")
 
     if row.status == "collected":
-        return row, {"status": "collected",
-                     "message": "Batch already collected, nothing to cancel"}
+        return row, {"status": "collected", "message": "Batch already collected, nothing to cancel"}
 
     processor = OpenAIProcessor()
     state = processor.get_batch(row.openai_batch_id)
@@ -444,15 +467,16 @@ def cancel_section_summaries_batch(
 
     if state["status"] == "cancelling":
         db.commit()
-        return row, {"status": "cancelling",
-                     "message": "Cancellation already in progress"}
+        return row, {"status": "cancelling", "message": "Cancellation already in progress"}
 
     if state["status"] not in PENDING_BATCH_STATUSES:
         # Completed, failed, expired or already cancelled: nothing left to stop.
         # A completed batch is collected by the next status call, as usual.
         db.commit()
-        return row, {"status": state["status"],
-                     "message": f"Batch is no longer running (status: {state['status']})"}
+        return row, {
+            "status": state["status"],
+            "message": f"Batch is no longer running (status: {state['status']})",
+        }
 
     cancelled = processor.cancel_batch(row.openai_batch_id)
     row.status = cancelled["status"]

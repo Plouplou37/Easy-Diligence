@@ -6,6 +6,7 @@ window. State lives in the process: it resets on restart and is not shared
 between workers, which is enough for the single backend process this
 application runs as.
 """
+
 import threading
 import time
 from collections import deque
@@ -22,8 +23,9 @@ SWEEP_ABOVE_KEYS = 10_000
 
 
 class LoginThrottle:
-    def __init__(self, max_attempts: int, window_seconds: int,
-                 clock: Callable[[], float] = time.monotonic):
+    def __init__(
+        self, max_attempts: int, window_seconds: int, clock: Callable[[], float] = time.monotonic
+    ):
         self.max_attempts = max_attempts
         self.window_seconds = window_seconds
         self._clock = clock

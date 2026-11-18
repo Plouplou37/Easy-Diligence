@@ -97,9 +97,7 @@ app.add_middleware(
 
 @app.exception_handler(AppError)
 async def app_error_handler(_request: Request, exc: AppError) -> JSONResponse:
-    status_code = next(
-        (code for cls, code in ERROR_STATUS.items() if isinstance(exc, cls)), 400
-    )
+    status_code = next((code for cls, code in ERROR_STATUS.items() if isinstance(exc, cls)), 400)
     headers = None
     if isinstance(exc, TooManyRequestsError):
         headers = {"Retry-After": str(exc.retry_after)}

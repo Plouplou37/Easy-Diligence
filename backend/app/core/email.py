@@ -9,6 +9,7 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
+
 class EmailService:
     def __init__(self):
         self.smtp_hostname = settings.smtp_hostname
@@ -26,7 +27,7 @@ class EmailService:
         html_content: str,
         text_content: str | None = None,
         cc: list[str] | None = None,
-        bcc: list[str] | None = None
+        bcc: list[str] | None = None,
     ) -> bool:
         """Send an email using SMTP."""
         try:
@@ -65,7 +66,7 @@ class EmailService:
                 start_tls=True,
                 username=self.smtp_user,
                 password=self.smtp_password.get_secret_value(),
-                recipients=recipients
+                recipients=recipients,
             )
 
             # No address in the logs: they are personal data.
@@ -76,7 +77,9 @@ class EmailService:
             logger.exception("Failed to send email: %s", subject)
             return False
 
-    async def send_password_reset_email(self, to_email: str, reset_token: str, user_name: str = "") -> bool:
+    async def send_password_reset_email(
+        self, to_email: str, reset_token: str, user_name: str = ""
+    ) -> bool:
         """Send password reset email."""
         reset_link = f"{self.frontend_url}/reset-password?token={reset_token}"
 
@@ -201,22 +204,17 @@ This is an automated message. Please do not reply to this email.
 © 2025 Due Diligence Automation Platform. All rights reserved.
         """)
 
-        html_content = html_template.render(
-            reset_link=reset_link,
-            user_name=user_name
-        )
+        html_content = html_template.render(reset_link=reset_link, user_name=user_name)
 
-        text_content = text_template.render(
-            reset_link=reset_link,
-            user_name=user_name
-        )
+        text_content = text_template.render(reset_link=reset_link, user_name=user_name)
 
         return await self.send_email(
             to_email=to_email,
             subject="🔐 Password Reset Request - Due Diligence Automation",
             html_content=html_content,
-            text_content=text_content
+            text_content=text_content,
         )
+
 
 # Create global email service instance
 email_service = EmailService()

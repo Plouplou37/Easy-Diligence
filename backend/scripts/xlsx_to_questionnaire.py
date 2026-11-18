@@ -15,6 +15,7 @@ columns are mapped by header name, never by position.
 Usage:
     python backend/scripts/xlsx_to_questionnaire.py <input.xlsx> <output.json>
 """
+
 import json
 import re
 import sys

@@ -18,6 +18,7 @@ from app.models.response import DDResponse
 
 logger = logging.getLogger(__name__)
 
+
 class DDProcessor:
     MAX_RETRIES = 3  # Maximum retry attempts per question
     CIRCUIT_BREAKER_THRESHOLD = 1  # Stop after N questions fail with global errors
@@ -44,29 +45,31 @@ class DDProcessor:
         error_type_name = type(error).__name__.lower()
 
         # Rate limit errors
-        if 'rate' in error_str and 'limit' in error_str:
+        if "rate" in error_str and "limit" in error_str:
             return ErrorType.RATE_LIMIT, True
 
         # Context overflow errors
-        if 'context' in error_str and ('length' in error_str or 'exceeded' in error_str or 'overflow' in error_str):
+        if "context" in error_str and (
+            "length" in error_str or "exceeded" in error_str or "overflow" in error_str
+        ):
             return ErrorType.CONTEXT_OVERFLOW, True
 
         # Network/connection errors
-        if any(keyword in error_type_name for keyword in ['connection', 'timeout', 'network']):
+        if any(keyword in error_type_name for keyword in ["connection", "timeout", "network"]):
             return ErrorType.NETWORK_ERROR, True
-        if any(keyword in error_str for keyword in ['connection', 'timeout', 'network']):
+        if any(keyword in error_str for keyword in ["connection", "timeout", "network"]):
             return ErrorType.NETWORK_ERROR, True
 
         # Timeout errors
-        if 'timeout' in error_str or 'timed out' in error_str:
+        if "timeout" in error_str or "timed out" in error_str:
             return ErrorType.TIMEOUT, True
 
         # Validation errors (not retryable)
-        if 'validation' in error_str or 'invalid' in error_str:
+        if "validation" in error_str or "invalid" in error_str:
             return ErrorType.VALIDATION_ERROR, False
 
         # General API errors (retryable with caution)
-        if 'api' in error_str or 'openai' in error_str:
+        if "api" in error_str or "openai" in error_str:
             return ErrorType.API_ERROR, True
 
         # Unknown error (retryable with caution)
@@ -128,7 +131,7 @@ class DDProcessor:
             base_delay = 2.0
 
         # Exponential backoff: delay = base * (2 ^ attempt)
-        delay = base_delay * (2 ** retry_attempt)
+        delay = base_delay * (2**retry_attempt)
 
         # Cap at 60 seconds
         return min(delay, 60.0)
@@ -184,7 +187,9 @@ class DDProcessor:
             # Get questions to process
             questions = self._get_questions_to_process(db)
 
-            logger.info(f"Starting processing for execution {self.execution.id} with {len(questions)} questions")
+            logger.info(
+                f"Starting processing for execution {self.execution.id} with {len(questions)} questions"
+            )
 
             # Track success and failure counts
             successful_count = 0
@@ -194,7 +199,9 @@ class DDProcessor:
             for idx, question in enumerate(questions):
                 # Check if processing should continue (user may have paused)
                 if not self._should_continue_processing(db):
-                    logger.info(f"Processing paused by user after {successful_count} successful questions")
+                    logger.info(
+                        f"Processing paused by user after {successful_count} successful questions"
+                    )
                     break
 
                 # Check circuit breaker - stop if too many consecutive global errors
@@ -210,16 +217,17 @@ class DDProcessor:
                     break
 
                 try:
-                    self._process_single_question(
-                        db, question, vector_store_ids, company_info, idx
-                    )
+                    self._process_single_question(db, question, vector_store_ids, company_info, idx)
                     successful_count += 1
-                    logger.info(f"Successfully processed question {question.question_code} ({successful_count}/{len(questions)})")
+                    logger.info(
+                        f"Successfully processed question {question.question_code} ({successful_count}/{len(questions)})"
+                    )
                 except Exception as e:
                     failed_count += 1
                     logger.error(f"Error processing question {question.question_code}: {e}")
                     logger.error(f"Error type: {type(e).__name__}")
                     import traceback
+
                     logger.error(f"Full traceback: {traceback.format_exc()}")
                     logger.error(f"Failed questions count: {failed_count}/{len(questions)}")
 
@@ -260,15 +268,21 @@ class DDProcessor:
             # Check if processing was interrupted (paused by user)
             if processed_count < total_questions:
                 # Processing was interrupted - don't change status, keep it as is (likely FAILED from pause)
-                logger.info(f"Processing interrupted: {processed_count}/{total_questions} questions processed before interruption")
+                logger.info(
+                    f"Processing interrupted: {processed_count}/{total_questions} questions processed before interruption"
+                )
             elif failed_count > 0:
                 # Any failures - mark as FAILED
                 self.execution.status = ExecutionStatus.FAILED
-                logger.error(f"Execution failed: {successful_count}/{total_questions} ({success_rate:.1f}%) questions succeeded, {failed_count} failed")
+                logger.error(
+                    f"Execution failed: {successful_count}/{total_questions} ({success_rate:.1f}%) questions succeeded, {failed_count} failed"
+                )
             else:
                 # All questions succeeded
                 self.execution.status = ExecutionStatus.GENERATED
-                logger.info(f"Full success: All {successful_count} questions processed successfully")
+                logger.info(
+                    f"Full success: All {successful_count} questions processed successfully"
+                )
 
             db.commit()
 
@@ -286,29 +300,46 @@ class DDProcessor:
 
     def resume_processing(self, vector_store_ids: list, company_info: dict) -> bool:
         """Resume processing from where it left off, preserving conversation context"""
-        logger.info(f"RESUME: Starting resume_processing for session={self.session_id}, dd_type={self.dd_type}")
+        logger.info(
+            f"RESUME: Starting resume_processing for session={self.session_id}, dd_type={self.dd_type}"
+        )
         db = next(get_db())
         try:
             # Get dd_type_id from code
             from app.models.dd_types import DDType as DDTypeModel
+
             dd_type_obj = db.query(DDTypeModel).filter(DDTypeModel.code == self.dd_type).first()
             if not dd_type_obj:
                 logger.error(f"DD type with code {self.dd_type} not found")
                 return False
 
             # Get existing execution
-            self.execution = db.query(DDExecution).filter(
-                DDExecution.session_id == self.session_id,
-                DDExecution.dd_type_id == dd_type_obj.id
-            ).first()
+            self.execution = (
+                db.query(DDExecution)
+                .filter(
+                    DDExecution.session_id == self.session_id,
+                    DDExecution.dd_type_id == dd_type_obj.id,
+                )
+                .first()
+            )
 
             if not self.execution:
-                logger.error(f"No execution found for session {self.session_id}, DD type {self.dd_type}")
+                logger.error(
+                    f"No execution found for session {self.session_id}, DD type {self.dd_type}"
+                )
                 return False
 
-            resumable_statuses = [ExecutionStatus.NOT_STARTED, ExecutionStatus.IN_PROGRESS, ExecutionStatus.GENERATED, ExecutionStatus.FAILED, ExecutionStatus.PAUSED]
+            resumable_statuses = [
+                ExecutionStatus.NOT_STARTED,
+                ExecutionStatus.IN_PROGRESS,
+                ExecutionStatus.GENERATED,
+                ExecutionStatus.FAILED,
+                ExecutionStatus.PAUSED,
+            ]
             if self.execution.status not in resumable_statuses:
-                logger.warning(f"Execution {self.execution.id} is in status {self.execution.status}, cannot resume")
+                logger.warning(
+                    f"Execution {self.execution.id} is in status {self.execution.status}, cannot resume"
+                )
                 return False
 
             # CRITICAL: Preserve existing conversation_id to maintain context chain
@@ -333,7 +364,7 @@ class DDProcessor:
                 db.query(DDAnswer.question_id)
                 .filter(
                     DDAnswer.execution_id == self.execution.id,
-                    DDAnswer.status != AnswerStatus.FAILED  # Exclude failed answers for retry
+                    DDAnswer.status != AnswerStatus.FAILED,  # Exclude failed answers for retry
                 )
                 .distinct()
                 .all()
@@ -341,18 +372,26 @@ class DDProcessor:
             successfully_answered = {q_id[0] for q_id in successfully_answered}
 
             # Get failed answers to retry
-            failed_answers = db.query(DDAnswer).filter(
-                DDAnswer.execution_id == self.execution.id,
-                DDAnswer.status == AnswerStatus.FAILED
-            ).all()
+            failed_answers = (
+                db.query(DDAnswer)
+                .filter(
+                    DDAnswer.execution_id == self.execution.id,
+                    DDAnswer.status == AnswerStatus.FAILED,
+                )
+                .all()
+            )
 
             # Mark old failed/pending answers as is_current=False to avoid duplicates
             # This ensures only the latest retry attempt is marked as current
-            old_answers_to_retry = db.query(DDAnswer).filter(
-                DDAnswer.execution_id == self.execution.id,
-                DDAnswer.question_id.in_([fa.question_id for fa in failed_answers]),
-                DDAnswer.is_current == True
-            ).all()
+            old_answers_to_retry = (
+                db.query(DDAnswer)
+                .filter(
+                    DDAnswer.execution_id == self.execution.id,
+                    DDAnswer.question_id.in_([fa.question_id for fa in failed_answers]),
+                    DDAnswer.is_current == True,
+                )
+                .all()
+            )
 
             for old_answer in old_answers_to_retry:
                 old_answer.is_current = False
@@ -366,15 +405,21 @@ class DDProcessor:
             questions_to_process = [q for q in all_questions if q.id not in successfully_answered]
 
             if not questions_to_process:
-                logger.info(f"All questions successfully answered for execution {self.execution.id}. Marking as GENERATED.")
+                logger.info(
+                    f"All questions successfully answered for execution {self.execution.id}. Marking as GENERATED."
+                )
                 self.execution.status = ExecutionStatus.GENERATED
                 db.commit()
                 return True
 
-            failed_count = len([q for q in all_questions if q.id in [fa.question_id for fa in failed_answers]])
+            failed_count = len(
+                [q for q in all_questions if q.id in [fa.question_id for fa in failed_answers]]
+            )
             unanswered_count = len(questions_to_process) - failed_count
 
-            logger.info(f"Resuming execution {self.execution.id}: {len(questions_to_process)} questions to process ({unanswered_count} unanswered, {failed_count} failed, out of {len(all_questions)} total)")
+            logger.info(
+                f"Resuming execution {self.execution.id}: {len(questions_to_process)} questions to process ({unanswered_count} unanswered, {failed_count} failed, out of {len(all_questions)} total)"
+            )
 
             # Track success and failure counts
             successful_count = 0
@@ -384,7 +429,9 @@ class DDProcessor:
             for idx, question in enumerate(questions_to_process):
                 # Check if processing should continue (user may have paused)
                 if not self._should_continue_processing(db):
-                    logger.info(f"Processing paused by user after {successful_count} successful questions")
+                    logger.info(
+                        f"Processing paused by user after {successful_count} successful questions"
+                    )
                     break
 
                 # Check circuit breaker - stop if too many consecutive global errors
@@ -400,15 +447,16 @@ class DDProcessor:
                     break
 
                 try:
-                    self._process_single_question(
-                        db, question, vector_store_ids, company_info, idx
-                    )
+                    self._process_single_question(db, question, vector_store_ids, company_info, idx)
                     successful_count += 1
-                    logger.info(f"Successfully processed question {question.question_code} ({successful_count}/{len(questions_to_process)})")
+                    logger.info(
+                        f"Successfully processed question {question.question_code} ({successful_count}/{len(questions_to_process)})"
+                    )
                 except Exception as e:
                     failed_count += 1
                     logger.error(f"Error processing question {question.question_code}: {e}")
                     import traceback
+
                     logger.error(f"Full traceback: {traceback.format_exc()}")
 
                     # Track consecutive failures for circuit breaker
@@ -448,15 +496,21 @@ class DDProcessor:
             # Check if processing was interrupted (paused by user)
             if processed_count < total_questions:
                 # Processing was interrupted - don't change status, keep it as is (likely FAILED from pause)
-                logger.info(f"Processing interrupted: {processed_count}/{total_questions} questions processed before interruption")
+                logger.info(
+                    f"Processing interrupted: {processed_count}/{total_questions} questions processed before interruption"
+                )
             elif failed_count > 0:
                 # Any failures - mark as FAILED
                 self.execution.status = ExecutionStatus.FAILED
-                logger.error(f"Resume execution failed: {successful_count}/{total_questions} ({success_rate:.1f}%) questions succeeded, {failed_count} failed")
+                logger.error(
+                    f"Resume execution failed: {successful_count}/{total_questions} ({success_rate:.1f}%) questions succeeded, {failed_count} failed"
+                )
             else:
                 # All questions succeeded
                 self.execution.status = ExecutionStatus.GENERATED
-                logger.info(f"Full success: All {successful_count} remaining questions processed successfully")
+                logger.info(
+                    f"Full success: All {successful_count} remaining questions processed successfully"
+                )
 
             db.commit()
             logger.info(f"Resume processing completed for execution {self.execution.id}")
@@ -465,6 +519,7 @@ class DDProcessor:
         except Exception as e:
             logger.error(f"RESUME ERROR: Error resuming processing: {e}")
             import traceback
+
             logger.error(f"RESUME ERROR: Full traceback: {traceback.format_exc()}")
             if self.execution:
                 self.execution.status = ExecutionStatus.FAILED
@@ -478,14 +533,19 @@ class DDProcessor:
         """Get all questions for the DD type"""
         # Find DD type by code first, then get its sections directly
         from app.models.dd_types import DDType as DDTypeModel
+
         dd_type_obj = db.query(DDTypeModel).filter(DDTypeModel.code == self.dd_type).first()
         if not dd_type_obj:
             raise ValueError(f"DD type with code {self.dd_type} not found")
 
         # Get questions directly from sections that belong to this DD type
-        questions = db.query(DDQuestion).join(DDSection).filter(
-            DDSection.dd_type_id == dd_type_obj.id
-        ).order_by(DDSection.order_index, DDQuestion.order_index).all()
+        questions = (
+            db.query(DDQuestion)
+            .join(DDSection)
+            .filter(DDSection.dd_type_id == dd_type_obj.id)
+            .order_by(DDSection.order_index, DDQuestion.order_index)
+            .all()
+        )
 
         if not questions:
             raise ValueError(f"No questions found for DD type {self.dd_type}")
@@ -496,25 +556,31 @@ class DDProcessor:
         """Get existing execution or create new one"""
         # Get dd_type_id from code
         from app.models.dd_types import DDType as DDTypeModel
+
         dd_type_obj = db.query(DDTypeModel).filter(DDTypeModel.code == self.dd_type).first()
         if not dd_type_obj:
             raise ValueError(f"DD type with code {self.dd_type} not found")
 
-        execution = db.query(DDExecution).filter(
-            DDExecution.session_id == self.session_id,
-            DDExecution.dd_type_id == dd_type_obj.id
-        ).first()
+        execution = (
+            db.query(DDExecution)
+            .filter(
+                DDExecution.session_id == self.session_id, DDExecution.dd_type_id == dd_type_obj.id
+            )
+            .first()
+        )
 
         if not execution:
             execution = DDExecution(
                 session_id=self.session_id,
                 dd_type_id=dd_type_obj.id,
-                status=ExecutionStatus.NOT_STARTED
+                status=ExecutionStatus.NOT_STARTED,
             )
             db.add(execution)
             db.commit()
             db.refresh(execution)
-            logger.info(f"Created new execution {execution.id} for session {self.session_id}, DD type {self.dd_type}")
+            logger.info(
+                f"Created new execution {execution.id} for session {self.session_id}, DD type {self.dd_type}"
+            )
 
         return execution
 
@@ -522,9 +588,9 @@ class DDProcessor:
         """Store the complete OpenAI response"""
         response_record = DDResponse(
             execution_id=self.execution.id,
-            response_id=result['response_id'],
-            previous_response_id=result.get('previous_response_id'),
-            openai_response=result.get('full_response', {})
+            response_id=result["response_id"],
+            previous_response_id=result.get("previous_response_id"),
+            openai_response=result.get("full_response", {}),
         )
         db.add(response_record)
         db.commit()
@@ -535,31 +601,37 @@ class DDProcessor:
 
     def _store_response_messages(self, db: Session, response_record: DDResponse, result: dict):
         """Extract and store messages from OpenAI response"""
-        messages = result.get('messages', [])
+        messages = result.get("messages", [])
 
         # Add null check for messages iteration
         if messages and isinstance(messages, list):
             for idx, message in enumerate(messages):
                 if message is None:
                     continue
-                openai_msg_id = message.get('id')
+                openai_msg_id = message.get("id")
                 message_record = DDMessage(
                     response_id=response_record.response_id,
                     message_index=idx,
-                    role=message.get('role', 'unknown'),
-                    content=message.get('content'),
-                    tool_calls=message.get('tool_calls'),
-                    openai_message_id=openai_msg_id
+                    role=message.get("role", "unknown"),
+                    content=message.get("content"),
+                    tool_calls=message.get("tool_calls"),
+                    openai_message_id=openai_msg_id,
                 )
                 db.add(message_record)
 
             if len(messages) > 0:
                 db.commit()
-                logger.debug(f"Stored {len(messages)} messages for response {response_record.response_id}")
+                logger.debug(
+                    f"Stored {len(messages)} messages for response {response_record.response_id}"
+                )
 
     def _process_single_question(
-        self, db: Session, question: DDQuestion,
-        vector_store_ids: list, company_info: dict, question_index: int
+        self,
+        db: Session,
+        question: DDQuestion,
+        vector_store_ids: list,
+        company_info: dict,
+        question_index: int,
     ):
         """Process a single question with full response tracking"""
         try:
@@ -584,21 +656,29 @@ class DDProcessor:
             previous_response_id = None
 
             # Find the previous question in the sequence (by order_index)
-            previous_answer = db.query(DDAnswer).join(
-                DDQuestion, DDAnswer.question_id == DDQuestion.id
-            ).filter(
-                DDAnswer.execution_id == self.execution.id,
-                DDQuestion.order_index < question.order_index,
-                DDAnswer.status == AnswerStatus.COMPLETED,
-                DDAnswer.response_id.isnot(None)  # Only completed answers have response_id
-            ).order_by(DDQuestion.order_index.desc()).first()
+            previous_answer = (
+                db.query(DDAnswer)
+                .join(DDQuestion, DDAnswer.question_id == DDQuestion.id)
+                .filter(
+                    DDAnswer.execution_id == self.execution.id,
+                    DDQuestion.order_index < question.order_index,
+                    DDAnswer.status == AnswerStatus.COMPLETED,
+                    DDAnswer.response_id.isnot(None),  # Only completed answers have response_id
+                )
+                .order_by(DDQuestion.order_index.desc())
+                .first()
+            )
 
             previous_response_id = previous_answer.response_id if previous_answer else None
 
             if previous_response_id:
-                logger.debug(f"Using response chaining with ID: {previous_response_id} from previous question in sequence")
+                logger.debug(
+                    f"Using response chaining with ID: {previous_response_id} from previous question in sequence"
+                )
             else:
-                logger.debug("First question or no previous completed answers - starting fresh conversation")
+                logger.debug(
+                    "First question or no previous completed answers - starting fresh conversation"
+                )
 
             # Validate parameters for OpenAI call
             if vector_store_ids is None:
@@ -624,7 +704,7 @@ class DDProcessor:
                         question_text=self.compose_question_text(question),
                         vector_store_ids=vector_store_ids,
                         previous_response_id=previous_response_id,
-                        company_info=company_info
+                        company_info=company_info,
                     )
                     logger.info("OpenAI processing completed successfully")
                     break  # Success, exit retry loop
@@ -636,12 +716,18 @@ class DDProcessor:
                     # Categorize error
                     error_type, is_retryable = self._categorize_error(e)
 
-                    logger.error(f"Error in OpenAI call (attempt {retry_count}/{self.MAX_RETRIES}): {str(e)}")
-                    logger.error(f"Error categorized as: {error_type.value}, Retryable: {is_retryable}")
+                    logger.error(
+                        f"Error in OpenAI call (attempt {retry_count}/{self.MAX_RETRIES}): {str(e)}"
+                    )
+                    logger.error(
+                        f"Error categorized as: {error_type.value}, Retryable: {is_retryable}"
+                    )
 
                     # If not retryable or last attempt, don't retry
                     if not is_retryable or attempt == self.MAX_RETRIES - 1:
-                        logger.error(f"Not retrying - Retryable: {is_retryable}, Attempt: {retry_count}/{self.MAX_RETRIES}")
+                        logger.error(
+                            f"Not retrying - Retryable: {is_retryable}, Attempt: {retry_count}/{self.MAX_RETRIES}"
+                        )
                         raise
 
                     # Calculate backoff delay
@@ -658,15 +744,21 @@ class DDProcessor:
             error_type, _ = self._categorize_error(e)
 
             # ISSUE #9 FIX: Mark old answers as is_current=False before creating new failed answer
-            old_answers = db.query(DDAnswer).filter(
-                DDAnswer.execution_id == self.execution.id,
-                DDAnswer.question_id == question.id,
-                DDAnswer.is_current == True
-            ).all()
+            old_answers = (
+                db.query(DDAnswer)
+                .filter(
+                    DDAnswer.execution_id == self.execution.id,
+                    DDAnswer.question_id == question.id,
+                    DDAnswer.is_current == True,
+                )
+                .all()
+            )
 
             for old_answer in old_answers:
                 old_answer.is_current = False
-                logger.info(f"Marking old answer {old_answer.id} as is_current=False before creating new failed answer")
+                logger.info(
+                    f"Marking old answer {old_answer.id} as is_current=False before creating new failed answer"
+                )
 
             if old_answers:
                 db.commit()
@@ -685,7 +777,7 @@ class DDProcessor:
                 retry_count=retry_count,
                 error_type=error_type,
                 error_message=str(e)[:1000],  # Limit to 1000 chars
-                last_error_at=datetime.now()
+                last_error_at=datetime.now(),
             )
             db.add(failed_answer)
             db.commit()
@@ -693,6 +785,7 @@ class DDProcessor:
             logger.error(f"Error in _process_single_question: {str(e)}")
             logger.error(f"Error type: {type(e).__name__}")
             import traceback
+
             logger.error(f"Full traceback: {traceback.format_exc()}")
             raise
 
@@ -703,39 +796,56 @@ class DDProcessor:
         self._store_response_messages(db, response_record, result)
 
         # CRITICAL FIX: Ensure sources are properly formatted for JSONB storage
-        sources_data = result.get('sources', {})
-
+        sources_data = result.get("sources", {})
 
         # Ensure sources is always a dict, never a string or list
         if sources_data is None:
             sources_data = {}
         elif isinstance(sources_data, str):
-            logger.warning(f"Sources is a string! Converting to empty dict. Original: {sources_data}")
+            logger.warning(
+                f"Sources is a string! Converting to empty dict. Original: {sources_data}"
+            )
             sources_data = {}
         elif isinstance(sources_data, list):
-            logger.warning(f"Sources is a list! Converting to structured dict. Original: {sources_data}")
+            logger.warning(
+                f"Sources is a list! Converting to structured dict. Original: {sources_data}"
+            )
             # If it's a list, structure it properly
             sources_data = {
-                "files": [s for s in sources_data if isinstance(s, dict) and s.get("type") == "file_search"],
-                "web": [s for s in sources_data if isinstance(s, dict) and s.get("type") == "web_search"],
-                "total_count": len(sources_data)
+                "files": [
+                    s
+                    for s in sources_data
+                    if isinstance(s, dict) and s.get("type") == "file_search"
+                ],
+                "web": [
+                    s for s in sources_data if isinstance(s, dict) and s.get("type") == "web_search"
+                ],
+                "total_count": len(sources_data),
             }
 
         # Final validation - ensure it's a dict
         if not isinstance(sources_data, dict):
-            logger.error(f"Sources is not a dict after processing! Type: {type(sources_data)}, Value: {sources_data}")
+            logger.error(
+                f"Sources is not a dict after processing! Type: {type(sources_data)}, Value: {sources_data}"
+            )
             sources_data = {}
 
         # ISSUE #9 FIX: Mark old answers as is_current=False before creating new completed answer
-        old_answers = db.query(DDAnswer).filter(
-            DDAnswer.execution_id == self.execution.id,
-            DDAnswer.question_id == question.id,
-            DDAnswer.is_current == True
-        ).all()
+        old_answers = (
+            db.query(DDAnswer)
+            .filter(
+                DDAnswer.execution_id == self.execution.id,
+                DDAnswer.question_id == question.id,
+                DDAnswer.is_current == True,
+            )
+            .all()
+        )
 
         for old_answer in old_answers:
             old_answer.is_current = False
-            logger.info(f"Marking old answer {old_answer.id} as is_current=False before creating new completed answer")
+            logger.info(
+                f"Marking old answer {old_answer.id} as is_current=False before creating new completed answer"
+            )
 
         if old_answers:
             db.commit()
@@ -750,14 +860,14 @@ class DDProcessor:
             question_code=question.question_code,  # Required legacy field
             section_id=question.section.id,
             question_id=question.id,
-            answer_text=result['answer'],
+            answer_text=result["answer"],
             sources=sources_data,
-            tokens_used=result['tokens_used'],
-            confidence_score=result.get('confidence_score'),
+            tokens_used=result["tokens_used"],
+            confidence_score=result.get("confidence_score"),
             response_id=response_record.response_id,  # ISSUE #7 FIX: Store response_id for context chain tracking
             status=AnswerStatus.COMPLETED,  # Mark as completed since AI successfully generated answer
             version=1,
-            is_current=True
+            is_current=True,
         )
 
         db.add(answer)
@@ -767,10 +877,10 @@ class DDProcessor:
         history_entry = DDAnswerHistory(
             answer_id=answer.id,
             version=1,
-            content=result['answer'],
+            content=result["answer"],
             sources=sources_data,
             edited_by=None,  # NULL indicates AI-generated
-            edit_reason="Initial AI-generated answer"
+            edit_reason="Initial AI-generated answer",
         )
 
         db.add(history_entry)
@@ -792,13 +902,17 @@ class DDProcessor:
         self.last_global_error_type = None
 
         # Apply rate limiting with proper rate limiter
-        self.rate_limiter.check_and_sleep_sync(tokens_used=result['tokens_used'])
+        self.rate_limiter.check_and_sleep_sync(tokens_used=result["tokens_used"])
 
     def regenerate_single_answer(
-        self, db: Session, answer: DDAnswer,
-        vector_store_ids: list, company_info: dict,
-        instruction: str = None, reference_url: str = None,
-        extra_file_source: dict = None
+        self,
+        db: Session,
+        answer: DDAnswer,
+        vector_store_ids: list,
+        company_info: dict,
+        instruction: str = None,
+        reference_url: str = None,
+        extra_file_source: dict = None,
     ) -> DDAnswer:
         """Regenerate ONE existing answer on demand (interactive).
 
@@ -824,14 +938,18 @@ class DDProcessor:
 
         # Context = previous completed answer in the question order (same chain
         # the engine uses). Later answers are intentionally not included.
-        previous_answer = db.query(DDAnswer).join(
-            DDQuestion, DDAnswer.question_id == DDQuestion.id
-        ).filter(
-            DDAnswer.execution_id == self.execution.id,
-            DDQuestion.order_index < question.order_index,
-            DDAnswer.status == AnswerStatus.COMPLETED,
-            DDAnswer.response_id.isnot(None)
-        ).order_by(DDQuestion.order_index.desc()).first()
+        previous_answer = (
+            db.query(DDAnswer)
+            .join(DDQuestion, DDAnswer.question_id == DDQuestion.id)
+            .filter(
+                DDAnswer.execution_id == self.execution.id,
+                DDQuestion.order_index < question.order_index,
+                DDAnswer.status == AnswerStatus.COMPLETED,
+                DDAnswer.response_id.isnot(None),
+            )
+            .order_by(DDQuestion.order_index.desc())
+            .first()
+        )
         previous_response_id = previous_answer.response_id if previous_answer else None
 
         vector_store_ids = vector_store_ids or []
@@ -866,7 +984,7 @@ class DDProcessor:
                     vector_store_ids=vector_store_ids,
                     previous_response_id=previous_response_id,
                     company_info=company_info,
-                    tool_choice=tool_choice
+                    tool_choice=tool_choice,
                 )
                 break
             except Exception as e:
@@ -882,7 +1000,7 @@ class DDProcessor:
         response_record = self._store_openai_response(db, result)
         self._store_response_messages(db, response_record, result)
 
-        sources_data = result.get('sources', {})
+        sources_data = result.get("sources", {})
         if not isinstance(sources_data, dict):
             sources_data = {}
 
@@ -914,19 +1032,19 @@ class DDProcessor:
         history_entry = DDAnswerHistory(
             answer_id=answer.id,
             version=new_version,
-            content=result['answer'],
+            content=result["answer"],
             sources=sources_data,
             edited_by=None,  # NULL = AI-generated
-            edit_reason=edit_reason
+            edit_reason=edit_reason,
         )
         db.add(history_entry)
         db.flush()
 
         answer.version = new_version
-        answer.answer_text = result['answer']
+        answer.answer_text = result["answer"]
         answer.sources = sources_data
-        answer.tokens_used = result.get('tokens_used')
-        answer.confidence_score = result.get('confidence_score')
+        answer.tokens_used = result.get("tokens_used")
+        answer.confidence_score = result.get("confidence_score")
         answer.response_id = response_record.response_id
         answer.status = AnswerStatus.NEEDS_REVIEW
         answer.edited_by = None
@@ -937,4 +1055,3 @@ class DDProcessor:
         db.refresh(answer)
         logger.info(f"Regenerated answer {answer.id} (new version {new_version})")
         return answer
-

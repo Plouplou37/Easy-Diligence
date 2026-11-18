@@ -9,6 +9,7 @@ Read-only. In particular the summary batches are read from
 ``dd_summary_batches`` as stored: the batch GET of ``summaries.py`` calls
 OpenAI and writes to the database, which a dashboard must never fan out.
 """
+
 import json
 from collections.abc import Iterable
 from datetime import datetime
@@ -148,7 +149,9 @@ def build_dashboard_rows(
             dd_type = dd_types_by_code.get(code)
             if dd_type is not None and dd_type.id not in runs:
                 runs[dd_type.id] = entry(session.id, dd_type.id)
-                runs[dd_type.id].update(code=dd_type.code, name=dd_type.name, is_active=dd_type.is_active)
+                runs[dd_type.id].update(
+                    code=dd_type.code, name=dd_type.name, is_active=dd_type.is_active
+                )
 
         dd_rows = []
         last_activity = session.created_at
@@ -158,7 +161,8 @@ def build_dashboard_rows(
             e["total_questions"] = question_totals.get(e["dd_type_id"], 0)
             e["percentage"] = (
                 min(round(100 * e["answered"] / e["total_questions"]), 100)
-                if e["total_questions"] else 0
+                if e["total_questions"]
+                else 0
             )
             last_activity = _latest(last_activity, e.pop("_activity"))
             for field in ("synthesis_updated_at", "last_answer_at"):
@@ -172,21 +176,23 @@ def build_dashboard_rows(
         dd_rows.sort(key=lambda e: e["name"] or "")
         company = getattr(session, "company", None)
         creator = getattr(session, "creator", None)
-        rows.append({
-            "id": session.id,
-            "session_code": session.session_code,
-            "name": session.name,
-            "description": session.description,
-            "company_name": getattr(company, "name", None),
-            "management_company_name": getattr(company, "management_company_name", None),
-            "created_by": session.created_by,
-            "assigned_to": session.assigned_to,
-            "created_by_username": getattr(creator, "username", None),
-            "created_at": _iso(session.created_at),
-            "last_activity_at": _iso(last_activity),
-            "batch_pending": any(e["batch_status"] in PENDING_BATCH_STATUSES for e in dd_rows),
-            "dd_types": dd_rows,
-        })
+        rows.append(
+            {
+                "id": session.id,
+                "session_code": session.session_code,
+                "name": session.name,
+                "description": session.description,
+                "company_name": getattr(company, "name", None),
+                "management_company_name": getattr(company, "management_company_name", None),
+                "created_by": session.created_by,
+                "assigned_to": session.assigned_to,
+                "created_by_username": getattr(creator, "username", None),
+                "created_at": _iso(session.created_at),
+                "last_activity_at": _iso(last_activity),
+                "batch_pending": any(e["batch_status"] in PENDING_BATCH_STATUSES for e in dd_rows),
+                "dd_types": dd_rows,
+            }
+        )
 
     rows.sort(key=lambda r: r["last_activity_at"] or "", reverse=True)
     return {"sessions": rows, "totals": totals}
@@ -204,12 +210,22 @@ async def dashboard_sessions(
         .all()
     )
     if not sessions:
-        return {"sessions": [], "totals": {"sessions": 0, "to_review": 0, "running": 0, "syntheses_ready": 0}}
+        return {
+            "sessions": [],
+            "totals": {"sessions": 0, "to_review": 0, "running": 0, "syntheses_ready": 0},
+        }
     ids = [s.id for s in sessions]
 
     executions = (
-        db.query(DDExecution.session_id, DDExecution.dd_type_id, DDType.code, DDType.name,
-                 DDType.is_active, DDExecution.status, DDExecution.updated_at)
+        db.query(
+            DDExecution.session_id,
+            DDExecution.dd_type_id,
+            DDType.code,
+            DDType.name,
+            DDType.is_active,
+            DDExecution.status,
+            DDExecution.updated_at,
+        )
         .join(DDType, DDType.id == DDExecution.dd_type_id)
         .filter(DDExecution.session_id.in_(ids))
         .all()
@@ -218,8 +234,14 @@ async def dashboard_sessions(
     # Grouped on the execution's DD type: dd_answers.dd_type_id is nullable.
     current_answers = and_(DDAnswer.execution_id == DDExecution.id, DDAnswer.is_current.is_(True))
     answer_counts = (
-        db.query(DDExecution.session_id, DDExecution.dd_type_id, DDAnswer.status,
-                 func.count(DDAnswer.id), func.max(DDAnswer.created_at), func.max(DDAnswer.edited_at))
+        db.query(
+            DDExecution.session_id,
+            DDExecution.dd_type_id,
+            DDAnswer.status,
+            func.count(DDAnswer.id),
+            func.max(DDAnswer.created_at),
+            func.max(DDAnswer.edited_at),
+        )
         .join(DDAnswer, current_answers)
         .filter(DDExecution.session_id.in_(ids))
         .group_by(DDExecution.session_id, DDExecution.dd_type_id, DDAnswer.status)
@@ -227,8 +249,11 @@ async def dashboard_sessions(
     )
     # Same progress rule as /session/{id}/status: distinct questions with a text.
     answered_counts = (
-        db.query(DDExecution.session_id, DDExecution.dd_type_id,
-                 func.count(func.distinct(DDAnswer.question_id)))
+        db.query(
+            DDExecution.session_id,
+            DDExecution.dd_type_id,
+            func.count(func.distinct(DDAnswer.question_id)),
+        )
         .join(DDAnswer, current_answers)
         .filter(DDExecution.session_id.in_(ids), DDAnswer.answer_text.isnot(None))
         .group_by(DDExecution.session_id, DDExecution.dd_type_id)
@@ -238,7 +263,8 @@ async def dashboard_sessions(
     is_synthesis = DDSummary.section_id.is_(None)
     summaries = (
         db.query(
-            DDSummary.session_id, DDSummary.dd_type_id,
+            DDSummary.session_id,
+            DDSummary.dd_type_id,
             func.max(case((is_synthesis, 1), else_=0)),
             func.max(case((is_synthesis, DDSummary.updated_at), else_=None)),
             func.max(DDSummary.updated_at),
@@ -249,8 +275,12 @@ async def dashboard_sessions(
     )
 
     batches = (
-        db.query(DDSummaryBatch.session_id, DDSummaryBatch.dd_type_id,
-                 DDSummaryBatch.status, DDSummaryBatch.updated_at)
+        db.query(
+            DDSummaryBatch.session_id,
+            DDSummaryBatch.dd_type_id,
+            DDSummaryBatch.status,
+            DDSummaryBatch.updated_at,
+        )
         .filter(DDSummaryBatch.session_id.in_(ids))
         .all()
     )
@@ -258,18 +288,29 @@ async def dashboard_sessions(
     selected = {code for s in sessions for code in _selected_codes(s.dd_types_json)}
     dd_types_by_code = (
         {t.code: t for t in db.query(DDType).filter(DDType.code.in_(selected)).all()}
-        if selected else {}
+        if selected
+        else {}
     )
     dd_type_ids = {row[1] for row in executions} | {t.id for t in dd_types_by_code.values()}
-    question_totals = dict(
-        db.query(DDSection.dd_type_id, func.count(DDQuestion.id))
-        .join(DDQuestion, DDQuestion.section_id == DDSection.id)
-        .filter(DDSection.dd_type_id.in_(dd_type_ids))
-        .group_by(DDSection.dd_type_id)
-        .all()
-    ) if dd_type_ids else {}
+    question_totals = (
+        dict(
+            db.query(DDSection.dd_type_id, func.count(DDQuestion.id))
+            .join(DDQuestion, DDQuestion.section_id == DDSection.id)
+            .filter(DDSection.dd_type_id.in_(dd_type_ids))
+            .group_by(DDSection.dd_type_id)
+            .all()
+        )
+        if dd_type_ids
+        else {}
+    )
 
     return build_dashboard_rows(
-        sessions, executions, answer_counts, answered_counts,
-        summaries, batches, question_totals, dd_types_by_code,
+        sessions,
+        executions,
+        answer_counts,
+        answered_counts,
+        summaries,
+        batches,
+        question_totals,
+        dd_types_by_code,
     )

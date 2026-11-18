@@ -2,6 +2,7 @@
 
 Self-contained: an in-memory SQLite database of its own, no OpenAI, no SMTP.
 """
+
 import asyncio
 import io
 
@@ -77,6 +78,7 @@ def make_admin(db_factory, email):
 
 # --- Registration -------------------------------------------------------------
 
+
 def test_registration_refuses_a_role(client):
     response = register(client, role="admin")
     assert response.status_code == 422
@@ -89,13 +91,19 @@ def test_registered_account_is_an_analyst(client):
 
 
 def test_password_longer_than_bcrypt_reads_is_refused(client):
-    response = client.post("/api/auth/register", json={
-        "email": "long@example.com", "username": "long", "password": "Aa1" + "x" * 80,
-    })
+    response = client.post(
+        "/api/auth/register",
+        json={
+            "email": "long@example.com",
+            "username": "long",
+            "password": "Aa1" + "x" * 80,
+        },
+    )
     assert response.status_code == 422
 
 
 # --- Tokens -------------------------------------------------------------------
+
 
 def test_tokens_are_stored_hashed(client, db_factory):
     register(client)
@@ -134,6 +142,7 @@ def test_me_uses_the_shared_dependency(client):
 
 # --- Admin --------------------------------------------------------------------
 
+
 def test_admin_routes_refuse_an_analyst(client):
     register(client)
     token = login(client).json()["access_token"]
@@ -171,6 +180,7 @@ def test_role_update_accepts_only_known_roles(client, db_factory):
 
 # --- Login throttling ---------------------------------------------------------
 
+
 def test_login_is_throttled_after_repeated_failures(client):
     register(client)
     for _ in range(3):
@@ -193,6 +203,7 @@ def test_throttle_window_expires():
 
 # --- Password reset -----------------------------------------------------------
 
+
 def test_reset_token_works_only_once(client, monkeypatch):
     register(client)
     sent = {}
@@ -202,22 +213,34 @@ def test_reset_token_works_only_once(client, monkeypatch):
         return True
 
     monkeypatch.setattr(auth_routes.email_service, "send_password_reset_email", fake_send)
-    assert client.post("/api/auth/reset-password", json={"email": "ana@example.com"}).status_code == 202
+    assert (
+        client.post("/api/auth/reset-password", json={"email": "ana@example.com"}).status_code
+        == 202
+    )
 
     body = {"token": sent["token"], "new_password": "N3wPassword!"}
     assert client.post("/api/auth/reset-password-confirm", json=body).status_code == 200
-    assert client.post("/api/auth/reset-password-confirm",
-                       json={**body, "new_password": "Th1rdPassword"}).status_code == 400
+    assert (
+        client.post(
+            "/api/auth/reset-password-confirm", json={**body, "new_password": "Th1rdPassword"}
+        ).status_code
+        == 400
+    )
     assert login(client, password="N3wPassword!").status_code == 200
 
 
 # --- Errors -------------------------------------------------------------------
 
+
 def _error_app():
     error_app = FastAPI()
     error_app.add_middleware(UnhandledErrorMiddleware)
-    error_app.add_middleware(CORSMiddleware, allow_origins=["http://front.test"],
-                             allow_methods=["*"], allow_headers=["*"])
+    error_app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["http://front.test"],
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
     error_app.add_exception_handler(NotFoundError, app_error_handler)
 
     @error_app.get("/boom")
@@ -248,6 +271,7 @@ def test_business_error_maps_to_its_status():
 
 # --- Uploads ------------------------------------------------------------------
 
+
 def _upload(name, content):
     return UploadFile(file=io.BytesIO(content), filename=name)
 
@@ -268,13 +292,17 @@ def test_upload_refuses_files_over_the_limit(monkeypatch):
 
 # --- create-admin -------------------------------------------------------------
 
+
 def test_create_admin_command(db_factory, monkeypatch):
     monkeypatch.setattr(cli_module, "SessionLocal", db_factory)
     monkeypatch.setattr(cli_module, "engine", db_factory.kw["bind"])
     runner = CliRunner()
 
-    result = runner.invoke(cli_module.cli, ["create-admin", "boss@example.com", "Jane Boss"],
-                           input=f"{PASSWORD}\n{PASSWORD}\n")
+    result = runner.invoke(
+        cli_module.cli,
+        ["create-admin", "boss@example.com", "Jane Boss"],
+        input=f"{PASSWORD}\n{PASSWORD}\n",
+    )
     assert result.exit_code == 0, result.output
     db = db_factory()
     user = db.query(User).filter(User.email == "boss@example.com").one()
@@ -282,6 +310,9 @@ def test_create_admin_command(db_factory, monkeypatch):
     assert user.role == "admin"
     assert user.username == "boss"
 
-    again = runner.invoke(cli_module.cli, ["create-admin", "boss@example.com", "Jane Boss"],
-                          input=f"{PASSWORD}\n{PASSWORD}\n")
+    again = runner.invoke(
+        cli_module.cli,
+        ["create-admin", "boss@example.com", "Jane Boss"],
+        input=f"{PASSWORD}\n{PASSWORD}\n",
+    )
     assert again.exit_code == 1

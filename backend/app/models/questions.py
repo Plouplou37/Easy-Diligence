@@ -20,6 +20,7 @@ class DDSection(Base):
     dd_type_obj = relationship("DDType", back_populates="sections")
     questions = relationship("DDQuestion", back_populates="section", cascade="all, delete-orphan")
 
+
 class DDQuestion(Base):
     __tablename__ = "dd_questions"
 

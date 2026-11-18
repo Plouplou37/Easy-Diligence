@@ -1,6 +1,7 @@
 """
 Redis caching service for API response optimization with in-memory fallback
 """
+
 import hashlib
 import json
 import logging
@@ -30,19 +31,16 @@ class InMemoryCache:
                 return None
 
             entry = self._cache[key]
-            if time.time() > entry['expires_at']:
+            if time.time() > entry["expires_at"]:
                 del self._cache[key]
                 return None
 
-            return entry['value']
+            return entry["value"]
 
     def set(self, key: str, value: Any, ttl: int) -> bool:
         """Set value in cache with TTL."""
         with self._lock:
-            self._cache[key] = {
-                'value': value,
-                'expires_at': time.time() + ttl
-            }
+            self._cache[key] = {"value": value, "expires_at": time.time() + ttl}
             return True
 
     def delete(self, key: str) -> bool:
@@ -56,10 +54,13 @@ class InMemoryCache:
     def delete_pattern(self, pattern: str) -> int:
         """Delete all keys matching pattern (wildcard support)."""
         import fnmatch
+
         with self._lock:
             all_keys = list(self._cache.keys())
             keys_to_delete = [k for k in all_keys if fnmatch.fnmatch(k, pattern)]
-            logger.info(f"Cache pattern '{pattern}' - Found {len(all_keys)} total keys, deleting {len(keys_to_delete)} matching keys: {keys_to_delete}")
+            logger.info(
+                f"Cache pattern '{pattern}' - Found {len(all_keys)} total keys, deleting {len(keys_to_delete)} matching keys: {keys_to_delete}"
+            )
             for key in keys_to_delete:
                 del self._cache[key]
             return len(keys_to_delete)
@@ -74,7 +75,7 @@ class InMemoryCache:
         """Remove expired entries from cache."""
         with self._lock:
             now = time.time()
-            expired_keys = [k for k, v in self._cache.items() if now > v['expires_at']]
+            expired_keys = [k for k, v in self._cache.items() if now > v["expires_at"]]
             for key in expired_keys:
                 del self._cache[key]
             return len(expired_keys)
@@ -103,10 +104,10 @@ class CacheService:
     def _generate_cache_key(self, prefix: str, **kwargs) -> str:
         """Generate cache key from prefix and parameters."""
         # Extract vector_store_id if present for better cache key readability and pattern matching
-        vector_store_id = kwargs.get('vector_store_id', None)
+        vector_store_id = kwargs.get("vector_store_id", None)
 
         # Create a copy without vector_store_id for hashing
-        remaining_params = {k: v for k, v in kwargs.items() if k != 'vector_store_id'}
+        remaining_params = {k: v for k, v in kwargs.items() if k != "vector_store_id"}
         params_str = json.dumps(remaining_params, sort_keys=True)
         params_hash = hashlib.md5(params_str.encode()).hexdigest()[:8]
 
@@ -190,10 +191,7 @@ cache_service = CacheService()
 
 
 def cache_response(
-    prefix: str,
-    ttl: int = 300,
-    key_params: list | None = None,
-    user_specific: bool = True
+    prefix: str, ttl: int = 300, key_params: list | None = None, user_specific: bool = True
 ):
     """
     Decorator for caching API responses.
@@ -204,14 +202,15 @@ def cache_response(
         key_params: List of parameter names to include in cache key
         user_specific: Whether to include user ID in cache key
     """
+
     def decorator(func):
         @wraps(func)
         async def wrapper(*args, **kwargs):
             # Extract current user if user_specific caching
             cache_key_params = {}
 
-            if user_specific and 'current_user' in kwargs:
-                cache_key_params['user_id'] = kwargs['current_user'].id
+            if user_specific and "current_user" in kwargs:
+                cache_key_params["user_id"] = kwargs["current_user"].id
 
             # Include specified parameters in cache key
             if key_params:
@@ -234,17 +233,17 @@ def cache_response(
             result = await func(*args, **kwargs)
 
             # Convert result to dict if it's a Pydantic model or similar
-            if hasattr(result, 'model_dump'):
+            if hasattr(result, "model_dump"):
                 cache_data = result.model_dump()
-            elif hasattr(result, 'dict'):
+            elif hasattr(result, "dict"):
                 cache_data = result.dict()
             elif isinstance(result, list):
                 # Handle list of models
                 cache_data = []
                 for item in result:
-                    if hasattr(item, 'model_dump'):
+                    if hasattr(item, "model_dump"):
                         cache_data.append(item.model_dump())
-                    elif hasattr(item, 'dict'):
+                    elif hasattr(item, "dict"):
                         cache_data.append(item.dict())
                     else:
                         cache_data.append(item)
@@ -258,6 +257,7 @@ def cache_response(
             return result
 
         return wrapper
+
     return decorator
 
 

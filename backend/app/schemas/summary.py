@@ -32,6 +32,7 @@ class DDSummaryBatchResponse(BaseModel):
     failed, expired, cancelled), plus 'collected' once the results have been
     stored and the synthesis generated, and 'none' when no batch exists.
     """
+
     status: str
     message: str | None = None
     openai_batch_id: str | None = None

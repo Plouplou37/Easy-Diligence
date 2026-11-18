@@ -55,8 +55,20 @@ _CITATION_MARKER = re.compile(
     + r"【】"
     + r"|【[^】\n]*†[^】\n]*】"
     + r"|【?"
-    + r"(?:" + _CITE_OPEN + r"[^" + _CITE_SEP + _CITE_CLOSE + r"\n]*" + _CITE_SEP + r")?"
-    + r"(?:" + _CITE_TOKEN + _CITE_SEP + r")*" + _CITE_TOKEN + _CITE_CLOSE
+    + r"(?:"
+    + _CITE_OPEN
+    + r"[^"
+    + _CITE_SEP
+    + _CITE_CLOSE
+    + r"\n]*"
+    + _CITE_SEP
+    + r")?"
+    + r"(?:"
+    + _CITE_TOKEN
+    + _CITE_SEP
+    + r")*"
+    + _CITE_TOKEN
+    + _CITE_CLOSE
     + r")"
 )
 
@@ -103,7 +115,9 @@ def count_file_citations(response_dict: dict[str, Any]) -> int:
     return count
 
 
-def documents_consulted(answer_text: str, search_results: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def documents_consulted(
+    answer_text: str, search_results: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
     """Document sources named on the answer's "Documents consulted:" line.
 
     Only files the search actually returned can be listed, so a name the model
@@ -118,7 +132,7 @@ def documents_consulted(answer_text: str, search_results: list[dict[str, Any]]) 
     position = answer_text.lower().rfind(key)
     if position < 0:
         return []
-    named = f" {_normalise_name(answer_text[position + len(key):])} "
+    named = f" {_normalise_name(answer_text[position + len(key) :])} "
 
     sources, seen = [], set()
     for result in search_results:
@@ -131,12 +145,14 @@ def documents_consulted(answer_text: str, search_results: list[dict[str, Any]]) 
         candidates = {_normalise_name(stem), _normalise_name(_LEADING_NUMBER.sub("", stem))}
         if any(candidate and f" {candidate} " in named for candidate in candidates):
             seen.add(file_id)
-            sources.append({
-                "type": "file_search",
-                "file_id": file_id,
-                "filename": filename,
-                "index": None,
-            })
+            sources.append(
+                {
+                    "type": "file_search",
+                    "file_id": file_id,
+                    "filename": filename,
+                    "index": None,
+                }
+            )
     return sources
 
 
@@ -150,17 +166,19 @@ class OpenAIProcessor:
         self.client = OpenAI(api_key=settings.openai_api_key.get_secret_value())
         self.model = settings.openai_model
         self.is_reasoning_model = is_reasoning_model(self.model)
-        self.web_search_tool = (
-            "web_search" if self.is_reasoning_model else "web_search_preview"
-        )
+        self.web_search_tool = "web_search" if self.is_reasoning_model else "web_search_preview"
         logger.info(
             f"OpenAI model: {self.model} (reasoning={self.is_reasoning_model}, "
             f"web tool={self.web_search_tool})"
         )
 
-    def _apply_model_params(self, request_params: dict[str, Any],
-                            temperature: float, max_output_tokens: int,
-                            reasoning_effort: str | None = None) -> None:
+    def _apply_model_params(
+        self,
+        request_params: dict[str, Any],
+        temperature: float,
+        max_output_tokens: int,
+        reasoning_effort: str | None = None,
+    ) -> None:
         """Apply the sampling / output-budget parameters the model accepts.
 
         Classic models (gpt-4o) take 'temperature' and the caller's token
@@ -174,9 +192,7 @@ class OpenAIProcessor:
             request_params["max_output_tokens"] = max(
                 max_output_tokens, REASONING_MIN_OUTPUT_TOKENS
             )
-            request_params["reasoning"] = {
-                "effort": reasoning_effort or settings.reasoning_effort
-            }
+            request_params["reasoning"] = {"effort": reasoning_effort or settings.reasoning_effort}
         else:
             request_params["temperature"] = temperature
             request_params["max_output_tokens"] = max_output_tokens
@@ -197,11 +213,9 @@ class OpenAIProcessor:
             return
         request_params["extra_body"] = {
             "context_management": [
-                {"type": "compaction",
-                 "compact_threshold": settings.compact_threshold}
+                {"type": "compaction", "compact_threshold": settings.compact_threshold}
             ]
         }
-
 
     async def create_vector_store(self, name: str, expires_after_days: int | None = None) -> str:
         """Create a vector store for document analysis with optional expiration policy"""
@@ -210,10 +224,7 @@ class OpenAIProcessor:
 
             # Add expiration policy if specified
             if expires_after_days:
-                params["expires_after"] = {
-                    "anchor": "last_active_at",
-                    "days": expires_after_days
-                }
+                params["expires_after"] = {"anchor": "last_active_at", "days": expires_after_days}
 
             vector_store = self.client.vector_stores.create(**params)
             return vector_store.id
@@ -225,24 +236,19 @@ class OpenAIProcessor:
         """Upload a file to OpenAI for analysis"""
         try:
             file_tuple = (filename, BytesIO(file_content))
-            file_obj = self.client.files.create(
-                file=file_tuple,
-                purpose="assistants"
-            )
+            file_obj = self.client.files.create(file=file_tuple, purpose="assistants")
             logger.info(f"Uploaded file {filename} with ID {file_obj.id}")
             return file_obj.id
         except Exception as e:
             logger.error(f"Error uploading file {filename}: {e}")
             raise
 
-    async def add_file_to_vector_store(self, vector_store_id: str, file_id: str,
-                                      chunking_strategy: dict[str, Any] | None = None) -> dict[str, Any]:
+    async def add_file_to_vector_store(
+        self, vector_store_id: str, file_id: str, chunking_strategy: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """Add a file to an existing vector store with optional chunking strategy"""
         try:
-            params = {
-                "vector_store_id": vector_store_id,
-                "file_id": file_id
-            }
+            params = {"vector_store_id": vector_store_id, "file_id": file_id}
 
             if chunking_strategy:
                 params["chunking_strategy"] = chunking_strategy
@@ -256,8 +262,9 @@ class OpenAIProcessor:
             logger.error(f"Error adding file to vector store: {e}")
             raise
 
-    async def wait_for_file_indexed(self, vector_store_id: str, file_id: str,
-                                    timeout: int = 30, interval: int = 2) -> bool:
+    async def wait_for_file_indexed(
+        self, vector_store_id: str, file_id: str, timeout: int = 30, interval: int = 2
+    ) -> bool:
         """Best-effort wait until a vector store file is indexed (status 'completed').
 
         Used right after attaching a file so a subsequent file_search can see it.
@@ -298,7 +305,7 @@ class OpenAIProcessor:
         vector_store_ids: list[str],
         previous_response_id: str | None = None,
         company_info: dict[str, Any] | None = None,
-        tool_choice: str | dict[str, str] | None = None
+        tool_choice: str | dict[str, str] | None = None,
     ) -> dict[str, Any]:
         """The responses.create() parameters for one DD question.
 
@@ -318,28 +325,15 @@ class OpenAIProcessor:
         request_params = {
             "model": self.model,
             "input": [
-                {
-                    "role": "system",
-                    "content": [
-                        {
-                            "type": "input_text",
-                            "text": system_prompt
-                        }
-                    ]
-                },
-                {
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "input_text",
-                            "text": question_text
-                        }
-                    ]
-                }
+                {"role": "system", "content": [{"type": "input_text", "text": system_prompt}]},
+                {"role": "user", "content": [{"type": "input_text", "text": question_text}]},
             ],
             "store": True,  # Enable prompt caching for cost savings
             "truncation": "auto",  # Automatically drop old messages when context is full
-            "include": ["file_search_call.results", "web_search_call.action.sources"]  # Include search results and web sources
+            "include": [
+                "file_search_call.results",
+                "web_search_call.action.sources",
+            ],  # Include search results and web sources
         }
         self._apply_model_params(request_params, temperature=0.1, max_output_tokens=4000)
         self._apply_compaction(request_params)
@@ -350,22 +344,23 @@ class OpenAIProcessor:
 
         # Add file search tool if vector stores are available
         if vector_store_ids:
-            tools.append({
-                "type": "file_search",
-                "vector_store_ids": vector_store_ids,
-                "max_num_results": 20,
-                "ranking_options": {
-                    "ranker": "auto",
-                    "score_threshold": 0.2
+            tools.append(
+                {
+                    "type": "file_search",
+                    "vector_store_ids": vector_store_ids,
+                    "max_num_results": 20,
+                    "ranking_options": {"ranker": "auto", "score_threshold": 0.2},
                 }
-            })
+            )
 
         # Always add web search
-        tools.append({
-            "type": self.web_search_tool,
-            "user_location": {"type": "approximate"},
-            "search_context_size": "medium"
-        })
+        tools.append(
+            {
+                "type": self.web_search_tool,
+                "user_location": {"type": "approximate"},
+                "search_context_size": "medium",
+            }
+        )
         logger.debug(f"Added {len(tools)} tools to request")
 
         if tools:
@@ -403,15 +398,17 @@ class OpenAIProcessor:
             request_params["previous_response_id"] = previous_response_id
             logger.debug("Added previous_response_id for context chaining")
 
-        logger.debug(f"Request params: model={request_params['model']}, input_messages={len(request_params['input'])}, tools={len(tools)}")
+        logger.debug(
+            f"Request params: model={request_params['model']}, input_messages={len(request_params['input'])}, tools={len(tools)}"
+        )
         return request_params
 
     @staticmethod
     def _cites_documents_with_markers(response) -> bool:
         """Whether a completed response carries document-citation annotations."""
-        if response is None or getattr(response, 'status', None) != "completed":
+        if response is None or getattr(response, "status", None) != "completed":
             return False
-        if not hasattr(response, 'model_dump'):
+        if not hasattr(response, "model_dump"):
             return False
         return count_file_citations(response.model_dump()) > 0
 
@@ -421,7 +418,7 @@ class OpenAIProcessor:
         vector_store_ids: list[str],
         previous_response_id: str | None = None,
         company_info: dict[str, Any] | None = None,
-        tool_choice: str | dict[str, str] | None = None
+        tool_choice: str | dict[str, str] | None = None,
     ) -> dict[str, Any]:
         """
         Process a single question using OpenAI's responses.create() with previous_response_id chaining
@@ -431,8 +428,7 @@ class OpenAIProcessor:
             logger.debug("Processing question with OpenAI API")
 
             request_params = self.build_question_request(
-                question_text, vector_store_ids, previous_response_id,
-                company_info, tool_choice
+                question_text, vector_store_ids, previous_response_id, company_info, tool_choice
             )
 
             # Make the API call using client.responses.create()
@@ -464,22 +460,22 @@ class OpenAIProcessor:
 
             # ISSUE #24 Phase 1: Validate response status and model
             # Check if response completed successfully
-            response_status = getattr(response, 'status', 'unknown')
+            response_status = getattr(response, "status", "unknown")
             logger.info(f"Response status: {response_status}")
 
             if response_status != "completed":
                 error_details = ""
 
                 # Extract structured error information if available
-                if hasattr(response, 'error') and response.error:
-                    error_type = getattr(response.error, 'type', 'unknown')
-                    error_message = getattr(response.error, 'message', 'No error message')
+                if hasattr(response, "error") and response.error:
+                    error_type = getattr(response.error, "type", "unknown")
+                    error_message = getattr(response.error, "message", "No error message")
                     error_details = f" Error: {error_type} - {error_message}"
                     logger.error(f"OpenAI API Error: {error_type} - {error_message}")
 
                 # Extract incomplete details if available
-                if hasattr(response, 'incomplete_details') and response.incomplete_details:
-                    incomplete_reason = getattr(response.incomplete_details, 'reason', 'unknown')
+                if hasattr(response, "incomplete_details") and response.incomplete_details:
+                    incomplete_reason = getattr(response.incomplete_details, "reason", "unknown")
                     error_details += f" Incomplete: {incomplete_reason}"
                     logger.warning(f"Response incomplete: {incomplete_reason}")
 
@@ -488,31 +484,31 @@ class OpenAIProcessor:
                 )
 
             # Verify correct model was used
-            response_model = getattr(response, 'model', 'unknown')
+            response_model = getattr(response, "model", "unknown")
             logger.info(f"Response generated by model: {response_model}")
 
             if response_model != self.model:
-                logger.warning(
-                    f"Model mismatch! Requested: {self.model}, Got: {response_model}"
-                )
+                logger.warning(f"Model mismatch! Requested: {self.model}, Got: {response_model}")
             logger.debug(f"Response ID: {getattr(response, 'id', 'unknown')}")
             logger.debug(f"Response type: {type(response)}")
             logger.debug(f"Has output_text: {hasattr(response, 'output_text')}")
             logger.debug(f"Has output: {hasattr(response, 'output')}")
 
-            if hasattr(response, 'output_text'):
-                logger.debug(f"output_text length: {len(response.output_text) if response.output_text else 0}")
-            if hasattr(response, 'output') and response.output:
+            if hasattr(response, "output_text"):
+                logger.debug(
+                    f"output_text length: {len(response.output_text) if response.output_text else 0}"
+                )
+            if hasattr(response, "output") and response.output:
                 logger.debug(f"output items count: {len(response.output)}")
 
             # Log token usage if available (including cache info)
-            if hasattr(response, 'usage') and response.usage:
+            if hasattr(response, "usage") and response.usage:
                 usage = response.usage
 
                 # Extract basic token counts
-                total_tokens = getattr(usage, 'total_tokens', 0)
-                input_tokens = getattr(usage, 'input_tokens', 0)
-                output_tokens = getattr(usage, 'output_tokens', 0)
+                total_tokens = getattr(usage, "total_tokens", 0)
+                input_tokens = getattr(usage, "input_tokens", 0)
+                output_tokens = getattr(usage, "output_tokens", 0)
 
                 # Log full usage object for debugging
                 logger.debug(f"Full usage object: {usage}")
@@ -523,26 +519,26 @@ class OpenAIProcessor:
                 cache_read_tokens = 0
 
                 # Try input_tokens_details (standard location)
-                if hasattr(usage, 'input_tokens_details'):
+                if hasattr(usage, "input_tokens_details"):
                     details = usage.input_tokens_details
                     logger.debug(f"input_tokens_details: {details}")
 
-                    if hasattr(details, 'cached_tokens'):
+                    if hasattr(details, "cached_tokens"):
                         cached_tokens = details.cached_tokens
-                    elif isinstance(details, dict) and 'cached_tokens' in details:
-                        cached_tokens = details['cached_tokens']
+                    elif isinstance(details, dict) and "cached_tokens" in details:
+                        cached_tokens = details["cached_tokens"]
 
                     # Check for cache_creation_input_tokens
-                    if hasattr(details, 'cache_creation_input_tokens'):
+                    if hasattr(details, "cache_creation_input_tokens"):
                         cache_creation_tokens = details.cache_creation_input_tokens
-                    elif isinstance(details, dict) and 'cache_creation_input_tokens' in details:
-                        cache_creation_tokens = details['cache_creation_input_tokens']
+                    elif isinstance(details, dict) and "cache_creation_input_tokens" in details:
+                        cache_creation_tokens = details["cache_creation_input_tokens"]
 
                     # Check for cache_read_input_tokens
-                    if hasattr(details, 'cache_read_input_tokens'):
+                    if hasattr(details, "cache_read_input_tokens"):
                         cache_read_tokens = details.cache_read_input_tokens
-                    elif isinstance(details, dict) and 'cache_read_input_tokens' in details:
-                        cache_read_tokens = details['cache_read_input_tokens']
+                    elif isinstance(details, dict) and "cache_read_input_tokens" in details:
+                        cache_read_tokens = details["cache_read_input_tokens"]
 
                 # Build comprehensive log message
                 log_msg = f"TOKEN USAGE - Total: {total_tokens} | Input: {input_tokens} | Output: {output_tokens}"
@@ -566,15 +562,15 @@ class OpenAIProcessor:
             sources = []
 
             # Get response as dictionary for accessing output array
-            response_dict = response.model_dump() if hasattr(response, 'model_dump') else {}
+            response_dict = response.model_dump() if hasattr(response, "model_dump") else {}
 
             # Debug logging for response structure (only when needed)
             logger.debug(f"Response dict keys: {list(response_dict.keys())}")
-            if 'output' in response_dict and response_dict['output']:
+            if "output" in response_dict and response_dict["output"]:
                 logger.debug(f"Output array length: {len(response_dict['output'])}")
 
             # Use simple method first - direct text access
-            if hasattr(response, 'output_text') and response.output_text:
+            if hasattr(response, "output_text") and response.output_text:
                 answer_text = response.output_text
                 logger.debug(f"Extracted answer using output_text: {len(answer_text)} chars")
 
@@ -586,35 +582,53 @@ class OpenAIProcessor:
 
                 # Extract vector store IDs from tools for fallback file retrieval
                 vector_store_ids_from_response = []
-                if 'tools' in response_dict and response_dict['tools']:
-                    for tool in response_dict['tools']:
-                        if isinstance(tool, dict) and tool.get('type') == 'file_search':
-                            vs_ids = tool.get('vector_store_ids', [])
+                if "tools" in response_dict and response_dict["tools"]:
+                    for tool in response_dict["tools"]:
+                        if isinstance(tool, dict) and tool.get("type") == "file_search":
+                            vs_ids = tool.get("vector_store_ids", [])
                             if vs_ids:
                                 vector_store_ids_from_response.extend(vs_ids)
                                 logger.debug(f"Found vector store IDs in response: {vs_ids}")
 
-                if 'output' in response_dict and response_dict['output'] is not None:
+                if "output" in response_dict and response_dict["output"] is not None:
                     # Ensure response.output is iterable (list)
-                    output_list = response_dict['output'] if isinstance(response_dict['output'], (list, tuple)) else []
-                    logger.debug(f"Processing {len(output_list)} output items for source extraction")
+                    output_list = (
+                        response_dict["output"]
+                        if isinstance(response_dict["output"], (list, tuple))
+                        else []
+                    )
+                    logger.debug(
+                        f"Processing {len(output_list)} output items for source extraction"
+                    )
 
                     # First pass: collect all file citations
                     for output_item in output_list:
-                        if isinstance(output_item, dict) and output_item.get('type') == 'message':
-                            content = output_item.get('content', [])
+                        if isinstance(output_item, dict) and output_item.get("type") == "message":
+                            content = output_item.get("content", [])
                             if isinstance(content, list):
                                 for content_item in content:
-                                    if isinstance(content_item, dict) and content_item.get('type') == 'text':
-                                        text_data = content_item.get('text', {})
-                                        annotations = text_data.get('annotations', []) if isinstance(text_data, dict) else []
+                                    if (
+                                        isinstance(content_item, dict)
+                                        and content_item.get("type") == "text"
+                                    ):
+                                        text_data = content_item.get("text", {})
+                                        annotations = (
+                                            text_data.get("annotations", [])
+                                            if isinstance(text_data, dict)
+                                            else []
+                                        )
                                         for annotation in annotations:
-                                            if isinstance(annotation, dict) and annotation.get('type') == 'file_citation':
-                                                file_id = annotation.get('file_id')
-                                                filename = annotation.get('filename')
+                                            if (
+                                                isinstance(annotation, dict)
+                                                and annotation.get("type") == "file_citation"
+                                            ):
+                                                file_id = annotation.get("file_id")
+                                                filename = annotation.get("filename")
                                                 if file_id and filename:
                                                     file_citations[file_id] = filename
-                                                    logger.debug(f"Collected file citation: {file_id} -> {filename}")
+                                                    logger.debug(
+                                                        f"Collected file citation: {file_id} -> {filename}"
+                                                    )
 
                     logger.debug(f"Collected {len(file_citations)} file citations for fallback")
 
@@ -625,30 +639,35 @@ class OpenAIProcessor:
 
                         # Handle dict format responses (main path)
                         if isinstance(output_item, dict):
-                            item_type = output_item.get('type', None)
+                            item_type = output_item.get("type", None)
                             logger.debug(f"Processing output item {i}: type='{item_type}'")
 
                             # Log tool calls for debugging but don't create sources from them
-                            if item_type == 'file_search_call':
+                            if item_type == "file_search_call":
                                 logger.info(f"Found file search tool call: {output_item.get('id')}")
                                 # Don't create source - actual citations come from message annotations
 
-                            elif item_type == 'web_search_call':
-                                action = output_item.get('action', {})
+                            elif item_type == "web_search_call":
+                                action = output_item.get("action", {})
                                 logger.info(f"Found web search tool call: {action.get('query')}")
                                 # Don't create source - actual citations come from message annotations
 
                             # Handle message output - extract sources from annotations
-                            elif item_type == 'message':
-                                content = output_item.get('content', [])
+                            elif item_type == "message":
+                                content = output_item.get("content", [])
                                 if content and isinstance(content, (list, tuple)):
-                                    logger.debug(f"Processing message with {len(content)} content items")
+                                    logger.debug(
+                                        f"Processing message with {len(content)} content items"
+                                    )
 
                                     for _j, content_item in enumerate(content):
-                                        if not isinstance(content_item, dict) or 'annotations' not in content_item:
+                                        if (
+                                            not isinstance(content_item, dict)
+                                            or "annotations" not in content_item
+                                        ):
                                             continue
 
-                                        annotations_list = content_item['annotations']
+                                        annotations_list = content_item["annotations"]
                                         if not annotations_list:
                                             continue
 
@@ -658,34 +677,39 @@ class OpenAIProcessor:
                                             if not isinstance(annotation, dict):
                                                 continue
 
-                                            ann_type = annotation.get('type', '')
+                                            ann_type = annotation.get("type", "")
 
                                             # Web search citations
-                                            if ann_type == 'url_citation':
-                                                url = annotation.get('url', '')
-                                                title = annotation.get('title', '')
+                                            if ann_type == "url_citation":
+                                                url = annotation.get("url", "")
+                                                title = annotation.get("title", "")
                                                 logger.info(f"Found web citation: {url}")
-                                                sources.append({
-                                                    "type": "web_search",
-                                                    "url": url,
-                                                    "title": title,
-                                                    "start_index": annotation.get('start_index'),
-                                                    "end_index": annotation.get('end_index')
-                                                })
+                                                sources.append(
+                                                    {
+                                                        "type": "web_search",
+                                                        "url": url,
+                                                        "title": title,
+                                                        "start_index": annotation.get(
+                                                            "start_index"
+                                                        ),
+                                                        "end_index": annotation.get("end_index"),
+                                                    }
+                                                )
 
                                             # File search citations
-                                            elif ann_type == 'file_citation':
-                                                file_id = annotation.get('file_id', '')
-                                                filename = annotation.get('filename', '')
-                                                index = annotation.get('index', 0)
+                                            elif ann_type == "file_citation":
+                                                file_id = annotation.get("file_id", "")
+                                                filename = annotation.get("filename", "")
+                                                index = annotation.get("index", 0)
                                                 logger.info(f"Found file citation: {filename}")
-                                                sources.append({
-                                                    "type": "file_search",
-                                                    "file_id": file_id,
-                                                    "filename": filename,
-                                                    "index": index
-                                                })
-
+                                                sources.append(
+                                                    {
+                                                        "type": "file_search",
+                                                        "file_id": file_id,
+                                                        "filename": filename,
+                                                        "index": index,
+                                                    }
+                                                )
 
                 logger.info(f"Source extraction complete: Found {len(sources)} sources")
 
@@ -697,60 +721,82 @@ class OpenAIProcessor:
             messages = []
 
             # Add user message (we don't have an ID for this as it's our input)
-            messages.append({
-                "role": "user",
-                "content": question_text,
-                "id": None  # User input doesn't have OpenAI message ID
-            })
+            messages.append(
+                {
+                    "role": "user",
+                    "content": question_text,
+                    "id": None,  # User input doesn't have OpenAI message ID
+                }
+            )
 
             # Extract assistant messages with actual OpenAI IDs from response.output
-            if 'output' in response_dict and response_dict['output'] is not None:
-                output_list = response_dict['output'] if isinstance(response_dict['output'], (list, tuple)) else []
+            if "output" in response_dict and response_dict["output"] is not None:
+                output_list = (
+                    response_dict["output"]
+                    if isinstance(response_dict["output"], (list, tuple))
+                    else []
+                )
 
                 for output_item in output_list:
                     if output_item is None:
                         continue
 
                     # Look for message objects with IDs (handle both dict and object formats)
-                    item_type = getattr(output_item, 'type', None) if hasattr(output_item, 'type') else output_item.get('type') if isinstance(output_item, dict) else None
+                    item_type = (
+                        getattr(output_item, "type", None)
+                        if hasattr(output_item, "type")
+                        else output_item.get("type")
+                        if isinstance(output_item, dict)
+                        else None
+                    )
 
-                    if item_type == 'message':
+                    if item_type == "message":
                         # Handle both object and dict formats
                         if isinstance(output_item, dict):
-                            message_id = output_item.get('id')
-                            role = output_item.get('role', 'assistant')
-                            item_content = output_item.get('content', [])
+                            message_id = output_item.get("id")
+                            role = output_item.get("role", "assistant")
+                            item_content = output_item.get("content", [])
                         else:
-                            message_id = getattr(output_item, 'id', None)
-                            role = getattr(output_item, 'role', 'assistant')
-                            item_content = getattr(output_item, 'content', []) if hasattr(output_item, 'content') else []
+                            message_id = getattr(output_item, "id", None)
+                            role = getattr(output_item, "role", "assistant")
+                            item_content = (
+                                getattr(output_item, "content", [])
+                                if hasattr(output_item, "content")
+                                else []
+                            )
 
                         # Extract content from the message
                         content = ""
-                        content_list = item_content if isinstance(item_content, (list, tuple)) else []
+                        content_list = (
+                            item_content if isinstance(item_content, (list, tuple)) else []
+                        )
 
                         for content_item in content_list:
                             if content_item is None:
                                 continue
                             # Handle both dict and object formats for content items
                             if isinstance(content_item, dict):
-                                if 'text' in content_item:
-                                    content += content_item['text']
-                            elif hasattr(content_item, 'text'):
+                                if "text" in content_item:
+                                    content += content_item["text"]
+                            elif hasattr(content_item, "text"):
                                 content += content_item.text
 
                         # If we don't have answer_text yet, use this content
                         if not answer_text and content:
                             answer_text = content
 
-                        messages.append({
-                            "role": role,
-                            "content": content,
-                            "id": message_id,
-                            "tool_calls": None  # responses API handles tools differently
-                        })
+                        messages.append(
+                            {
+                                "role": role,
+                                "content": content,
+                                "id": message_id,
+                                "tool_calls": None,  # responses API handles tools differently
+                            }
+                        )
 
-                        logger.info(f"EXTRACTED MESSAGE ID: {message_id}, content length: {len(content)}")
+                        logger.info(
+                            f"EXTRACTED MESSAGE ID: {message_id}, content length: {len(content)}"
+                        )
 
             # Done after every extraction path above, and before the emptiness
             # check below: an answer made of nothing but markers must fall into
@@ -763,20 +809,16 @@ class OpenAIProcessor:
                 answer_text = "Unable to extract answer from OpenAI response. Please check the response format."
 
                 # Create fallback assistant message
-                messages.append({
-                    "role": "assistant",
-                    "content": answer_text,
-                    "id": None,
-                    "tool_calls": None
-                })
+                messages.append(
+                    {"role": "assistant", "content": answer_text, "id": None, "tool_calls": None}
+                )
             elif len(messages) == 1:  # Only user message exists but we have answer_text
-                logger.warning("No assistant messages found in response.output, creating fallback with extracted text")
-                messages.append({
-                    "role": "assistant",
-                    "content": answer_text,
-                    "id": None,
-                    "tool_calls": None
-                })
+                logger.warning(
+                    "No assistant messages found in response.output, creating fallback with extracted text"
+                )
+                messages.append(
+                    {"role": "assistant", "content": answer_text, "id": None, "tool_calls": None}
+                )
 
             # Structure sources as a proper dict for better organization
             # Ensure sources is a list to avoid issues
@@ -790,12 +832,15 @@ class OpenAIProcessor:
             if not any(isinstance(s, dict) and s.get("type") == "file_search" for s in sources):
                 search_results = [
                     result
-                    for item in (response_dict.get('output') or [])
-                    if isinstance(item, dict) and item.get('type') == 'file_search_call'
-                    for result in (item.get('results') or [])
+                    for item in (response_dict.get("output") or [])
+                    if isinstance(item, dict) and item.get("type") == "file_search_call"
+                    for result in (item.get("results") or [])
                 ]
                 consulted = documents_consulted(answer_text, search_results)
-                if search_results and CONSULTED_LABEL.rstrip(":").lower() not in answer_text.lower():
+                if (
+                    search_results
+                    and CONSULTED_LABEL.rstrip(":").lower() not in answer_text.lower()
+                ):
                     logger.warning(
                         f"Response {response.id}: documents were searched but the "
                         f"answer has no '{CONSULTED_LABEL}' line, no document source kept"
@@ -803,14 +848,20 @@ class OpenAIProcessor:
                 sources.extend(consulted)
 
             structured_sources = {
-                "files": [s for s in sources if isinstance(s, dict) and s.get("type") == "file_search"],
-                "web": [s for s in sources if isinstance(s, dict) and s.get("type") == "web_search"],
-                "total_count": len(sources)
+                "files": [
+                    s for s in sources if isinstance(s, dict) and s.get("type") == "file_search"
+                ],
+                "web": [
+                    s for s in sources if isinstance(s, dict) and s.get("type") == "web_search"
+                ],
+                "total_count": len(sources),
             }
 
             # CRITICAL: Ensure structured_sources is always a dict
             if not isinstance(structured_sources, dict):
-                logger.error(f"structured_sources is not a dict! Type: {type(structured_sources)}, Value: {structured_sources}")
+                logger.error(
+                    f"structured_sources is not a dict! Type: {type(structured_sources)}, Value: {structured_sources}"
+                )
                 structured_sources = {"files": [], "web": [], "total_count": 0}
 
             # Special handling for empty sources to ensure proper JSONB storage
@@ -818,13 +869,16 @@ class OpenAIProcessor:
                 logger.debug("No sources found, using empty dict structure for JSONB")
                 structured_sources = {"files": [], "web": [], "total_count": 0}
 
-            logger.info(f"Final sources: {structured_sources['total_count']} total ({len(structured_sources['files'])} files, {len(structured_sources['web'])} web)")
+            logger.info(
+                f"Final sources: {structured_sources['total_count']} total ({len(structured_sources['files'])} files, {len(structured_sources['web'])} web)"
+            )
             logger.debug(f"Sources structure: {structured_sources}")
 
             return {
                 "answer": answer_text,
                 "sources": structured_sources,  # Structured dict for JSONB storage
-                "tokens_used": (response.usage.total_tokens if response.usage else 0) + discarded_tokens,
+                "tokens_used": (response.usage.total_tokens if response.usage else 0)
+                + discarded_tokens,
                 "response_id": response.id,
                 "previous_response_id": previous_response_id,  # Pass through for context chain tracking
                 # No confidence_score: it used to be hardcoded to 0.8, which
@@ -834,7 +888,7 @@ class OpenAIProcessor:
                 # (see the system prompt). The DB column is kept for history.
                 "processing_time": time.time(),
                 "messages": messages,
-                "full_response": response.model_dump() if hasattr(response, 'model_dump') else {}
+                "full_response": response.model_dump() if hasattr(response, "model_dump") else {},
             }
 
         except Exception as e:
@@ -842,7 +896,7 @@ class OpenAIProcessor:
             logger.error(f"Error type: {type(e).__name__}")
 
             # Log request details for debugging
-            if 'request_params' in locals():
+            if "request_params" in locals():
                 logger.error(f"Request model: {request_params.get('model', 'unknown')}")
                 logger.error(f"Request input length: {len(request_params.get('input', ''))}")
                 logger.error(f"Request tools count: {len(request_params.get('tools', []))}")
@@ -850,8 +904,9 @@ class OpenAIProcessor:
             # Re-raise the exception with more context
             raise RuntimeError(f"Failed to process question with OpenAI API: {str(e)}") from e
 
-    def _build_system_prompt(self, company_info: dict[str, Any] | None = None,
-                             has_documents: bool = True) -> str:
+    def _build_system_prompt(
+        self, company_info: dict[str, Any] | None = None, has_documents: bool = True
+    ) -> str:
         """Build the system prompt for due diligence analysis.
 
         ``has_documents`` says whether a document collection is attached. The
@@ -867,18 +922,18 @@ class OpenAIProcessor:
         # model -- and the web search behind it -- guess, which is where answers
         # go wrong. The manager block is skipped when unknown.
         if company_info:
-            fund = company_info.get('name') or 'the target company'
+            fund = company_info.get("name") or "the target company"
             prompt += f"\nFUND UNDER REVIEW: {fund}"
-            if company_info.get('website_url'):
+            if company_info.get("website_url"):
                 prompt += f" ({company_info['website_url']})"
 
-            manager = company_info.get('management_company_name')
+            manager = company_info.get("management_company_name")
             if manager:
                 prompt += f"\nMANAGEMENT COMPANY: {manager}"
-                if company_info.get('management_company_website'):
+                if company_info.get("management_company_website"):
                     prompt += f" ({company_info['management_company_website']})"
 
-            if company_info.get('description'):
+            if company_info.get("description"):
                 prompt += f"\nOverview: {company_info['description']}"
 
             prompt += (
@@ -1063,8 +1118,7 @@ Format your answers like a professional analyst responding to specific due dilig
             metadata={"description": description[:512]} if description else None,
         )
         logger.info(
-            f"Submitted summary batch {batch.id} ({len(requests)} requests, "
-            f"status={batch.status})"
+            f"Submitted summary batch {batch.id} ({len(requests)} requests, status={batch.status})"
         )
         return {
             "batch_id": batch.id,
@@ -1138,8 +1192,7 @@ Format your answers like a professional analyst responding to specific due dilig
             response = record.get("response") or {}
             if response.get("status_code") != 200:
                 logger.error(
-                    f"Batch request {custom_id} returned "
-                    f"status {response.get('status_code')}"
+                    f"Batch request {custom_id} returned status {response.get('status_code')}"
                 )
                 continue
 
@@ -1161,28 +1214,39 @@ Format your answers like a professional analyst responding to specific due dilig
             expires_after_days = None
 
             try:
-                if hasattr(vector_store, 'expires_after') and vector_store.expires_after:
-                    if hasattr(vector_store.expires_after, 'days'):
+                if hasattr(vector_store, "expires_after") and vector_store.expires_after:
+                    if hasattr(vector_store.expires_after, "days"):
                         expires_after_days = vector_store.expires_after.days
                     elif isinstance(vector_store.expires_after, dict):
-                        expires_after_days = vector_store.expires_after.get('days')
+                        expires_after_days = vector_store.expires_after.get("days")
 
                     # Calculate expires_at based on last_active_at + days
-                    if expires_after_days and hasattr(vector_store, 'last_active_at') and vector_store.last_active_at:
+                    if (
+                        expires_after_days
+                        and hasattr(vector_store, "last_active_at")
+                        and vector_store.last_active_at
+                    ):
                         import datetime
+
                         try:
-                            last_active = datetime.datetime.fromtimestamp(vector_store.last_active_at)
+                            last_active = datetime.datetime.fromtimestamp(
+                                vector_store.last_active_at
+                            )
                             expires_at = last_active + datetime.timedelta(days=expires_after_days)
                         except (ValueError, OSError) as dt_error:
                             logger.warning(f"Error calculating expires_at: {dt_error}")
             except Exception as exp_error:
-                logger.warning(f"Error processing expiration info for {vector_store_id}: {exp_error}")
+                logger.warning(
+                    f"Error processing expiration info for {vector_store_id}: {exp_error}"
+                )
 
             # Handle file_counts safely - it can be an object or dict
             file_counts_dict = {}
             try:
-                file_counts_obj = getattr(vector_store, 'file_counts', None)
-                logger.debug(f"File counts object: {file_counts_obj} (type: {type(file_counts_obj)})")
+                file_counts_obj = getattr(vector_store, "file_counts", None)
+                logger.debug(
+                    f"File counts object: {file_counts_obj} (type: {type(file_counts_obj)})"
+                )
 
                 if file_counts_obj:
                     # If it's already a dict, use it directly
@@ -1190,40 +1254,44 @@ Format your answers like a professional analyst responding to specific due dilig
                         file_counts_dict = file_counts_obj
                     else:
                         # If it's an object, extract attributes
-                        if hasattr(file_counts_obj, 'total'):
-                            file_counts_dict['total'] = getattr(file_counts_obj, 'total', 0)
-                        if hasattr(file_counts_obj, 'in_progress'):
-                            file_counts_dict['in_progress'] = getattr(file_counts_obj, 'in_progress', 0)
-                        if hasattr(file_counts_obj, 'completed'):
-                            file_counts_dict['completed'] = getattr(file_counts_obj, 'completed', 0)
-                        if hasattr(file_counts_obj, 'failed'):
-                            file_counts_dict['failed'] = getattr(file_counts_obj, 'failed', 0)
-                        if hasattr(file_counts_obj, 'cancelled'):
-                            file_counts_dict['cancelled'] = getattr(file_counts_obj, 'cancelled', 0)
+                        if hasattr(file_counts_obj, "total"):
+                            file_counts_dict["total"] = getattr(file_counts_obj, "total", 0)
+                        if hasattr(file_counts_obj, "in_progress"):
+                            file_counts_dict["in_progress"] = getattr(
+                                file_counts_obj, "in_progress", 0
+                            )
+                        if hasattr(file_counts_obj, "completed"):
+                            file_counts_dict["completed"] = getattr(file_counts_obj, "completed", 0)
+                        if hasattr(file_counts_obj, "failed"):
+                            file_counts_dict["failed"] = getattr(file_counts_obj, "failed", 0)
+                        if hasattr(file_counts_obj, "cancelled"):
+                            file_counts_dict["cancelled"] = getattr(file_counts_obj, "cancelled", 0)
 
                         # Ensure total is calculated if not present
-                        if 'total' not in file_counts_dict:
-                            file_counts_dict['total'] = (
-                                file_counts_dict.get('completed', 0) +
-                                file_counts_dict.get('in_progress', 0) +
-                                file_counts_dict.get('failed', 0) +
-                                file_counts_dict.get('cancelled', 0)
+                        if "total" not in file_counts_dict:
+                            file_counts_dict["total"] = (
+                                file_counts_dict.get("completed", 0)
+                                + file_counts_dict.get("in_progress", 0)
+                                + file_counts_dict.get("failed", 0)
+                                + file_counts_dict.get("cancelled", 0)
                             )
             except Exception as file_count_error:
-                logger.warning(f"Error processing file_counts for {vector_store_id}: {file_count_error}")
-                file_counts_dict = {'total': 0}
+                logger.warning(
+                    f"Error processing file_counts for {vector_store_id}: {file_count_error}"
+                )
+                file_counts_dict = {"total": 0}
 
             # Safely extract other fields
             result = {
-                "id": getattr(vector_store, 'id', vector_store_id),
-                "name": getattr(vector_store, 'name', f'Vector Store {vector_store_id[:8]}'),
-                "status": getattr(vector_store, 'status', 'unknown'),
+                "id": getattr(vector_store, "id", vector_store_id),
+                "name": getattr(vector_store, "name", f"Vector Store {vector_store_id[:8]}"),
+                "status": getattr(vector_store, "status", "unknown"),
                 "file_counts": file_counts_dict,
-                "usage_bytes": getattr(vector_store, 'usage_bytes', 0),
+                "usage_bytes": getattr(vector_store, "usage_bytes", 0),
                 "expires_after_days": expires_after_days,
                 "expires_at": expires_at.isoformat() if expires_at else None,
-                "last_active_at": getattr(vector_store, 'last_active_at', None),
-                "created_at": getattr(vector_store, 'created_at', None)
+                "last_active_at": getattr(vector_store, "last_active_at", None),
+                "created_at": getattr(vector_store, "created_at", None),
             }
 
             logger.debug(f"Processed vector store info for {vector_store_id}: {result}")
@@ -1235,19 +1303,14 @@ Format your answers like a professional analyst responding to specific due dilig
             raise
 
     async def update_vector_store_expiration(
-        self,
-        vector_store_id: str,
-        expires_after_days: int | None = None
+        self, vector_store_id: str, expires_after_days: int | None = None
     ) -> bool:
         """Update the expiration policy of a vector store"""
         try:
             params = {}
 
             if expires_after_days:
-                params["expires_after"] = {
-                    "anchor": "last_active_at",
-                    "days": expires_after_days
-                }
+                params["expires_after"] = {"anchor": "last_active_at", "days": expires_after_days}
             else:
                 # Remove expiration policy
                 params["expires_after"] = None
@@ -1267,7 +1330,9 @@ Format your answers like a professional analyst responding to specific due dilig
             logger.error(f"Error updating vector store name: {e}")
             raise
 
-    async def update_vector_store_metadata(self, vector_store_id: str, metadata: dict[str, Any]) -> bool:
+    async def update_vector_store_metadata(
+        self, vector_store_id: str, metadata: dict[str, Any]
+    ) -> bool:
         """Update the metadata of a vector store"""
         try:
             self.client.vector_stores.update(vector_store_id, metadata=metadata)
@@ -1291,23 +1356,29 @@ Format your answers like a professional analyst responding to specific due dilig
                         "filename": file_details.filename,
                         "size_bytes": file_details.bytes,
                         "created_at": file_details.created_at,
-                        "status": getattr(file_obj, 'status', 'completed'),
-                        "usage_bytes": getattr(file_obj, 'usage_bytes', 0),
-                        "attributes": getattr(file_obj, 'attributes', {}),
-                        "last_error": file_obj.last_error.dict() if hasattr(file_obj, 'last_error') and file_obj.last_error else None
+                        "status": getattr(file_obj, "status", "completed"),
+                        "usage_bytes": getattr(file_obj, "usage_bytes", 0),
+                        "attributes": getattr(file_obj, "attributes", {}),
+                        "last_error": file_obj.last_error.dict()
+                        if hasattr(file_obj, "last_error") and file_obj.last_error
+                        else None,
                     }
                 except Exception as file_error:
                     logger.warning(f"Could not get details for file {file_obj.id}: {file_error}")
                     return {
                         "id": file_obj.id,
                         "filename": f"File {file_obj.id}",
-                        "status": getattr(file_obj, 'status', 'unknown'),
-                        "attributes": getattr(file_obj, 'attributes', {}),
-                        "last_error": file_obj.last_error.dict() if hasattr(file_obj, 'last_error') and file_obj.last_error else None
+                        "status": getattr(file_obj, "status", "unknown"),
+                        "attributes": getattr(file_obj, "attributes", {}),
+                        "last_error": file_obj.last_error.dict()
+                        if hasattr(file_obj, "last_error") and file_obj.last_error
+                        else None,
                     }
 
             # Fetch all file details in parallel using asyncio.gather
-            file_list = await asyncio.gather(*[fetch_file_details(file_obj) for file_obj in files.data])
+            file_list = await asyncio.gather(
+                *[fetch_file_details(file_obj) for file_obj in files.data]
+            )
 
             return list(file_list)
         except Exception as e:
@@ -1317,10 +1388,7 @@ Format your answers like a professional analyst responding to specific due dilig
     async def remove_file_from_vector_store(self, vector_store_id: str, file_id: str) -> bool:
         """Remove a file from a vector store"""
         try:
-            self.client.vector_stores.files.delete(
-                vector_store_id=vector_store_id,
-                file_id=file_id
-            )
+            self.client.vector_stores.files.delete(vector_store_id=vector_store_id, file_id=file_id)
             return True
         except Exception as e:
             logger.error(f"Error removing file from vector store: {e}")
@@ -1353,19 +1421,22 @@ Format your answers like a professional analyst responding to specific due dilig
                 "object": file_obj.object,
                 "bytes": file_obj.bytes,
                 "created_at": file_obj.created_at,
-                "expires_at": getattr(file_obj, 'expires_at', None),
+                "expires_at": getattr(file_obj, "expires_at", None),
                 "filename": file_obj.filename,
                 "purpose": file_obj.purpose,
-                "status": getattr(file_obj, 'status', 'unknown')
+                "status": getattr(file_obj, "status", "unknown"),
             }
         except Exception as e:
             logger.error(f"Error retrieving file {file_id}: {e}")
             raise
 
-    async def filter_vector_store_files(self, vector_store_id: str,
-                                      filename_filter: str = None,
-                                      attribute_filters: dict[str, Any] = None,
-                                      max_results: int = 50) -> dict[str, Any]:
+    async def filter_vector_store_files(
+        self,
+        vector_store_id: str,
+        filename_filter: str = None,
+        attribute_filters: dict[str, Any] = None,
+        max_results: int = 50,
+    ) -> dict[str, Any]:
         """Filter files in a vector store by filename and attributes"""
         try:
             logger.info(f"Filtering files in vector store {vector_store_id}")
@@ -1378,13 +1449,13 @@ Format your answers like a professional analyst responding to specific due dilig
             for file_info in all_files:
                 # Apply filename filter (case-insensitive partial match)
                 if filename_filter:
-                    filename = file_info.get('filename', '').lower()
+                    filename = file_info.get("filename", "").lower()
                     if filename_filter.lower() not in filename:
                         continue
 
                 # Apply attribute filters (exact match)
                 if attribute_filters:
-                    file_attributes = file_info.get('attributes', {})
+                    file_attributes = file_info.get("attributes", {})
                     match = True
                     for key, value in attribute_filters.items():
                         if key not in file_attributes or str(file_attributes[key]) != str(value):
@@ -1395,14 +1466,14 @@ Format your answers like a professional analyst responding to specific due dilig
 
                 # Convert file info to search result format for consistency
                 filter_result = {
-                    "file_id": file_info.get('id'),
-                    "filename": file_info.get('filename'),
+                    "file_id": file_info.get("id"),
+                    "filename": file_info.get("filename"),
                     "score": 1.0,  # No relevance scoring for filtering
-                    "attributes": file_info.get('attributes', {}),
+                    "attributes": file_info.get("attributes", {}),
                     "content": [],  # Content not included in filter results
-                    "size_bytes": file_info.get('size_bytes', 0),
-                    "status": file_info.get('status', 'unknown'),
-                    "created_at": file_info.get('created_at')
+                    "size_bytes": file_info.get("size_bytes", 0),
+                    "status": file_info.get("status", "unknown"),
+                    "created_at": file_info.get("created_at"),
                 }
 
                 filtered_files.append(filter_result)
@@ -1412,7 +1483,7 @@ Format your answers like a professional analyst responding to specific due dilig
                     break
 
             # Sort by filename for consistent results
-            filtered_files.sort(key=lambda x: x.get('filename', '').lower())
+            filtered_files.sort(key=lambda x: x.get("filename", "").lower())
 
             filter_results = {
                 "search_query": filename_filter or "(filtered)",
@@ -1420,10 +1491,12 @@ Format your answers like a professional analyst responding to specific due dilig
                 "has_more": False,  # We don't implement pagination for filtering
                 "next_page": None,
                 "total_files": len(all_files),
-                "filtered_count": len(filtered_files)
+                "filtered_count": len(filtered_files),
             }
 
-            logger.info(f"Filter returned {len(filtered_files)} files out of {len(all_files)} total")
+            logger.info(
+                f"Filter returned {len(filtered_files)} files out of {len(all_files)} total"
+            )
             return filter_results
 
         except Exception as e:

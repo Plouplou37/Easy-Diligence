@@ -19,7 +19,7 @@ class TestCompanyAPI:
         company_data = {
             "name": "Unauthorized Company",
             "website_url": "https://test.com",
-            "description": "Should fail"
+            "description": "Should fail",
         }
 
         response = await async_client.post("/api/company/", json=company_data)
@@ -27,7 +27,9 @@ class TestCompanyAPI:
         assert response.json()["detail"] == "Not authenticated"
 
     @pytest.mark.api
-    async def test_create_company_with_auth(self, async_client: AsyncClient, create_test_user, test_company_data):
+    async def test_create_company_with_auth(
+        self, async_client: AsyncClient, create_test_user, test_company_data
+    ):
         """Test creating company with authentication succeeds."""
         user = create_test_user()
         headers = await self.get_auth_headers(user.id)
@@ -50,7 +52,9 @@ class TestCompanyAPI:
         assert response.json()["detail"] == "Not authenticated"
 
     @pytest.mark.api
-    async def test_list_companies_with_auth(self, async_client: AsyncClient, create_test_user, create_test_company):
+    async def test_list_companies_with_auth(
+        self, async_client: AsyncClient, create_test_user, create_test_company
+    ):
         """Test listing companies with authentication succeeds."""
         user = create_test_user()
         company = create_test_company()
@@ -65,7 +69,9 @@ class TestCompanyAPI:
         assert data[0]["id"] == company.id
 
     @pytest.mark.api
-    async def test_get_company_by_id(self, async_client: AsyncClient, create_test_user, create_test_company):
+    async def test_get_company_by_id(
+        self, async_client: AsyncClient, create_test_user, create_test_company
+    ):
         """Test getting specific company by ID."""
         user = create_test_user()
         company = create_test_company(name="Specific Company")
@@ -90,7 +96,9 @@ class TestCompanyAPI:
         assert "Company not found" in response.json()["detail"]
 
     @pytest.mark.api
-    async def test_update_company(self, async_client: AsyncClient, create_test_user, create_test_company):
+    async def test_update_company(
+        self, async_client: AsyncClient, create_test_user, create_test_company
+    ):
         """Test updating company information."""
         user = create_test_user()
         company = create_test_company()
@@ -99,10 +107,12 @@ class TestCompanyAPI:
         update_data = {
             "name": "Updated Company Name",
             "website_url": "https://updated.com",
-            "description": "Updated description"
+            "description": "Updated description",
         }
 
-        response = await async_client.put(f"/api/company/{company.id}", json=update_data, headers=headers)
+        response = await async_client.put(
+            f"/api/company/{company.id}", json=update_data, headers=headers
+        )
 
         assert response.status_code == 200
         data = response.json()

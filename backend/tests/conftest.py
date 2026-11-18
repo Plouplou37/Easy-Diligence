@@ -59,7 +59,7 @@ def test_user_data():
         "email": "test@example.com",
         "username": "testuser",
         "password": "testpass123",
-        "role": "user"
+        "role": "user",
     }
 
 
@@ -70,7 +70,7 @@ def test_admin_data():
         "email": "admin@example.com",
         "username": "admin",
         "password": "adminpass123",
-        "role": "admin"
+        "role": "admin",
     }
 
 
@@ -80,7 +80,7 @@ def test_company_data():
     return {
         "name": "Test Company",
         "website_url": "https://testcompany.com",
-        "description": "A test company for unit testing"
+        "description": "A test company for unit testing",
     }
 
 
@@ -93,10 +93,10 @@ def create_test_user(test_db):
         hashed_password = get_password_hash(password)
         user = User(
             email=email,
-            username=email.split('@')[0],
+            username=email.split("@")[0],
             hashed_password=hashed_password,
             role=role,
-            is_active=True
+            is_active=True,
         )
         db.add(user)
         db.commit()
@@ -113,11 +113,7 @@ def create_test_company(test_db):
     db = TestingSessionLocal()
 
     def _create_company(name="Test Company", website_url="https://test.com"):
-        company = Company(
-            name=name,
-            website_url=website_url,
-            description="Test company"
-        )
+        company = Company(name=name, website_url=website_url, description="Test company")
         db.add(company)
         db.commit()
         db.refresh(company)
@@ -130,12 +126,12 @@ def create_test_company(test_db):
 @pytest.fixture
 def mock_redis():
     """Mock Redis for testing."""
-    with patch('redis.from_url') as mock:
+    with patch("redis.from_url") as mock:
         yield mock
 
 
 @pytest.fixture
 def mock_openai():
     """Mock OpenAI client for testing."""
-    with patch('app.engine.openai_client.openai_client') as mock:
+    with patch("app.engine.openai_client.openai_client") as mock:
         yield mock

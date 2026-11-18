@@ -57,19 +57,28 @@ class Settings(BaseSettings):
     login_window_seconds: int = 900
 
     # CORS
-    cors_origins: list[str] = ["http://localhost:5173", "http://localhost:5174", "http://localhost:5175", "http://localhost:5176", "http://localhost:5177", "http://localhost:5178", "http://localhost:5179", "http://localhost:3000"]
+    cors_origins: list[str] = [
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "http://localhost:5175",
+        "http://localhost:5176",
+        "http://localhost:5177",
+        "http://localhost:5178",
+        "http://localhost:5179",
+        "http://localhost:3000",
+    ]
 
     # Rate limiting between questions.
     # Measured on the account: 10 000 requests/min and 10 000 000 tokens/min,
     # while a run uses ~0.5 request/min. No pause is needed, and 429s are already
     # handled by the processor's exponential backoff + circuit breaker. These
     # knobs remain as an escape hatch: 0 disables the rule it belongs to.
-    inter_question_delay_seconds: int = 0   # pause after every question
-    max_questions_per_batch: int = 6        # batch size for the batch pause
-    batch_sleep_minutes: int = 0            # pause after each batch
-    high_token_sleep_seconds: int = 0       # pause after a heavy question
-    token_threshold: int = 50000            # what counts as "heavy" (was 3000,
-                                            # unreachable: a question costs 8k-46k)
+    inter_question_delay_seconds: int = 0  # pause after every question
+    max_questions_per_batch: int = 6  # batch size for the batch pause
+    batch_sleep_minutes: int = 0  # pause after each batch
+    high_token_sleep_seconds: int = 0  # pause after a heavy question
+    token_threshold: int = 50000  # what counts as "heavy" (was 3000,
+    # unreachable: a question costs 8k-46k)
 
     # Server-side compaction of the conversation chain (reasoning models only).
     # Chaining grows the input by ~4 200 tokens per question, so a 292-question
@@ -113,7 +122,17 @@ class Settings(BaseSettings):
     # bytes; extensions lowercase, without the dot.
     max_upload_size: int = 104857600  # 100 MB
     allowed_extensions: list[str] = [
-        "pdf", "doc", "docx", "pptx", "txt", "md", "html", "json", "csv", "xls", "xlsx",
+        "pdf",
+        "doc",
+        "docx",
+        "pptx",
+        "txt",
+        "md",
+        "html",
+        "json",
+        "csv",
+        "xls",
+        "xlsx",
     ]
 
     # Email Configuration

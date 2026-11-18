@@ -32,6 +32,7 @@ class AnswerStatus(str, enum.Enum):
     - APPROVED: Answer approved by reviewer
     - REJECTED: Answer rejected by reviewer
     """
+
     # AI Processing statuses
     COMPLETED = "completed"
     FAILED = "failed"
@@ -45,13 +46,14 @@ class AnswerStatus(str, enum.Enum):
 
 class ErrorType(str, enum.Enum):
     """Categorized error types for better error handling and retry logic"""
-    RATE_LIMIT = "rate_limit"              # API rate limit exceeded - retryable with backoff
+
+    RATE_LIMIT = "rate_limit"  # API rate limit exceeded - retryable with backoff
     CONTEXT_OVERFLOW = "context_overflow"  # Context length exceeded - may need truncation
-    API_ERROR = "api_error"                # General API error from OpenAI
-    NETWORK_ERROR = "network_error"        # Network/connection issues - retryable
+    API_ERROR = "api_error"  # General API error from OpenAI
+    NETWORK_ERROR = "network_error"  # Network/connection issues - retryable
     VALIDATION_ERROR = "validation_error"  # Input validation error - not retryable
-    TIMEOUT = "timeout"                    # Request timeout - retryable
-    UNKNOWN = "unknown"                    # Unknown error type
+    TIMEOUT = "timeout"  # Request timeout - retryable
+    UNKNOWN = "unknown"  # Unknown error type
 
 
 class DDAnswer(Base):
@@ -59,16 +61,24 @@ class DDAnswer(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     session_id = Column(Integer, ForeignKey("dd_sessions.id", ondelete="CASCADE"), nullable=False)
-    execution_id = Column(Integer, ForeignKey("dd_executions.id", ondelete="CASCADE"), nullable=True)
+    execution_id = Column(
+        Integer, ForeignKey("dd_executions.id", ondelete="CASCADE"), nullable=True
+    )
 
     # Database legacy fields (NOT NULL in database)
     section_code = Column(String(50), nullable=False)
     question_code = Column(String(50), nullable=False)
 
     # Proper foreign key relationships for referential integrity
-    section_id = Column(Integer, ForeignKey("dd_sections.id"), nullable=True)    # Proper section reference
-    question_id = Column(Integer, ForeignKey("dd_questions.id"), nullable=True)  # Proper question reference
-    dd_type_id = Column(Integer, ForeignKey("dd_types.id"), nullable=True)  # Proper DD type reference
+    section_id = Column(
+        Integer, ForeignKey("dd_sections.id"), nullable=True
+    )  # Proper section reference
+    question_id = Column(
+        Integer, ForeignKey("dd_questions.id"), nullable=True
+    )  # Proper question reference
+    dd_type_id = Column(
+        Integer, ForeignKey("dd_types.id"), nullable=True
+    )  # Proper DD type reference
 
     # Version control fields
     version = Column(Integer, default=1)
@@ -76,7 +86,6 @@ class DDAnswer(Base):
     status = Column(Enum(AnswerStatus), default=AnswerStatus.NEEDS_REVIEW)
     edited_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     edited_at = Column(DateTime(timezone=True), nullable=True)
-
 
     # Answer content
     answer_text = Column(Text, nullable=True)
@@ -92,7 +101,9 @@ class DDAnswer(Base):
 
     # Error tracking for robust retry logic
     retry_count = Column(Integer, default=0)
-    error_type = Column(Enum(ErrorType, values_callable=lambda x: [e.value for e in x]), nullable=True)  # Categorized error type
+    error_type = Column(
+        Enum(ErrorType, values_callable=lambda x: [e.value for e in x]), nullable=True
+    )  # Categorized error type
     error_message = Column(Text, nullable=True)  # Detailed error message
     last_error_at = Column(DateTime(timezone=True), nullable=True)  # When last error occurred
 
@@ -108,5 +119,7 @@ class DDAnswer(Base):
     question = relationship("DDQuestion", foreign_keys=[question_id])
     dd_type_obj = relationship("DDType", foreign_keys=[dd_type_id])
     editor = relationship("User", foreign_keys=[edited_by])
-    response = relationship("DDResponse", foreign_keys=[response_id])  # ISSUE #7 FIX: Link to OpenAI response
+    response = relationship(
+        "DDResponse", foreign_keys=[response_id]
+    )  # ISSUE #7 FIX: Link to OpenAI response
     history = relationship("DDAnswerHistory", back_populates="answer", cascade="all, delete-orphan")

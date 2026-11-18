@@ -85,8 +85,12 @@ def login(
 
     tokens = create_tokens(user.id, user.email, user.role)
     create_user_session(
-        db, user.id, tokens["access_token"], tokens["refresh_token"],
-        address, request.headers.get("User-Agent"),
+        db,
+        user.id,
+        tokens["access_token"],
+        tokens["refresh_token"],
+        address,
+        request.headers.get("User-Agent"),
     )
     return tokens
 
@@ -107,8 +111,9 @@ def refresh_token(body: RefreshRequest, db: Session = Depends(get_db)):
         raise invalid
 
     tokens = create_tokens(user.id, user.email, user.role)
-    if not rotate_user_session(db, body.refresh_token,
-                               tokens["access_token"], tokens["refresh_token"]):
+    if not rotate_user_session(
+        db, body.refresh_token, tokens["access_token"], tokens["refresh_token"]
+    ):
         raise invalid
     return tokens
 
@@ -143,10 +148,12 @@ def change_user_password(
     db: Session = Depends(get_db),
 ):
     """Change the current user's password; every session is closed after it."""
-    if not change_password(db, current_user.id,
-                           password_change.current_password, password_change.new_password):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                            detail="Current password is incorrect")
+    if not change_password(
+        db, current_user.id, password_change.current_password, password_change.new_password
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Current password is incorrect"
+        )
 
     invalidate_user_sessions(db, current_user.id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
@@ -175,8 +182,9 @@ async def reset_password_request(password_reset: PasswordReset, db: Session = De
 def reset_password_confirm(reset_data: PasswordResetConfirm, db: Session = Depends(get_db)):
     """Set a new password with a reset token. A token works once: it is tied to
     the password it was issued for."""
-    invalid = HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                            detail="Invalid or expired reset token")
+    invalid = HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired reset token"
+    )
 
     token = read_password_reset_token(reset_data.token)
     if not token:

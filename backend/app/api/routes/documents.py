@@ -20,7 +20,7 @@ router = APIRouter()
 async def list_documents(
     session_identifier: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user),
 ):
     """List documents for a session"""
     # Try to parse as integer ID first
@@ -34,26 +34,34 @@ async def list_documents(
         raise HTTPException(status_code=404, detail="Session not found")
 
     # Check if user has access to this session
-    if current_user.role != "admin" and session.created_by != current_user.id and session.assigned_to != current_user.id:
+    if (
+        current_user.role != "admin"
+        and session.created_by != current_user.id
+        and session.assigned_to != current_user.id
+    ):
         raise HTTPException(status_code=403, detail="Access denied")
 
     # Get vector stores from new assignment system
     from app.models.vector_store import SessionVectorStore
+
     documents = []
 
     # Get all vector store assignments for this session
-    assignments = db.query(SessionVectorStore).filter(
-        SessionVectorStore.session_id == session.id
-    ).all()
+    assignments = (
+        db.query(SessionVectorStore).filter(SessionVectorStore.session_id == session.id).all()
+    )
 
     for i, assignment in enumerate(assignments):
-        documents.append({
-            "id": assignment.vector_store_id,
-            "filename": f"Document_batch_{i+1}",
-            "uploaded_at": assignment.assigned_at
-        })
+        documents.append(
+            {
+                "id": assignment.vector_store_id,
+                "filename": f"Document_batch_{i + 1}",
+                "uploaded_at": assignment.assigned_at,
+            }
+        )
 
     return documents
+
 
 @router.post("/session/{session_identifier}/upload/{vector_store_id}")
 async def upload_documents_to_vector_store(
@@ -61,7 +69,7 @@ async def upload_documents_to_vector_store(
     vector_store_id: str,
     files: list[UploadFile] = File(...),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user),
 ):
     """Upload documents to an existing vector store for a session"""
     # Try to parse as integer ID first
@@ -75,15 +83,21 @@ async def upload_documents_to_vector_store(
         raise HTTPException(status_code=404, detail="Session not found")
 
     # Check if user has access to this session
-    if current_user.role != "admin" and session.created_by != current_user.id and session.assigned_to != current_user.id:
+    if (
+        current_user.role != "admin"
+        and session.created_by != current_user.id
+        and session.assigned_to != current_user.id
+    ):
         raise HTTPException(status_code=403, detail="Access denied")
 
     # Verify vector store exists and user has access
     from app.models.vector_store import VectorStore
-    vector_store = db.query(VectorStore).filter(
-        VectorStore.id == vector_store_id,
-        VectorStore.created_by == current_user.id
-    ).first()
+
+    vector_store = (
+        db.query(VectorStore)
+        .filter(VectorStore.id == vector_store_id, VectorStore.created_by == current_user.id)
+        .first()
+    )
 
     if not vector_store:
         raise HTTPException(status_code=404, detail="Vector store not found or access denied")
@@ -98,9 +112,7 @@ async def upload_documents_to_vector_store(
         file_ids = []
         for file, content in zip(files, contents, strict=True):
             openai_file = openai_processor.upload_file_to_vector_store(
-                vector_store_id=vector_store_id,
-                file_content=content,
-                filename=file.filename
+                vector_store_id=vector_store_id, file_content=content, filename=file.filename
             )
             file_ids.append(openai_file.id)
 
@@ -116,7 +128,7 @@ async def upload_documents_to_vector_store(
         return {
             "message": f"Successfully uploaded {len(files)} documents",
             "vector_store_id": vector_store_id,
-            "file_ids": file_ids
+            "file_ids": file_ids,
         }
 
     except Exception:
