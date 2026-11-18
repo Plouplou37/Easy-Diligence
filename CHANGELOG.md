@@ -33,6 +33,21 @@
 - `pip-audit` ne trouve plus aucune faille connue, outils de développement
   compris.
 
+### Tests
+
+- La suite est réécrite : chaque test a sa propre base SQLite en mémoire, et
+  `conftest.py` fournit les utilisateurs, les données de départ et de faux
+  clients OpenAI. Les tests vides, en double ou devenus inutiles sont supprimés.
+- Nouveaux tests : cloisonnement entre utilisateurs, sociétés, vector stores,
+  moteur de réponses (démarrage, pause, reprise, question en échec), modèles,
+  sécurité des jetons, connexion.
+- La CI lance toute la suite.
+
+### Corrections
+
+- L'export Excel plantait pour toute réponse qui avait des sources.
+- La modification d'un vector store échouait toujours.
+
 ### Structure du backend
 
 Les fichiers sont rangés en `api/routes`, `core`, `engine`, `services` et

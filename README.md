@@ -157,7 +157,6 @@ correspondent aux modèles.
 
 ```bash
 # Backend, depuis backend/ (uv sync installe aussi les outils de développement)
-uv run pytest tests/test_auth_security.py tests/test_citation_format.py tests/test_dashboard.py
 uv run pytest                    # toute la suite
 uv run ruff check .              # lint
 uv run ruff format .             # formatage
@@ -173,9 +172,13 @@ Les tests n'ont besoin ni de base ni de clé OpenAI. Leurs réglages sont fixés
 dans `pyproject.toml` (section `[tool.pytest.ini_options]`, via pytest-env) et
 priment sur `backend/.env` : un test ne peut pas atteindre une vraie base.
 
-La suite complète compte encore des tests anciens en échec, qui sont en cours
-de reprise. ESLint signale aussi de nombreux problèmes dans le code existant du
-frontend.
+Chaque test a sa propre base SQLite en mémoire, créée à partir des modèles.
+`tests/conftest.py` fournit cette base, un client d'API, des utilisateurs et
+leurs en-têtes d'authentification, des données de départ (sociétés, types de
+DD, sessions) et un faux client OpenAI pour les vector stores. Le moteur de
+réponses est testé avec un faux client lui aussi (`tests/test_processing.py`).
+
+ESLint signale de nombreux problèmes dans le code existant du frontend.
 
 **Contrôles automatiques** :
 - **À chaque commit**, des hooks pre-commit lancent ruff et cherchent les

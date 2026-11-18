@@ -256,7 +256,7 @@ async def update_vector_store(
 
         # Update in OpenAI if name is being changed
         if update_data.name and update_data.name != vector_store.name:
-            await openai_processor.modify_vector_store(vector_store_id, name=update_data.name)
+            await openai_processor.update_vector_store_name(vector_store_id, update_data.name)
 
         # Update in database
         if update_data.name:
@@ -272,7 +272,7 @@ async def update_vector_store(
         CacheInvalidator.invalidate_vector_store_cache(vector_store_id)
 
         # Get current OpenAI status
-        openai_store = await openai_processor.get_vector_store(vector_store_id)
+        openai_store = await openai_processor.get_vector_store_info(vector_store_id)
 
         return VectorStoreResponse(
             id=vector_store.id,

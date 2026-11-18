@@ -880,6 +880,29 @@ class AnswerExporter:
         return [f"{i}. {line}" for i, line in enumerate(lines, 1)]
 
     @staticmethod
+    def _plain_sources(raw_sources) -> str:
+        """Sources as one plain-text cell: "Document: x; Web: https://...".
+
+        Goes through _parse_sources like the PDF. The Excel export used to iterate
+        the field as a list, so the dict the engine stores ({"files", "web",
+        "total_count"}) crashed every export holding a sourced answer.
+        """
+        parts, seen = [], set()
+        for src in AnswerExporter._parse_sources(raw_sources):
+            stype = src.get("type", "")
+            if stype in ("web", "web_search"):
+                label, value = "Web", src.get("url") or src.get("content")
+            elif stype in ("file", "file_search"):
+                label, value = "Document", src.get("filename") or src.get("content")
+            else:
+                label = "Source"
+                value = src.get("url") or src.get("filename") or src.get("content")
+            if value and (label, value) not in seen:
+                seen.add((label, value))
+                parts.append(f"{label}: {value}")
+        return "; ".join(parts)
+
+    @staticmethod
     def generate_excel_report(session, answers: list) -> Response:
         """Generate Excel report for session answers"""
         buffer = io.BytesIO()
@@ -887,24 +910,7 @@ class AnswerExporter:
         # Prepare data for Excel
         data = []
         for answer in answers:
-            # Parse sources
-            sources_text = ""
-            if answer.sources:
-                try:
-                    sources = (
-                        json.loads(answer.sources)
-                        if isinstance(answer.sources, str)
-                        else answer.sources
-                    )
-                    if sources:
-                        sources_text = "; ".join(
-                            [
-                                f"{s.get('type', 'Unknown')}: {s.get('content', 'N/A')}"
-                                for s in sources
-                            ]
-                        )
-                except (json.JSONDecodeError, TypeError):
-                    sources_text = str(answer.sources) if answer.sources else ""
+            sources_text = AnswerExporter._plain_sources(answer.sources)
 
             data.append(
                 {

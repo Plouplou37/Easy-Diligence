@@ -103,6 +103,46 @@ def test_password_longer_than_bcrypt_reads_is_refused(client):
     assert response.status_code == 422
 
 
+def test_duplicate_email_is_refused(client):
+    register(client)
+    response = register(client, username="other")
+    assert response.status_code == 409
+    assert response.json()["detail"] == "Email already registered"
+
+
+# --- Login --------------------------------------------------------------------
+
+
+def test_login_returns_both_tokens(client):
+    register(client)
+    body = login(client).json()
+    assert body["token_type"] == "bearer"
+    assert body["access_token"] and body["refresh_token"]
+
+
+def test_login_with_a_wrong_password(client):
+    register(client)
+    response = login(client, password="Wrong-passw0rd")
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Incorrect email or password"
+
+
+def test_email_case_does_not_matter(client):
+    # Stored lowercase: PostgreSQL would otherwise compare it case-sensitively.
+    register(client, email="Mixed.Case@Example.com", username="mixed")
+    assert login(client, email="MIXED.case@example.COM").status_code == 200
+    assert register(client, email="mixed.case@example.com", username="again").status_code == 409
+
+
+def test_inactive_account_cannot_log_in(client, db_factory):
+    register(client)
+    db = db_factory()
+    db.query(User).filter(User.email == "ana@example.com").one().is_active = False
+    db.commit()
+    db.close()
+    assert login(client).status_code == 403
+
+
 # --- Tokens -------------------------------------------------------------------
 
 

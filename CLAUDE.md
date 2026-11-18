@@ -61,7 +61,7 @@ Guide court pour un agent qui travaille sur Easy Diligence. Le reste est dans :
 
 ```bash
 # backend/
-uv run pytest tests/test_auth_security.py tests/test_citation_format.py tests/test_dashboard.py
+uv run pytest
 uv run ruff check . && uv run ruff format --check .
 uv run mypy app
 # frontend/

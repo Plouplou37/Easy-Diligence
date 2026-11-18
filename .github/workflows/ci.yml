@@ -36,8 +36,7 @@ jobs:
         run: uv run mypy app
 
       - name: Tests
-        # The rest of the suite joins this list as the older tests are rewritten.
-        run: uv run pytest tests/test_auth_security.py tests/test_citation_format.py tests/test_dashboard.py
+        run: uv run pytest
 
       - name: Known vulnerabilities
         run: uv run pip-audit --skip-editable
