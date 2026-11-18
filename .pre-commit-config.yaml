@@ -1,0 +1,32 @@
+# Checks run on every `git commit`, on the staged files only.
+# Install once, from the repository root:
+#   uv run --project backend pre-commit install
+# Run on every file:
+#   uv run --project backend pre-commit run --all-files
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-added-large-files
+        args: ["--maxkb=1024"]
+      - id: check-merge-conflict
+      - id: check-yaml
+      - id: check-toml
+      - id: detect-private-key
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.17.5
+    hooks:
+      - id: ruff-check
+        args: ["--fix"]
+        files: ^backend/
+      - id: ruff-format
+        files: ^backend/
+
+  - repo: local
+    hooks:
+      - id: no-openai-key
+        name: no OpenAI API key
+        language: pygrep
+        entry: "sk-(proj|svcacct|admin)-[A-Za-z0-9_-]{20,}"
+        exclude: ^\.pre-commit-config\.yaml$

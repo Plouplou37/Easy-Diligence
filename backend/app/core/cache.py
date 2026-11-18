@@ -1,14 +1,16 @@
 """
 Redis caching service for API response optimization with in-memory fallback
 """
-import json
 import hashlib
+import json
 import logging
-import time
 import threading
-from typing import Optional, Any, Union, Dict
+import time
 from functools import wraps
+from typing import Any
+
 import redis
+
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -18,10 +20,10 @@ class InMemoryCache:
     """Simple in-memory cache with TTL support as fallback when Redis unavailable."""
 
     def __init__(self):
-        self._cache: Dict[str, Dict[str, Any]] = {}
+        self._cache: dict[str, dict[str, Any]] = {}
         self._lock = threading.RLock()
 
-    def get(self, key: str) -> Optional[Any]:
+    def get(self, key: str) -> Any | None:
         """Get value from cache if not expired."""
         with self._lock:
             if key not in self._cache:
@@ -97,7 +99,7 @@ class CacheService:
             self.redis_available = False
             self.memory_cache = InMemoryCache()
             logger.info("In-memory cache enabled")
-    
+
     def _generate_cache_key(self, prefix: str, **kwargs) -> str:
         """Generate cache key from prefix and parameters."""
         # Extract vector_store_id if present for better cache key readability and pattern matching
@@ -112,8 +114,8 @@ class CacheService:
         if vector_store_id:
             return f"{prefix}:{vector_store_id}:{params_hash}"
         return f"{prefix}:{params_hash}"
-    
-    def get(self, key: str) -> Optional[Any]:
+
+    def get(self, key: str) -> Any | None:
         """Get value from cache."""
         if self.redis_available:
             try:
@@ -127,8 +129,8 @@ class CacheService:
         elif self.memory_cache:
             return self.memory_cache.get(key)
         return None
-    
-    def set(self, key: str, value: Any, ttl: Optional[int] = None) -> bool:
+
+    def set(self, key: str, value: Any, ttl: int | None = None) -> bool:
         """Set value in cache with TTL."""
         ttl = ttl or self.default_ttl
 
@@ -142,7 +144,7 @@ class CacheService:
         elif self.memory_cache:
             return self.memory_cache.set(key, value, ttl)
         return False
-    
+
     def delete(self, key: str) -> bool:
         """Delete value from cache."""
         if self.redis_available:
@@ -154,7 +156,7 @@ class CacheService:
         elif self.memory_cache:
             return self.memory_cache.delete(key)
         return False
-    
+
     def delete_pattern(self, pattern: str) -> int:
         """Delete all keys matching pattern."""
         if self.redis_available:
@@ -169,7 +171,7 @@ class CacheService:
         elif self.memory_cache:
             return self.memory_cache.delete_pattern(pattern)
         return 0
-    
+
     def flush_all(self) -> bool:
         """Clear all cache (use with caution)."""
         if self.redis_available:
@@ -190,12 +192,12 @@ cache_service = CacheService()
 def cache_response(
     prefix: str,
     ttl: int = 300,
-    key_params: Optional[list] = None,
+    key_params: list | None = None,
     user_specific: bool = True
 ):
     """
     Decorator for caching API responses.
-    
+
     Args:
         prefix: Cache key prefix (e.g., 'sessions', 'companies')
         ttl: Time to live in seconds (default: 5 minutes)
@@ -207,16 +209,16 @@ def cache_response(
         async def wrapper(*args, **kwargs):
             # Extract current user if user_specific caching
             cache_key_params = {}
-            
+
             if user_specific and 'current_user' in kwargs:
                 cache_key_params['user_id'] = kwargs['current_user'].id
-            
+
             # Include specified parameters in cache key
             if key_params:
                 for param in key_params:
                     if param in kwargs:
                         cache_key_params[param] = kwargs[param]
-            
+
             # Generate cache key
             cache_key = cache_service._generate_cache_key(prefix, **cache_key_params)
 
@@ -227,10 +229,10 @@ def cache_response(
                 return cached_result
             else:
                 logger.debug(f"Cache MISS for key: {cache_key}")
-            
+
             # Execute function and cache result
             result = await func(*args, **kwargs)
-            
+
             # Convert result to dict if it's a Pydantic model or similar
             if hasattr(result, 'model_dump'):
                 cache_data = result.model_dump()
@@ -248,13 +250,13 @@ def cache_response(
                         cache_data.append(item)
             else:
                 cache_data = result
-            
+
             # Cache the result
             cache_service.set(cache_key, cache_data, ttl)
             logger.debug(f"Cache SET for key: {cache_key} with TTL: {ttl}s")
 
             return result
-        
+
         return wrapper
     return decorator
 
@@ -267,25 +269,25 @@ def invalidate_cache_pattern(pattern: str):
 # Cache invalidation helpers for common operations
 class CacheInvalidator:
     """Helper class for cache invalidation patterns."""
-    
+
     @staticmethod
     def invalidate_user_cache(user_id: int):
         """Invalidate all cache entries for a specific user."""
         return invalidate_cache_pattern(f"*:*user_id*{user_id}*")
-    
-    @staticmethod 
+
+    @staticmethod
     def invalidate_session_cache(session_id: int = None):
         """Invalidate session-related cache entries."""
         if session_id:
             return invalidate_cache_pattern(f"session*:*{session_id}*")
         else:
             return invalidate_cache_pattern("session*")
-    
+
     @staticmethod
     def invalidate_company_cache():
         """Invalidate company-related cache entries."""
         return invalidate_cache_pattern("company*")
-    
+
     @staticmethod
     def invalidate_dd_types_cache():
         """Invalidate DD types cache entries."""
@@ -300,7 +302,7 @@ class CacheInvalidator:
             return invalidate_cache_pattern(f"vector_store*:{vector_store_id}:*")
         else:
             return invalidate_cache_pattern("vector_store*")
-    
+
     @staticmethod
     def invalidate_execution_cache(session_id: int = None):
         """Invalidate execution-related cache entries."""

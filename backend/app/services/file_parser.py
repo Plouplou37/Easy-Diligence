@@ -1,10 +1,10 @@
 import json
 import random
 import time
-from typing import Dict, List, Tuple, Union
-import pandas as pd
-import openpyxl
 from io import BytesIO
+
+import openpyxl
+import pandas as pd
 
 
 class FileParsingError(Exception):
@@ -55,7 +55,7 @@ class DDTypeFileParser:
         random_suffix = str(random.randint(10, 99))
         return f"{reference.strip().upper()[:20]}-_{section_timestamp}{random_suffix}"
 
-    def parse_excel(self, file_content: bytes) -> List[Dict]:
+    def parse_excel(self, file_content: bytes) -> list[dict]:
         """
         Parse Excel file with format:
         Column A: Section (only on first row of each section)
@@ -118,9 +118,9 @@ class DDTypeFileParser:
         except Exception as e:
             if isinstance(e, FileParsingError):
                 raise e
-            raise FileParsingError(f"Error parsing Excel file: {str(e)}")
+            raise FileParsingError(f"Error parsing Excel file: {str(e)}")  # noqa: B904
 
-    def parse_csv(self, file_content: bytes) -> List[Dict]:
+    def parse_csv(self, file_content: bytes) -> list[dict]:
         """
         Parse CSV file with format:
         Column 1: Section (only on first row of each section)
@@ -194,9 +194,9 @@ class DDTypeFileParser:
         except Exception as e:
             if isinstance(e, FileParsingError):
                 raise e
-            raise FileParsingError(f"Error parsing CSV file: {str(e)}")
+            raise FileParsingError(f"Error parsing CSV file: {str(e)}")  # noqa: B904
 
-    def parse_json(self, file_content: bytes) -> List[Dict]:
+    def parse_json(self, file_content: bytes) -> list[dict]:
         """
         Parse JSON file with format:
         [
@@ -276,13 +276,13 @@ class DDTypeFileParser:
             return sections
 
         except json.JSONDecodeError as e:
-            raise FileParsingError(f"Invalid JSON format: {str(e)}")
+            raise FileParsingError(f"Invalid JSON format: {str(e)}")  # noqa: B904
         except Exception as e:
             if isinstance(e, FileParsingError):
                 raise e
-            raise FileParsingError(f"Error parsing JSON file: {str(e)}")
+            raise FileParsingError(f"Error parsing JSON file: {str(e)}")  # noqa: B904
 
-    def parse_file(self, file_content: bytes, filename: str) -> List[Dict]:
+    def parse_file(self, file_content: bytes, filename: str) -> list[dict]:
         """
         Parse file based on extension and return structured sections data
 
@@ -313,9 +313,9 @@ class DDTypeFileParser:
         elif filename_lower.endswith('.json'):
             return self.parse_json(file_content)
         else:
-            raise FileParsingError(f"Unsupported file format. Supported formats: .xlsx, .xls, .csv, .json")
+            raise FileParsingError("Unsupported file format. Supported formats: .xlsx, .xls, .csv, .json")
 
-    def validate_parsed_data(self, sections: List[Dict]) -> Tuple[bool, List[str]]:
+    def validate_parsed_data(self, sections: list[dict]) -> tuple[bool, list[str]]:
         """
         Validate parsed sections data
 

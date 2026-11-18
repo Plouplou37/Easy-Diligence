@@ -9,7 +9,7 @@ application runs as.
 import threading
 import time
 from collections import deque
-from typing import Callable, Deque, Dict, Iterable, Tuple
+from collections.abc import Callable, Iterable
 
 from app.core.config import settings
 
@@ -27,15 +27,15 @@ class LoginThrottle:
         self.max_attempts = max_attempts
         self.window_seconds = window_seconds
         self._clock = clock
-        self._failures: Dict[str, Deque[float]] = {}
+        self._failures: dict[str, deque[float]] = {}
         self._lock = threading.Lock()
 
-    def _keys(self, email: str, address: str | None) -> Iterable[Tuple[str, int]]:
+    def _keys(self, email: str, address: str | None) -> Iterable[tuple[str, int]]:
         yield f"account:{email.strip().lower()}", self.max_attempts
         if address:
             yield f"address:{address}", self.max_attempts * ADDRESS_FACTOR
 
-    def _recent(self, key: str, now: float) -> Deque[float]:
+    def _recent(self, key: str, now: float) -> deque[float]:
         failures = self._failures.get(key)
         if failures is None:
             return deque()

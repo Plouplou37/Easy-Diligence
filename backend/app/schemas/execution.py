@@ -1,39 +1,42 @@
-from pydantic import BaseModel
-from typing import Optional, List, Dict, Any
 from datetime import datetime
+from typing import Any
+
+from pydantic import BaseModel
+
 from app.models.execution import ExecutionStatus
+
 
 class ExecutionCreate(BaseModel):
     session_id: int
     dd_type_id: int
 
 class ExecutionUpdate(BaseModel):
-    status: Optional[ExecutionStatus] = None
-    conversation_id: Optional[str] = None
+    status: ExecutionStatus | None = None
+    conversation_id: str | None = None
 
 class ExecutionValidate(BaseModel):
-    validation_comments: Optional[str] = None
+    validation_comments: str | None = None
 
 class ExecutionResponse(BaseModel):
     id: int
     session_id: int
     dd_type_id: int
-    dd_type_code: Optional[str] = None  # For display purposes
+    dd_type_code: str | None = None  # For display purposes
     status: ExecutionStatus
-    conversation_id: Optional[str]
-    validated_at: Optional[datetime]
-    validated_by: Optional[int]
+    conversation_id: str | None
+    validated_at: datetime | None
+    validated_by: int | None
     created_at: datetime
     updated_at: datetime
 
     # Relationships
-    validator_name: Optional[str] = None
-    dd_type_name: Optional[str] = None
-    total_responses: Optional[int] = None
-    total_answers: Optional[int] = None
+    validator_name: str | None = None
+    dd_type_name: str | None = None
+    total_responses: int | None = None
+    total_answers: int | None = None
 
     # Error feedback when execution fails
-    failure_info: Optional[Dict[str, Any]] = None
+    failure_info: dict[str, Any] | None = None
 
     class Config:
         from_attributes = True
@@ -41,7 +44,7 @@ class ExecutionResponse(BaseModel):
 class ExecutionSummary(BaseModel):
     id: int
     dd_type_id: int
-    dd_type_code: Optional[str] = None  # For display purposes
+    dd_type_code: str | None = None  # For display purposes
     dd_type_name: str
     status: ExecutionStatus
     created_at: datetime
@@ -49,6 +52,6 @@ class ExecutionSummary(BaseModel):
     total_answers: int = 0
     validated_answers: int = 0
     pending_answers: int = 0
-    
+
     class Config:
         from_attributes = True

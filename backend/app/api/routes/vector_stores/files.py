@@ -2,17 +2,19 @@
 Vector Store File Management
 Handle file upload, deletion, and content retrieval
 """
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
+import logging
+
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
-from app.core.database import get_db
-from app.models.vector_store import VectorStore
-from app.models.user import User
+
 from app.api.deps import get_current_active_user
 from app.api.uploads import read_upload
-from app.services.authz import user_is_admin
+from app.core.cache import CacheInvalidator, cache_response
+from app.core.database import get_db
 from app.engine.openai_client import OpenAIProcessor
-from app.core.cache import cache_response, CacheInvalidator
-import logging
+from app.models.user import User
+from app.models.vector_store import VectorStore
+from app.services.authz import user_is_admin
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -61,12 +63,12 @@ async def list_vector_store_files(
             ).delete()
             db.delete(vector_store)
             db.commit()
-            raise HTTPException(
+            raise HTTPException(  # noqa: B904
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Vector store no longer exists"
             )
         logger.exception("Failed to list files")
-        raise HTTPException(
+        raise HTTPException(  # noqa: B904
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to list files"
         )
@@ -80,7 +82,7 @@ async def upload_file_to_vector_store(
     current_user: User = Depends(get_current_active_user)
 ):
     """Upload a file to a vector store"""
-    vector_store = _get_owned_vector_store(vector_store_id, db, current_user)
+    _get_owned_vector_store(vector_store_id, db, current_user)
     file_content = await read_upload(file)
 
     try:
@@ -99,10 +101,10 @@ async def upload_file_to_vector_store(
             "status": "uploaded",
             "vector_store_file": result
         }
-        
-    except Exception as e:
+
+    except Exception:
         logger.exception("Failed to upload file")
-        raise HTTPException(
+        raise HTTPException(  # noqa: B904
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to upload file"
         )
@@ -116,11 +118,11 @@ async def delete_file_from_vector_store(
     current_user: User = Depends(get_current_active_user)
 ):
     """Delete a file from a vector store"""
-    vector_store = _get_owned_vector_store(vector_store_id, db, current_user)
-    
+    _get_owned_vector_store(vector_store_id, db, current_user)
+
     try:
         openai_processor = OpenAIProcessor()
-        
+
         # Remove from vector store and delete file
         await openai_processor.remove_file_from_vector_store(vector_store_id, file_id)
         await openai_processor.delete_file(file_id)
@@ -129,13 +131,13 @@ async def delete_file_from_vector_store(
         CacheInvalidator.invalidate_vector_store_cache(vector_store_id)
 
         return {"message": "File deleted successfully"}
-        
+
     except Exception as e:
         # If file is already gone, that's fine
         if "404" in str(e):
             return {"message": "File was already deleted"}
         logger.exception("Failed to delete file")
-        raise HTTPException(
+        raise HTTPException(  # noqa: B904
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to delete file"
         )
@@ -149,11 +151,11 @@ async def get_file_content(
     current_user: User = Depends(get_current_active_user)
 ):
     """Get processed content of a file (for preview)"""
-    vector_store = _get_owned_vector_store(vector_store_id, db, current_user)
-    
+    _get_owned_vector_store(vector_store_id, db, current_user)
+
     try:
         openai_processor = OpenAIProcessor()
-        
+
         # Get file info first
         file_info = await openai_processor.get_file(file_id)
         if not file_info:
@@ -161,7 +163,7 @@ async def get_file_content(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="File not found"
             )
-        
+
         # Return file info including expiration
         response = {
             "file_id": file_id,
@@ -178,12 +180,12 @@ async def get_file_content(
             response["expires_at"] = file_info["expires_at"]
 
         return response
-        
+
     except HTTPException:
         raise
     except Exception:
         logger.exception("Failed to get file content")
-        raise HTTPException(
+        raise HTTPException(  # noqa: B904
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get file content"
         )
@@ -197,11 +199,11 @@ async def download_original_file(
     current_user: User = Depends(get_current_active_user)
 ):
     """Download original file content"""
-    vector_store = _get_owned_vector_store(vector_store_id, db, current_user)
-    
+    _get_owned_vector_store(vector_store_id, db, current_user)
+
     try:
         openai_processor = OpenAIProcessor()
-        
+
         # Get file info and content
         file_info = await openai_processor.get_file(file_id)
         if not file_info:
@@ -209,7 +211,7 @@ async def download_original_file(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="File not found"
             )
-        
+
         # OpenAI doesn't typically allow downloading original content
         # for vector store files for security reasons
         response = {
@@ -227,12 +229,12 @@ async def download_original_file(
             response["file_info"]["expires_at"] = file_info["expires_at"]
 
         return response
-        
+
     except HTTPException:
         raise
     except Exception:
         logger.exception("Failed to download file")
-        raise HTTPException(
+        raise HTTPException(  # noqa: B904
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to download file"
         )

@@ -35,8 +35,9 @@ attendant, l'application se lance à la main.
 
 ### Prérequis
 
-- Python 3.11 ou plus récent, et [uv](https://docs.astral.sh/uv/) ;
-- Node.js 18 ou plus récent, avec npm ;
+- [uv](https://docs.astral.sh/uv/) 0.9.17 ou plus récent. Il installe lui-même
+  Python 3.12 au besoin (`backend/.python-version`) ;
+- Node.js 24, avec npm (`frontend/.nvmrc`) ;
 - un serveur MySQL 8 ;
 - une clé d'API OpenAI.
 
@@ -129,10 +130,13 @@ renvoi de toutes les routes vers `index.html`. Le backend se lance alors sans
 ## Tests et qualité
 
 ```bash
-# Backend, depuis backend/
+# Backend, depuis backend/ (uv sync installe aussi les outils de développement)
 uv run pytest tests/test_auth_security.py tests/test_citation_format.py tests/test_dashboard.py
-uv run pytest                 # toute la suite
-uv run ruff check .
+uv run pytest                    # toute la suite
+uv run ruff check .              # lint
+uv run ruff format .             # formatage
+uv run mypy app                  # types
+uv run pip-audit --skip-editable # failles connues des dépendances
 
 # Frontend, depuis frontend/
 npm run lint
@@ -144,8 +148,17 @@ dans `pyproject.toml` (section `[tool.pytest.ini_options]`, via pytest-env) et
 priment sur `backend/.env` : un test ne peut pas atteindre une vraie base.
 
 La suite complète compte encore des tests anciens en échec, qui sont en cours
-de reprise. Ruff et ESLint signalent aussi de nombreux problèmes dans le code
-existant.
+de reprise. ESLint signale aussi de nombreux problèmes dans le code existant du
+frontend.
+
+**Contrôles automatiques** :
+- **À chaque commit**, des hooks pre-commit lancent ruff et cherchent les
+  fichiers trop gros, les clés privées et les clés OpenAI. Pour les installer
+  une fois, depuis la racine du dépôt :
+  `uv run --project backend pre-commit install`.
+- **Sur GitHub**, la CI (`.github/workflows/ci.yml`) lance le lint, le
+  formatage, les types, les tests et l'audit du backend, puis le build du
+  frontend.
 
 ## Structure du dépôt
 
@@ -172,8 +185,10 @@ frontend/             application React (Vite, Tailwind)
     utils/            statuts, libellés, formats
 examples/             questionnaire d'exemple au format d'import
 docs/ARCHITECTURE.md  conception détaillée
+.github/workflows/    intégration continue
 .env.template         toutes les variables de configuration
-VERSION.md            version de l'application et versions des dépendances
+VERSION.md            version de l'application et des outils
+CHANGELOG.md          journal des changements
 ```
 
 ## Documentation
@@ -181,5 +196,7 @@ VERSION.md            version de l'application et versions des dépendances
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) : le modèle de données, le
   moteur de réponses, le cloisonnement par utilisateur, les synthèses, l'export
   PDF et le design system du frontend.
-- [`VERSION.md`](VERSION.md) : la version de l'application et les versions
-  exactes des outils et des dépendances.
+- [`VERSION.md`](VERSION.md) : la version de l'application et celle des outils
+  (Python, uv, Node). Les versions des dépendances sont figées dans
+  `backend/uv.lock` et `frontend/package-lock.json`.
+- [`CHANGELOG.md`](CHANGELOG.md) : le journal des changements.

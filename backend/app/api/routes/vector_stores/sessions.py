@@ -2,17 +2,18 @@
 Vector Store Session Assignment
 Handle assigning/unassigning vector stores to sessions
 """
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import func
+
+from app.api.deps import get_current_active_user
 from app.core.database import get_db
-from app.models.vector_store import VectorStore, SessionVectorStore
 from app.models.dd_types import DDType
 from app.models.user import User
-from app.api.deps import get_current_active_user
+from app.models.vector_store import SessionVectorStore, VectorStore
 from app.schemas.vector_stores import SessionVectorStoreAssignment
-from typing import Optional
-import logging
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -45,13 +46,13 @@ async def get_session_vector_store_assignments(
         # Not an integer, treat as session_code
         session = db.query(DDSession).filter(DDSession.session_code == session_identifier).first()
         session_id = session.id if session else None
-    
+
     if not session or session.created_by != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Session not found"
         )
-    
+
     # Get all assignments for this session with vector store details (all vector stores are shareable)
     # DDType is joined outer: dd_type_id is NULL on a session-wide assignment.
     assignments = db.query(SessionVectorStore, VectorStore, DDType).join(
@@ -77,7 +78,7 @@ async def get_session_vector_store_assignments(
             "assigned_at": assignment.assigned_at,
             "session_id": session_id
         })
-    
+
     return {
         "session_id": session_id,
         "session_name": session.name,
@@ -89,7 +90,7 @@ async def get_session_vector_store_assignments(
 async def assign_vector_store_to_session(
     vector_store_id: str,
     session_identifier: str,
-    payload: Optional[SessionVectorStoreAssignment] = None,
+    payload: SessionVectorStoreAssignment | None = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
@@ -109,7 +110,7 @@ async def assign_vector_store_to_session(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Vector store not found"
         )
-    
+
     # Verify session exists and user has access
     from app.models.session import DDSession
     try:
@@ -119,13 +120,13 @@ async def assign_vector_store_to_session(
         # Not an integer, treat as session_code
         session = db.query(DDSession).filter(DDSession.session_code == session_identifier).first()
         session_id = session.id if session else None
-    
+
     if not session or session.created_by != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Session not found"
         )
-    
+
     # Scope of the assignment: a DD type, or the whole session when absent.
     dd_type_id = payload.dd_type_id if payload else None
     dd_type = None
@@ -169,10 +170,10 @@ async def assign_vector_store_to_session(
             assigned_by=current_user.id,
             assigned_at=func.now()
         )
-        
+
         db.add(assignment)
         db.commit()
-        
+
         return {
             "message": "Vector store assigned to session successfully",
             "assignment": {
@@ -185,11 +186,11 @@ async def assign_vector_store_to_session(
                 "assigned_at": assignment.assigned_at
             }
         }
-        
-    except Exception as e:
+
+    except Exception:
         db.rollback()
         logger.exception("Failed to assign vector store")
-        raise HTTPException(
+        raise HTTPException(  # noqa: B904
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to assign vector store"
         )
@@ -199,7 +200,7 @@ async def assign_vector_store_to_session(
 async def unassign_vector_store_from_session(
     vector_store_id: str,
     session_identifier: str,
-    dd_type_code: Optional[str] = None,
+    dd_type_code: str | None = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
@@ -219,7 +220,7 @@ async def unassign_vector_store_from_session(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Vector store not found"
         )
-    
+
     # Verify session exists and user has access
     from app.models.session import DDSession
     try:
@@ -229,13 +230,13 @@ async def unassign_vector_store_from_session(
         # Not an integer, treat as session_code
         session = db.query(DDSession).filter(DDSession.session_code == session_identifier).first()
         session_id = session.id if session else None
-    
+
     if not session or session.created_by != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Session not found"
         )
-    
+
     # Find and remove assignment -- the one with the scope that was asked for.
     query = db.query(SessionVectorStore).filter(
         SessionVectorStore.vector_store_id == vector_store_id,
@@ -257,21 +258,21 @@ async def unassign_vector_store_from_session(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Assignment not found"
         )
-    
+
     try:
         db.delete(assignment)
         db.commit()
-        
+
         return {
             "message": "Vector store unassigned from session successfully",
             "vector_store_id": vector_store_id,
             "session_id": session_id
         }
-        
-    except Exception as e:
+
+    except Exception:
         db.rollback()
         logger.exception("Failed to unassign vector store")
-        raise HTTPException(
+        raise HTTPException(  # noqa: B904
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to unassign vector store"
         )

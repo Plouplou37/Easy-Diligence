@@ -1,9 +1,22 @@
-from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, Enum, Float, Boolean
+import enum
+
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    Column,
+    DateTime,
+    Enum,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+)
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-from sqlalchemy import JSON
+
 from app.core.database import Base
-import enum
+
 
 class AnswerStatus(str, enum.Enum):
     """
@@ -43,33 +56,33 @@ class ErrorType(str, enum.Enum):
 
 class DDAnswer(Base):
     __tablename__ = "dd_answers"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     session_id = Column(Integer, ForeignKey("dd_sessions.id", ondelete="CASCADE"), nullable=False)
     execution_id = Column(Integer, ForeignKey("dd_executions.id", ondelete="CASCADE"), nullable=True)
-    
+
     # Database legacy fields (NOT NULL in database)
     section_code = Column(String(50), nullable=False)
     question_code = Column(String(50), nullable=False)
-    
+
     # Proper foreign key relationships for referential integrity
     section_id = Column(Integer, ForeignKey("dd_sections.id"), nullable=True)    # Proper section reference
     question_id = Column(Integer, ForeignKey("dd_questions.id"), nullable=True)  # Proper question reference
     dd_type_id = Column(Integer, ForeignKey("dd_types.id"), nullable=True)  # Proper DD type reference
-    
+
     # Version control fields
     version = Column(Integer, default=1)
     is_current = Column(Boolean, default=True)
     status = Column(Enum(AnswerStatus), default=AnswerStatus.NEEDS_REVIEW)
     edited_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     edited_at = Column(DateTime(timezone=True), nullable=True)
-    
-    
+
+
     # Answer content
     answer_text = Column(Text, nullable=True)
     sources = Column(JSON, nullable=True)  # JSON of source documents/references
     confidence_score = Column(Float, nullable=True)  # AI confidence in the answer
-    
+
     # Processing metadata
     tokens_used = Column(Integer, default=0)
 
@@ -87,7 +100,7 @@ class DDAnswer(Base):
     answered_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
-    
+
     # Relationships
     session = relationship("DDSession", back_populates="answers")
     execution = relationship("DDExecution", back_populates="answers")

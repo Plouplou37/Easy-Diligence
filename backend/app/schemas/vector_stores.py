@@ -1,60 +1,61 @@
-from pydantic import BaseModel
-from typing import Optional, List, Dict, Any
 from datetime import datetime
+from typing import Any
+
+from pydantic import BaseModel
 
 
 class VectorStoreCreate(BaseModel):
     name: str
-    description: Optional[str] = None
-    expires_after_days: Optional[int] = None
+    description: str | None = None
+    expires_after_days: int | None = None
 
 
 class VectorStoreUpdate(BaseModel):
-    name: Optional[str] = None
-    description: Optional[str] = None
+    name: str | None = None
+    description: str | None = None
 
 
 class VectorStoreResponse(BaseModel):
     id: str
     name: str
-    description: Optional[str] = None
+    description: str | None = None
     file_count: int
     total_bytes: int
     status: str
-    expires_after_days: Optional[int] = None
-    expires_at: Optional[datetime] = None
-    last_active_at: Optional[datetime] = None
+    expires_after_days: int | None = None
+    expires_at: datetime | None = None
+    last_active_at: datetime | None = None
     created_at: datetime
-    updated_at: Optional[datetime] = None
+    updated_at: datetime | None = None
 
     class Config:
         from_attributes = True
 
 
 class SessionVectorStoreAssignment(BaseModel):
-    vector_store_id: Optional[str] = None  # Optional since it's in URL path
-    dd_type_id: Optional[int] = None  # None = whole session
+    vector_store_id: str | None = None  # Optional since it's in URL path
+    dd_type_id: int | None = None  # None = whole session
 
 
 class VectorStoreSearchRequest(BaseModel):
     query: str
-    limit: Optional[int] = 10
-    filter: Optional[Dict[str, Any]] = None
+    limit: int | None = 10
+    filter: dict[str, Any] | None = None
 
 
 class SearchResult(BaseModel):
-    file_id: Optional[str]
-    filename: Optional[str]
+    file_id: str | None
+    filename: str | None
     score: float
-    attributes: Dict[str, Any]
-    content: List[Dict[str, str]]
+    attributes: dict[str, Any]
+    content: list[dict[str, str]]
 
 
 class VectorStoreSearchResponse(BaseModel):
     search_query: str
-    data: List[SearchResult]
+    data: list[SearchResult]
     has_more: bool
-    next_page: Optional[str]
+    next_page: str | None
 
 
 # Removed unused batch and file attributes functionality

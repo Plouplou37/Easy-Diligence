@@ -1,20 +1,24 @@
+
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import case, func
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import func, case
+
+from app.api.deps import get_current_active_user
+from app.core.cache import CacheInvalidator
 from app.core.database import get_db
+from app.models.answer import DDAnswer
+from app.models.dd_types import DDType
 from app.models.execution import DDExecution, ExecutionStatus
 from app.models.session import DDSession
-from app.models.dd_types import DDType
-from app.models.answer import DDAnswer
 from app.models.user import User
-from app.api.deps import get_current_active_user
-from app.services.authz import filter_sessions_for_user, assert_session_access
-from app.core.cache import cache_response, CacheInvalidator
 from app.schemas.execution import (
-    ExecutionCreate, ExecutionUpdate, ExecutionValidate, 
-    ExecutionResponse, ExecutionSummary
+    ExecutionCreate,
+    ExecutionResponse,
+    ExecutionSummary,
+    ExecutionUpdate,
+    ExecutionValidate,
 )
-from typing import List, Optional
+from app.services.authz import assert_session_access, filter_sessions_for_user
 
 router = APIRouter()
 
@@ -46,8 +50,8 @@ def get_execution_with_access(execution_id: int, db: Session, current_user: User
 
 @router.get("/summary")
 async def get_executions_summary(
-    session_id: Optional[int] = None,
-    status: Optional[str] = None,
+    session_id: int | None = None,
+    status: str | None = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
@@ -184,24 +188,24 @@ async def create_execution(
             status_code=400,
             detail=f"Execution already exists for session {execution.session_id} and DD type {execution.dd_type_id}"
         )
-    
+
     # Create new execution
     db_execution = DDExecution(
         session_id=execution.session_id,
         dd_type_id=dd_type.id,
         status=ExecutionStatus.NOT_STARTED
     )
-    
+
     db.add(db_execution)
     db.commit()
     db.refresh(db_execution)
-    
+
     # Invalidate execution caches after creation
     CacheInvalidator.invalidate_execution_cache(session_id=execution.session_id)
-    
+
     return ExecutionResponse.from_orm(db_execution)
 
-@router.get("/session/{session_id}", response_model=List[ExecutionSummary])
+@router.get("/session/{session_id}", response_model=list[ExecutionSummary])
 async def get_session_executions(
     session_id: int,
     db: Session = Depends(get_db),
@@ -226,26 +230,26 @@ async def get_session_executions(
     ).filter(
         DDExecution.session_id == session_id
     ).all()
-    
+
     result = []
     for exec_data in executions:
         execution, dd_type_name, dd_type_code = exec_data
-        
+
         # Count answers separately
         total_answers = db.query(DDAnswer).filter(
             DDAnswer.execution_id == execution.id
         ).count()
-        
+
         validated_answers = db.query(DDAnswer).filter(
             DDAnswer.execution_id == execution.id,
             DDAnswer.status == 'validated'
         ).count()
-        
+
         pending_answers = db.query(DDAnswer).filter(
             DDAnswer.execution_id == execution.id,
             DDAnswer.status.in_(['draft', 'under_review'])
         ).count()
-        
+
         result.append(ExecutionSummary(
             id=execution.id,
             dd_type_code=dd_type_code,
@@ -257,7 +261,7 @@ async def get_session_executions(
             validated_answers=validated_answers,
             pending_answers=pending_answers
         ))
-    
+
     return result
 
 @router.get("/{execution_id}", response_model=ExecutionResponse)
@@ -319,13 +323,13 @@ async def update_execution(
     execution = get_execution_with_access(execution_id, db, current_user)
 
     update_data = execution_update.model_dump(exclude_unset=True)
-    
+
     for field, value in update_data.items():
         setattr(execution, field, value)
-    
+
     db.commit()
     db.refresh(execution)
-    
+
     return ExecutionResponse.from_orm(execution)
 
 @router.post("/{execution_id}/validate")
@@ -340,14 +344,14 @@ async def validate_execution(
 
     if execution.status != ExecutionStatus.GENERATED:
         raise HTTPException(
-            status_code=400, 
+            status_code=400,
             detail=f"Cannot validate execution with status: {execution.status}"
         )
-    
+
     execution.status = ExecutionStatus.VALIDATED
-    
+
     db.commit()
-    
+
     return {"message": "Execution validated successfully", "execution_id": execution_id}
 
 @router.post("/{execution_id}/finalize")
@@ -361,13 +365,13 @@ async def finalize_execution(
 
     if execution.status != ExecutionStatus.VALIDATED:
         raise HTTPException(
-            status_code=400, 
+            status_code=400,
             detail=f"Cannot finalize execution with status: {execution.status}"
         )
-    
+
     execution.status = ExecutionStatus.FINALIZED
     db.commit()
-    
+
     return {"message": "Execution finalized successfully", "execution_id": execution_id}
 
 @router.delete("/{execution_id}")
@@ -382,11 +386,11 @@ async def delete_execution(
     # Check if execution can be deleted (not in progress)
     if execution.status == ExecutionStatus.IN_PROGRESS:
         raise HTTPException(
-            status_code=400, 
+            status_code=400,
             detail="Cannot delete execution that is in progress"
         )
-    
+
     db.delete(execution)
     db.commit()
-    
+
     return {"message": "Execution deleted successfully", "execution_id": execution_id}

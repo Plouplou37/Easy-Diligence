@@ -1,5 +1,19 @@
 from fastapi import APIRouter
-from app.api.routes import auth, admin, company, session, documents, processing, answers, questions, dd_types, executions, summaries, dashboard
+
+from app.api.routes import (
+    admin,
+    answers,
+    auth,
+    company,
+    dashboard,
+    dd_types,
+    documents,
+    executions,
+    processing,
+    questions,
+    session,
+    summaries,
+)
 
 api_router = APIRouter()
 
@@ -23,5 +37,6 @@ api_router.include_router(executions.router, prefix="/executions", tags=["execut
 api_router.include_router(summaries.router, prefix="/summaries", tags=["summaries"])
 api_router.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])
 
-from app.api.routes.vector_stores import router as vector_stores_router
+from app.api.routes.vector_stores import router as vector_stores_router  # noqa: E402
+
 api_router.include_router(vector_stores_router, prefix="/vector-stores", tags=["vector-stores"])

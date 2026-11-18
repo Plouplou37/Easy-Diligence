@@ -2,37 +2,36 @@
 Test suite for modularized vector stores API
 Validates that all functionality works after breaking down the large file
 """
+from datetime import datetime
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
-import json
-from datetime import datetime
 
 from app.main import app
-from app.models.vector_store import VectorStore, SessionVectorStore
-from app.models.user import User
 from app.models.session import DDSession
-from app.core.database import get_db
+from app.models.user import User
+from app.models.vector_store import VectorStore
 
 
 class TestVectorStoreCoreModule:
     """Test the core CRUD operations module"""
-    
+
     @pytest.fixture
     def client(self):
         return TestClient(app)
-    
+
     @pytest.fixture
     def mock_db(self):
         db = MagicMock(spec=Session)
         return db
-    
+
     @pytest.fixture
     def mock_user(self):
         user = User(id=1, email="test@example.com", username="testuser", role="user")
         return user
-    
+
     @pytest.fixture
     def mock_vector_store(self):
         return VectorStore(
@@ -43,7 +42,7 @@ class TestVectorStoreCoreModule:
             created_at=datetime.utcnow(),
             updated_at=datetime.utcnow()
         )
-    
+
     @patch('app.api.routes.vector_stores.core.OpenAIProcessor')
     @patch('app.api.routes.vector_stores.core.get_db')
     @patch('app.api.deps.get_current_active_user')
@@ -53,7 +52,7 @@ class TestVectorStoreCoreModule:
         mock_auth.return_value = mock_user
         mock_db_dep.return_value = mock_db
         mock_db.query.return_value.filter.return_value.order_by.return_value.all.return_value = [mock_vector_store]
-        
+
         mock_openai_instance = AsyncMock()
         mock_openai_instance.get_vector_store.return_value = {
             "file_counts": {"total": 5},
@@ -61,10 +60,10 @@ class TestVectorStoreCoreModule:
             "usage_bytes": 1024
         }
         mock_openai.return_value = mock_openai_instance
-        
+
         # Make request
         response = client.get("/vector-stores/")
-        
+
         # Assertions
         assert response.status_code == 200
         data = response.json()
@@ -74,7 +73,7 @@ class TestVectorStoreCoreModule:
         assert data[0]["file_count"] == 5
         assert data[0]["status"] == "completed"
         assert data[0]["total_bytes"] == 1024
-    
+
     @patch('app.api.routes.vector_stores.core.OpenAIProcessor')
     @patch('app.api.routes.vector_stores.core.get_db')
     @patch('app.api.deps.get_current_active_user')
@@ -83,17 +82,17 @@ class TestVectorStoreCoreModule:
         # Setup mocks
         mock_auth.return_value = mock_user
         mock_db_dep.return_value = mock_db
-        
+
         mock_openai_instance = AsyncMock()
         mock_openai_instance.create_vector_store.return_value = {"id": "vs_new123456"}
         mock_openai.return_value = mock_openai_instance
-        
+
         mock_db.add = MagicMock()
         mock_db.commit = MagicMock()
         mock_db.refresh = MagicMock()
-        
+
         # Mock the created vector store
-        created_store = VectorStore(
+        VectorStore(
             id="vs_new123456",
             name="New Store",
             description="New Description",
@@ -102,13 +101,13 @@ class TestVectorStoreCoreModule:
             updated_at=datetime.utcnow()
         )
         mock_db.refresh.side_effect = lambda obj: setattr(obj, 'id', 'vs_new123456')
-        
+
         # Make request
         response = client.post("/vector-stores/", json={
             "name": "New Store",
             "description": "New Description"
         })
-        
+
         # Assertions
         assert response.status_code == 200
         data = response.json()
@@ -116,7 +115,7 @@ class TestVectorStoreCoreModule:
         assert data["name"] == "New Store"
         mock_db.add.assert_called_once()
         mock_db.commit.assert_called_once()
-    
+
     @patch('app.api.routes.vector_stores.core.OpenAIProcessor')
     @patch('app.api.routes.vector_stores.core.get_db')
     @patch('app.api.deps.get_current_active_user')
@@ -126,7 +125,7 @@ class TestVectorStoreCoreModule:
         mock_auth.return_value = mock_user
         mock_db_dep.return_value = mock_db
         mock_db.query.return_value.filter.return_value.first.return_value = mock_vector_store
-        
+
         mock_openai_instance = AsyncMock()
         mock_openai_instance.get_vector_store.return_value = {
             "file_counts": {"total": 3},
@@ -134,17 +133,17 @@ class TestVectorStoreCoreModule:
             "usage_bytes": 512
         }
         mock_openai.return_value = mock_openai_instance
-        
+
         # Make request
         response = client.get("/vector-stores/vs_123456789")
-        
+
         # Assertions
         assert response.status_code == 200
         data = response.json()
         assert data["id"] == "vs_123456789"
         assert data["file_count"] == 3
         assert data["total_bytes"] == 512
-    
+
     @patch('app.api.routes.vector_stores.core.get_db')
     @patch('app.api.deps.get_current_active_user')
     def test_get_vector_store_not_found(self, mock_auth, mock_db_dep, client, mock_db, mock_user):
@@ -153,14 +152,14 @@ class TestVectorStoreCoreModule:
         mock_auth.return_value = mock_user
         mock_db_dep.return_value = mock_db
         mock_db.query.return_value.filter.return_value.first.return_value = None
-        
+
         # Make request
         response = client.get("/vector-stores/vs_nonexistent")
-        
+
         # Assertions
         assert response.status_code == 404
         assert "not found" in response.json()["detail"]
-    
+
     @patch('app.api.routes.vector_stores.core.OpenAIProcessor')
     @patch('app.api.routes.vector_stores.core.get_db')
     @patch('app.api.deps.get_current_active_user')
@@ -170,7 +169,7 @@ class TestVectorStoreCoreModule:
         mock_auth.return_value = mock_user
         mock_db_dep.return_value = mock_db
         mock_db.query.return_value.filter.return_value.first.return_value = mock_vector_store
-        
+
         mock_openai_instance = AsyncMock()
         mock_openai_instance.modify_vector_store.return_value = {"id": "vs_123456789"}
         mock_openai_instance.get_vector_store.return_value = {
@@ -179,22 +178,22 @@ class TestVectorStoreCoreModule:
             "usage_bytes": 0
         }
         mock_openai.return_value = mock_openai_instance
-        
+
         mock_db.commit = MagicMock()
         mock_db.refresh = MagicMock()
-        
+
         # Make request
         response = client.patch("/vector-stores/vs_123456789", json={
             "name": "Updated Store Name",
             "description": "Updated Description"
         })
-        
+
         # Assertions
         assert response.status_code == 200
         data = response.json()
         assert data["name"] == "Updated Store Name"
         mock_db.commit.assert_called_once()
-    
+
     @patch('app.api.routes.vector_stores.core.OpenAIProcessor')
     @patch('app.api.routes.vector_stores.core.get_db')
     @patch('app.api.deps.get_current_active_user')
@@ -205,17 +204,17 @@ class TestVectorStoreCoreModule:
         mock_db_dep.return_value = mock_db
         mock_db.query.return_value.filter.return_value.first.return_value = mock_vector_store
         mock_db.query.return_value.filter.return_value.delete.return_value = 1
-        
+
         mock_openai_instance = AsyncMock()
         mock_openai_instance.delete_vector_store.return_value = {"deleted": True}
         mock_openai.return_value = mock_openai_instance
-        
+
         mock_db.delete = MagicMock()
         mock_db.commit = MagicMock()
-        
+
         # Make request
         response = client.delete("/vector-stores/vs_123456789")
-        
+
         # Assertions
         assert response.status_code == 200
         data = response.json()
@@ -226,20 +225,20 @@ class TestVectorStoreCoreModule:
 
 class TestVectorStoreFilesModule:
     """Test the file management module"""
-    
+
     @pytest.fixture
     def client(self):
         return TestClient(app)
-    
+
     @pytest.fixture
     def mock_db(self):
         db = MagicMock(spec=Session)
         return db
-    
+
     @pytest.fixture
     def mock_user(self):
         return User(id=1, email="test@example.com", username="testuser", role="user")
-    
+
     @pytest.fixture
     def mock_vector_store(self):
         return VectorStore(
@@ -248,7 +247,7 @@ class TestVectorStoreFilesModule:
             created_by=1,
             created_at=datetime.utcnow()
         )
-    
+
     @patch('app.api.routes.vector_stores.files.OpenAIProcessor')
     @patch('app.api.routes.vector_stores.files.get_db')
     @patch('app.api.deps.get_current_active_user')
@@ -258,23 +257,23 @@ class TestVectorStoreFilesModule:
         mock_auth.return_value = mock_user
         mock_db_dep.return_value = mock_db
         mock_db.query.return_value.filter.return_value.first.return_value = mock_vector_store
-        
+
         mock_openai_instance = AsyncMock()
         mock_openai_instance.list_vector_store_files.return_value = [
             {"id": "file_123", "filename": "test.pdf", "bytes": 1024}
         ]
         mock_openai.return_value = mock_openai_instance
-        
+
         # Make request
         response = client.get("/vector-stores/vs_123456789/files")
-        
+
         # Assertions
         assert response.status_code == 200
         data = response.json()
         assert "files" in data
         assert len(data["files"]) == 1
         assert data["files"][0]["id"] == "file_123"
-    
+
     @patch('app.api.routes.vector_stores.files.OpenAIProcessor')
     @patch('app.api.routes.vector_stores.files.get_db')
     @patch('app.api.deps.get_current_active_user')
@@ -284,28 +283,28 @@ class TestVectorStoreFilesModule:
         mock_auth.return_value = mock_user
         mock_db_dep.return_value = mock_db
         mock_db.query.return_value.filter.return_value.first.return_value = mock_vector_store
-        
+
         mock_openai_instance = AsyncMock()
         mock_openai_instance.upload_file.return_value = "file_123"
         mock_openai_instance.add_file_to_vector_store.return_value = {"id": "vs_file_123"}
         mock_openai.return_value = mock_openai_instance
-        
+
         # Create mock file
         file_content = b"Test file content"
-        
+
         # Make request
         response = client.post(
             "/vector-stores/vs_123456789/files",
             files={"file": ("test.txt", file_content, "text/plain")}
         )
-        
+
         # Assertions
         assert response.status_code == 200
         data = response.json()
         assert data["file_id"] == "file_123"
         assert data["filename"] == "test.txt"
         assert data["status"] == "uploaded"
-    
+
     @patch('app.api.routes.vector_stores.files.OpenAIProcessor')
     @patch('app.api.routes.vector_stores.files.get_db')
     @patch('app.api.deps.get_current_active_user')
@@ -315,15 +314,15 @@ class TestVectorStoreFilesModule:
         mock_auth.return_value = mock_user
         mock_db_dep.return_value = mock_db
         mock_db.query.return_value.filter.return_value.first.return_value = mock_vector_store
-        
+
         mock_openai_instance = AsyncMock()
         mock_openai_instance.remove_file_from_vector_store.return_value = {"deleted": True}
         mock_openai_instance.delete_file.return_value = {"deleted": True}
         mock_openai.return_value = mock_openai_instance
-        
+
         # Make request
         response = client.delete("/vector-stores/vs_123456789/files/file_123")
-        
+
         # Assertions
         assert response.status_code == 200
         data = response.json()
@@ -332,20 +331,20 @@ class TestVectorStoreFilesModule:
 
 class TestVectorStoreSessionsModule:
     """Test the session assignment module"""
-    
+
     @pytest.fixture
     def client(self):
         return TestClient(app)
-    
+
     @pytest.fixture
     def mock_db(self):
         db = MagicMock(spec=Session)
         return db
-    
+
     @pytest.fixture
     def mock_user(self):
         return User(id=1, email="test@example.com", username="testuser", role="user")
-    
+
     @pytest.fixture
     def mock_session(self):
         return DDSession(
@@ -354,7 +353,7 @@ class TestVectorStoreSessionsModule:
             created_by=1,
             created_at=datetime.utcnow()
         )
-    
+
     @pytest.fixture
     def mock_vector_store(self):
         return VectorStore(
@@ -363,7 +362,7 @@ class TestVectorStoreSessionsModule:
             created_by=1,
             created_at=datetime.utcnow()
         )
-    
+
     @patch('app.api.routes.vector_stores.sessions.get_db')
     @patch('app.api.deps.get_current_active_user')
     def test_get_session_vector_store_assignments(self, mock_auth, mock_db_dep, client, mock_db, mock_user, mock_session, mock_vector_store):
@@ -371,20 +370,20 @@ class TestVectorStoreSessionsModule:
         # Setup mocks
         mock_auth.return_value = mock_user
         mock_db_dep.return_value = mock_db
-        
+
         # Mock session query
         mock_db.query.return_value.filter.return_value.first.return_value = mock_session
-        
+
         # Mock assignments query
         mock_assignment = MagicMock()
         mock_assignment.assigned_at = datetime.utcnow()
         mock_db.query.return_value.join.return_value.filter.return_value.all.return_value = [
             (mock_assignment, mock_vector_store)
         ]
-        
+
         # Make request
         response = client.get("/vector-stores/session/1/assignments")
-        
+
         # Assertions
         assert response.status_code == 200
         data = response.json()
@@ -392,7 +391,7 @@ class TestVectorStoreSessionsModule:
         assert data["session_name"] == "Test Session"
         assert len(data["assignments"]) == 1
         assert data["assignments"][0]["vector_store_id"] == "vs_123456789"
-    
+
     @patch('app.api.routes.vector_stores.sessions.get_db')
     @patch('app.api.deps.get_current_active_user')
     def test_assign_vector_store_to_session(self, mock_auth, mock_db_dep, client, mock_db, mock_user, mock_session, mock_vector_store):
@@ -400,21 +399,21 @@ class TestVectorStoreSessionsModule:
         # Setup mocks
         mock_auth.return_value = mock_user
         mock_db_dep.return_value = mock_db
-        
+
         # Mock vector store and session queries
         mock_db.query.return_value.filter.return_value.first.side_effect = [mock_vector_store, mock_session]
-        
+
         # Mock no existing assignment
         mock_db.query.return_value.filter.return_value.first.return_value = None
-        
+
         # Mock database operations
         mock_db.add = MagicMock()
         mock_db.commit = MagicMock()
         mock_db.execute.return_value.scalar.return_value = datetime.utcnow()
-        
+
         # Make request
         response = client.put("/vector-stores/vs_123456789/assign-session/1")
-        
+
         # Assertions
         assert response.status_code == 200
         data = response.json()
@@ -427,20 +426,20 @@ class TestVectorStoreSessionsModule:
 
 class TestVectorStoreSearchModule:
     """Test the search functionality module"""
-    
+
     @pytest.fixture
     def client(self):
         return TestClient(app)
-    
+
     @pytest.fixture
     def mock_db(self):
         db = MagicMock(spec=Session)
         return db
-    
+
     @pytest.fixture
     def mock_user(self):
         return User(id=1, email="test@example.com", username="testuser", role="user")
-    
+
     @pytest.fixture
     def mock_vector_store(self):
         return VectorStore(
@@ -449,7 +448,7 @@ class TestVectorStoreSearchModule:
             created_by=1,
             created_at=datetime.utcnow()
         )
-    
+
     @patch('app.api.routes.vector_stores.search.OpenAIProcessor')
     @patch('app.api.routes.vector_stores.search.get_db')
     @patch('app.api.deps.get_current_active_user')
@@ -459,7 +458,7 @@ class TestVectorStoreSearchModule:
         mock_auth.return_value = mock_user
         mock_db_dep.return_value = mock_db
         mock_db.query.return_value.filter.return_value.first.return_value = mock_vector_store
-        
+
         mock_openai_instance = AsyncMock()
         mock_openai_instance.search_vector_store.return_value = {
             "results": [
@@ -468,13 +467,13 @@ class TestVectorStoreSearchModule:
             "processing_time_ms": 150
         }
         mock_openai.return_value = mock_openai_instance
-        
+
         # Make request
         response = client.post("/vector-stores/vs_123456789/search", json={
             "query": "test search query",
             "limit": 10
         })
-        
+
         # Assertions
         assert response.status_code == 200
         data = response.json()
@@ -487,23 +486,23 @@ class TestVectorStoreSearchModule:
 
 class TestModularRouterIntegration:
     """Test that all modules are properly integrated"""
-    
+
     @pytest.fixture
     def client(self):
         return TestClient(app)
-    
+
     def test_all_routes_available(self, client):
         """Test that all routes from all modules are available"""
         # Get OpenAPI schema to check available routes
         response = client.get("/openapi.json")
         assert response.status_code == 200
-        
+
         openapi_data = response.json()
         paths = openapi_data["paths"]
-        
+
         # Check that vector store routes exist
         vector_store_routes = [path for path in paths.keys() if path.startswith("/vector-stores")]
-        
+
         # Should have routes from all modules
         expected_route_patterns = [
             "/vector-stores/",  # Core: list/create
@@ -514,18 +513,18 @@ class TestModularRouterIntegration:
             "/vector-stores/session/{session_identifier}/assignments",  # Sessions
             "/vector-stores/{vector_store_id}/search",  # Search
         ]
-        
+
         for pattern in expected_route_patterns:
             assert any(pattern in route for route in vector_store_routes), f"Route pattern {pattern} not found"
-    
+
     def test_route_tags_properly_assigned(self, client):
         """Test that routes have proper tags from modules"""
         response = client.get("/openapi.json")
         openapi_data = response.json()
-        
+
         # Check that vector store routes have proper tags
         paths = openapi_data["paths"]
-        
+
         # Find a core route and check its tags
         if "/vector-stores/" in paths:
             get_method = paths["/vector-stores/"].get("get")

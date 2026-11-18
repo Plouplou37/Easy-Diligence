@@ -1,18 +1,18 @@
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from app.core.database import get_db
+
 from app.api.deps import get_current_active_user
+from app.core.cache import CacheInvalidator
+from app.core.database import get_db
 from app.models.company import Company
 from app.models.user import User
-from app.services.authz import (
-    filter_companies_for_user,
-    assert_company_view,
-    assert_company_ownership,
-)
 from app.schemas.company import CompanyCreate, CompanyResponse
-from app.core.cache import cache_response, CacheInvalidator
-from typing import Optional, List
-from datetime import datetime
+from app.services.authz import (
+    assert_company_ownership,
+    assert_company_view,
+    filter_companies_for_user,
+)
 
 router = APIRouter()
 
@@ -34,13 +34,13 @@ async def create_company(
     db.add(db_company)
     db.commit()
     db.refresh(db_company)
-    
+
     # Invalidate company caches after creating new company
     CacheInvalidator.invalidate_company_cache()
-    
+
     return db_company
 
-@router.get("/", response_model=List[CompanyResponse])
+@router.get("/", response_model=list[CompanyResponse])
 async def list_companies(
     skip: int = 0,
     limit: int = 100,
@@ -100,11 +100,11 @@ async def update_company(
     company.management_company_name = company_update.management_company_name
     company.management_company_website = company_update.management_company_website
     company.updated_by = current_user.id
-    
+
     db.commit()
     db.refresh(company)
-    
+
     # Invalidate company caches after updating
     CacheInvalidator.invalidate_company_cache()
-    
+
     return company

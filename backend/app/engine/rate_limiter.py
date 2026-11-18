@@ -1,7 +1,7 @@
-import time
-from typing import List, Tuple
-from app.core.config import settings
 import logging
+import time
+
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -28,9 +28,9 @@ class RateLimiter:
     def __init__(self):
         self.questions_processed = 0
 
-    def _pending_delays(self, tokens_used: int) -> List[Tuple[str, float]]:
+    def _pending_delays(self, tokens_used: int) -> list[tuple[str, float]]:
         """Delays to apply after the question just processed, as (reason, seconds)."""
-        delays: List[Tuple[str, float]] = []
+        delays: list[tuple[str, float]] = []
 
         if settings.inter_question_delay_seconds > 0:
             delays.append((

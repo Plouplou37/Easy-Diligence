@@ -7,7 +7,7 @@ du frontend. Pour installer et lancer l'application, voir le
 
 ## Stack
 
-- **Backend** : FastAPI (Python 3.11 ou plus), SQLAlchemy 2, MySQL 8 via PyMySQL.
+- **Backend** : FastAPI (Python 3.12), SQLAlchemy 2, MySQL 8 via PyMySQL.
   Code dans `backend/app/`, routes sous le préfixe `/api` :
   - `api/` : l'assemblage des routers (`router.py`), un router par ressource
     (`routes/`) et les dépendances communes (`deps.py`) ;

@@ -1,36 +1,38 @@
-from pydantic import BaseModel
-from typing import Optional, List, Dict, Any
 from datetime import datetime
+from typing import Any
+
+from pydantic import BaseModel
+
+from app.core.pagination import PaginatedResponse
 from app.models.session import SessionStatus
-from app.core.pagination import PaginatedResponse, PaginationMeta
 
 
 class SessionCreate(BaseModel):
     company_id: int
     name: str
-    description: Optional[str] = None
-    dd_type_ids: Optional[List[int]] = None  # Allow users to select specific DD type IDs
+    description: str | None = None
+    dd_type_ids: list[int] | None = None  # Allow users to select specific DD type IDs
 
 
 class SessionResponse(BaseModel):
     id: int
-    session_code: Optional[str] = None
+    session_code: str | None = None
     company_id: int
     name: str
-    description: Optional[str]
+    description: str | None
     status: SessionStatus
     created_at: datetime
     updated_at: datetime
-    created_by: Optional[int] = None
-    assigned_to: Optional[int] = None
-    created_by_username: Optional[str] = None
-    dd_types_json: Optional[str] = None  # JSON string of selected DD types for this session
+    created_by: int | None = None
+    assigned_to: int | None = None
+    created_by_username: str | None = None
+    dd_types_json: str | None = None  # JSON string of selected DD types for this session
     # The company under review, as two entities (see models/company.py): the
     # fund itself and the company running it (NULL on companies created before
     # the split).
-    company_name: Optional[str] = None
-    management_company_name: Optional[str] = None
-    
+    company_name: str | None = None
+    management_company_name: str | None = None
+
     # New execution-related fields
     total_executions: int = 0
     completed_executions: int = 0
@@ -39,7 +41,7 @@ class SessionResponse(BaseModel):
 
     class Config:
         from_attributes = True
-        
+
     @classmethod
     def from_db_model(cls, session_db):
         """Custom method to ensure all fields are properly serialized"""
@@ -71,17 +73,17 @@ class SessionResponse(BaseModel):
 class SessionStatusResponse(BaseModel):
     id: int
     status: SessionStatus
-    progress: List[dict]  # Will contain progress for each DD type
-    executions: List[Dict[str, Any]] = []  # Execution status for each DD type
+    progress: list[dict]  # Will contain progress for each DD type
+    executions: list[dict[str, Any]] = []  # Execution status for each DD type
 
 
 class SessionWithExecutions(BaseModel):
     """Session with detailed execution information"""
     session: SessionResponse
-    executions: List[Dict[str, Any]] = []
-    session_dd_types: List[Dict[str, Any]] = []
-    validation_stats: Dict[str, Any] = {}
-    
+    executions: list[dict[str, Any]] = []
+    session_dd_types: list[dict[str, Any]] = []
+    validation_stats: dict[str, Any] = {}
+
     class Config:
         from_attributes = True
 
@@ -94,15 +96,15 @@ class PaginatedSessionResponse(PaginatedResponse[SessionResponse]):
 
 class SessionListResponse(BaseModel):
     """Legacy session list response with pagination info"""
-    sessions: List[SessionResponse]
-    pagination: Dict[str, Any]
-    filters: Optional[Dict[str, Any]] = None
-    
+    sessions: list[SessionResponse]
+    pagination: dict[str, Any]
+    filters: dict[str, Any] | None = None
+
     @classmethod
     def from_paginated(
         cls,
         paginated: PaginatedSessionResponse,
-        filters: Optional[Dict[str, Any]] = None
+        filters: dict[str, Any] | None = None
     ) -> 'SessionListResponse':
         """Convert from paginated response to legacy format"""
         return cls(

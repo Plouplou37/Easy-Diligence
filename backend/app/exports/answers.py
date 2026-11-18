@@ -2,26 +2,32 @@
 Data Export Utilities
 Handle PDF and Excel report generation for various data types
 """
-from typing import List
+import html
 import io
+import json
+import logging
 import os
 import re
-import json
-import html
-import logging
 from datetime import datetime
-from fastapi.responses import Response
-from reportlab.lib.pagesizes import A4
-from reportlab.platypus import (
-    SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image, PageBreak,
-    HRFlowable, KeepTogether,
-)
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.units import inch
-from reportlab.lib.enums import TA_JUSTIFY, TA_CENTER, TA_LEFT, TA_RIGHT
-from reportlab.lib.utils import ImageReader
-from reportlab.lib import colors
+
 import pandas as pd
+from fastapi.responses import Response
+from reportlab.lib import colors
+from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_LEFT, TA_RIGHT
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.lib.utils import ImageReader
+from reportlab.platypus import (
+    HRFlowable,
+    Image,
+    KeepTogether,
+    PageBreak,
+    Paragraph,
+    SimpleDocTemplate,
+    Spacer,
+    Table,
+    TableStyle,
+)
 
 from app.core.config import settings
 
@@ -162,8 +168,8 @@ def _markdown_table(rows, alignments, body_style, available_width):
                else _CELL_PADDING_TIGHT)
 
     size = max(body_style.fontSize - 1, 7)
-    base = dict(parent=body_style, fontSize=size, leading=size + 2,
-                spaceBefore=0, spaceAfter=0, firstLineIndent=0)
+    base = {"parent": body_style, "fontSize": size, "leading": size + 2,
+                "spaceBefore": 0, "spaceAfter": 0, "firstLineIndent": 0}
     styles = {}
 
     def cell(text, alignment, header):
@@ -346,7 +352,7 @@ class AnswerExporter:
             return None
 
     @staticmethod
-    def generate_pdf_report(session, answers: List, summaries: List = None) -> Response:
+    def generate_pdf_report(session, answers: list, summaries: list = None) -> Response:
         """Generate a branded PDF report for session answers.
 
         When ``summaries`` is provided, the report leads with a per-DD-type
@@ -629,7 +635,7 @@ class AnswerExporter:
         )
 
     @staticmethod
-    def _parse_sources(raw_sources) -> List[dict]:
+    def _parse_sources(raw_sources) -> list[dict]:
         """Normalise the sources field into a flat list of source dicts.
 
         Mirrors the frontend parser (useSourceParser): sources may arrive as a
@@ -690,7 +696,7 @@ class AnswerExporter:
         return normalised
 
     @staticmethod
-    def _format_sources(raw_sources) -> List[str]:
+    def _format_sources(raw_sources) -> list[str]:
         """Build numbered, reportlab-ready source lines (links for web sources)."""
         lines, seen = [], set()
         for src in AnswerExporter._parse_sources(raw_sources):
@@ -719,12 +725,12 @@ class AnswerExporter:
                 lines.append(_esc(value))
 
         return [f"{i}. {line}" for i, line in enumerate(lines, 1)]
-    
+
     @staticmethod
-    def generate_excel_report(session, answers: List) -> Response:
+    def generate_excel_report(session, answers: list) -> Response:
         """Generate Excel report for session answers"""
         buffer = io.BytesIO()
-        
+
         # Prepare data for Excel
         data = []
         for answer in answers:
@@ -735,12 +741,12 @@ class AnswerExporter:
                     sources = json.loads(answer.sources) if isinstance(answer.sources, str) else answer.sources
                     if sources:
                         sources_text = "; ".join([
-                            f"{s.get('type', 'Unknown')}: {s.get('content', 'N/A')}" 
+                            f"{s.get('type', 'Unknown')}: {s.get('content', 'N/A')}"
                             for s in sources
                         ])
                 except (json.JSONDecodeError, TypeError):
                     sources_text = str(answer.sources) if answer.sources else ""
-            
+
             data.append({
                 "DD Type": answer.dd_type_obj.name if answer.dd_type_obj else "N/A",
                 "Section": _section_title(answer),
@@ -755,10 +761,10 @@ class AnswerExporter:
                 "Tokens Used": answer.tokens_used or 0,
                 "Created At": answer.created_at.strftime("%Y-%m-%d %H:%M:%S")
             })
-        
+
         # Create DataFrame and Excel file
         df = pd.DataFrame(data)
-        
+
         with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
             # Session summary sheet
             session_info = pd.DataFrame([
@@ -769,7 +775,7 @@ class AnswerExporter:
                 ["Total Answers", len(answers)]
             ], columns=["Property", "Value"])
             session_info.to_excel(writer, sheet_name='Session Info', index=False)
-            
+
             # All answers sheet
             df.to_excel(writer, sheet_name='All Answers', index=False)
 
@@ -779,9 +785,9 @@ class AnswerExporter:
                     dd_data = df[df['DD Type'] == dd_type]
                     sheet_name = dd_type.replace('_', ' ').title()[:31]  # Excel sheet name limit
                     dd_data.to_excel(writer, sheet_name=sheet_name, index=False)
-        
+
         buffer.seek(0)
-        
+
         return Response(
             content=buffer.getvalue(),
             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

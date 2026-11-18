@@ -1,24 +1,30 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import func
-from app.core.database import get_db
-from app.models.questions import DDSection, DDQuestion
-from app.models.dd_types import DDType as DDTypeModel
-from app.models.user import User
-from app.api.deps import get_current_active_user, get_current_admin_user
-from app.services.authz import (
-    filter_dd_types_for_user,
-    assert_dd_type_view,
-    assert_dd_type_ownership,
-)
-from app.schemas.questions import (
-    QuestionResponse, SectionResponse, DDTypeDetailResponse,
-    QuestionCreate, QuestionUpdate, SectionCreate, SectionUpdate, ReorderRequest
-)
-from typing import Optional, List
-from datetime import datetime
-import time
 import random
+import time
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import func
+from sqlalchemy.orm import Session, joinedload
+
+from app.api.deps import get_current_active_user
+from app.core.database import get_db
+from app.models.dd_types import DDType as DDTypeModel
+from app.models.questions import DDQuestion, DDSection
+from app.models.user import User
+from app.schemas.questions import (
+    DDTypeDetailResponse,
+    QuestionCreate,
+    QuestionResponse,
+    QuestionUpdate,
+    ReorderRequest,
+    SectionCreate,
+    SectionResponse,
+    SectionUpdate,
+)
+from app.services.authz import (
+    assert_dd_type_ownership,
+    assert_dd_type_view,
+    filter_dd_types_for_user,
+)
 
 router = APIRouter()
 
@@ -88,9 +94,9 @@ def check_question_dd_type_immutability(question_id: int, db: Session, current_u
     check_section_dd_type_immutability(question.section_id, db, current_user)
 
 
-@router.get("/dd-types", response_model=List[DDTypeDetailResponse])
+@router.get("/dd-types", response_model=list[DDTypeDetailResponse])
 async def list_dd_types_with_questions(
-    dd_type: Optional[str] = None,
+    dd_type: str | None = None,
     active_only: bool = True,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
@@ -129,7 +135,7 @@ async def get_dd_type_with_questions(
     return dd_type
 
 
-@router.get("/dd-types/{dd_type_code}/sections/{section_id}/questions", response_model=List[QuestionResponse])
+@router.get("/dd-types/{dd_type_code}/sections/{section_id}/questions", response_model=list[QuestionResponse])
 async def list_section_questions(
     dd_type_code: str,
     section_id: int,
@@ -152,11 +158,11 @@ async def list_section_questions(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Section not found"
         )
-    
+
     questions = db.query(DDQuestion).filter(
         DDQuestion.section_id == section_id
     ).order_by(DDQuestion.order_index).all()
-    
+
     return questions
 
 @router.post("/dd-types/{dd_type_code}/sections/{section_id}/questions", response_model=QuestionResponse)
@@ -221,11 +227,11 @@ async def create_question(
         context_prompt=question.context_prompt,
         order_index=question.order_index
     )
-    
+
     db.add(db_question)
     db.commit()
     db.refresh(db_question)
-    
+
     return db_question
 
 @router.put("/questions/{question_id}", response_model=QuestionResponse)
@@ -238,22 +244,22 @@ async def update_question(
     """Update an existing question - protected by validation lock"""
     # Check ownership + DD type validation status before allowing modifications
     check_question_dd_type_immutability(question_id, db, current_user)
-    
+
     question = db.query(DDQuestion).filter(DDQuestion.id == question_id).first()
     if not question:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Question not found"
         )
-    
+
     # Update fields if provided
     update_data = question_update.dict(exclude_unset=True)
     for field, value in update_data.items():
         setattr(question, field, value)
-    
+
     db.commit()
     db.refresh(question)
-    
+
     return question
 
 @router.delete("/questions/{question_id}")
@@ -265,17 +271,17 @@ async def delete_question(
     """Delete a question - protected by validation lock"""
     # Check ownership + DD type validation status before allowing modifications
     check_question_dd_type_immutability(question_id, db, current_user)
-    
+
     question = db.query(DDQuestion).filter(DDQuestion.id == question_id).first()
     if not question:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Question not found"
         )
-    
+
     db.delete(question)
     db.commit()
-    
+
     return {"message": "Question deleted successfully"}
 
 @router.post("/dd-types/{dd_type_code}/sections", response_model=SectionResponse)
@@ -286,7 +292,7 @@ async def create_section(
     current_user: User = Depends(get_current_active_user)
 ):
     """Create a new section in a DD type - protected by validation lock"""
-    
+
     # Verify DD type exists
     dd_type = db.query(DDTypeModel).filter(DDTypeModel.code == dd_type_code).first()
     if not dd_type:
@@ -294,7 +300,7 @@ async def create_section(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="DD type not found"
         )
-    
+
     # Check ownership + DD type validation status before allowing modifications
     check_dd_type_immutability(dd_type_code, db, current_user)
 
@@ -303,13 +309,13 @@ async def create_section(
     title_prefix = ''.join(c for c in title_prefix if c.isalnum())[:6]
     if len(title_prefix) < 3:
         title_prefix = 'SECTION'
-    
+
     # Generate unique suffix using timestamp and random number
     timestamp = str(int(time.time()))[-6:]  # Last 6 digits of timestamp
     random_suffix = str(random.randint(10, 99))  # 2-digit random number
-    
+
     section_code = f"{title_prefix}_{timestamp}{random_suffix}"
-    
+
     # Auto-calculate order_index if not provided
     if section.order_index is None:
         max_order = db.query(func.max(DDSection.order_index)).filter(
@@ -326,11 +332,11 @@ async def create_section(
         description=section.description,
         order_index=order_index
     )
-    
+
     db.add(db_section)
     db.commit()
     db.refresh(db_section)
-    
+
     return db_section
 
 @router.put("/sections/{section_id}", response_model=SectionResponse)
@@ -343,22 +349,22 @@ async def update_section(
     """Update an existing section - protected by validation lock"""
     # Check DD type validation status before allowing modifications
     check_section_dd_type_immutability(section_id, db, current_user)
-    
+
     section = db.query(DDSection).filter(DDSection.id == section_id).first()
     if not section:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Section not found"
         )
-    
+
     # Update fields if provided
     update_data = section_update.dict(exclude_unset=True)
     for field, value in update_data.items():
         setattr(section, field, value)
-    
+
     db.commit()
     db.refresh(section)
-    
+
     return section
 
 @router.delete("/sections/{section_id}")

@@ -1,11 +1,13 @@
-from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
+
 from app.core.database import Base
+
 
 class Company(Base):
     __tablename__ = "companies"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     # The DD subject: the fund / product under review.
     name = Column(String(255), nullable=False, index=True)
@@ -21,7 +23,7 @@ class Company(Base):
     updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
-    
+
     # Relationships
     sessions = relationship("DDSession", back_populates="company")
     creator = relationship("User", foreign_keys=[created_by], back_populates="companies_created")

@@ -2,26 +2,27 @@
 Vector Store Core CRUD Operations
 Basic create, read, update, delete functionality
 """
+import asyncio
+import logging
+from datetime import datetime
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from app.core.database import get_db
-from app.models.vector_store import VectorStore
-from app.models.user import User
+
 from app.api.deps import get_current_active_user
-from app.services.authz import user_is_admin
+from app.core.cache import CacheInvalidator, cache_response
+from app.core.database import get_db
 from app.engine.openai_client import OpenAIProcessor
-from app.schemas.vector_stores import VectorStoreCreate, VectorStoreUpdate, VectorStoreResponse
-from app.core.cache import cache_response, CacheInvalidator
-from typing import List
-from datetime import datetime
-import logging
-import asyncio
+from app.models.user import User
+from app.models.vector_store import VectorStore
+from app.schemas.vector_stores import VectorStoreCreate, VectorStoreResponse, VectorStoreUpdate
+from app.services.authz import user_is_admin
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-@router.get("/", response_model=List[VectorStoreResponse])
+@router.get("/", response_model=list[VectorStoreResponse])
 @cache_response(prefix="vector_stores", ttl=300, user_specific=True)
 async def list_vector_stores(
     db: Session = Depends(get_db),
@@ -121,13 +122,13 @@ async def create_vector_store(
     """Create a new vector store"""
     try:
         openai_processor = OpenAIProcessor()
-        
+
         # Create in OpenAI first
         openai_store_id = await openai_processor.create_vector_store(
             name=vector_store.name,
             expires_after_days=30
         )
-        
+
         # Create in database
         db_vector_store = VectorStore(
             id=openai_store_id,
@@ -137,7 +138,7 @@ async def create_vector_store(
             created_at=datetime.utcnow(),
             updated_at=datetime.utcnow()
         )
-        
+
         db.add(db_vector_store)
         db.commit()
         db.refresh(db_vector_store)
@@ -156,11 +157,11 @@ async def create_vector_store(
             status="completed",
             total_bytes=0
         )
-        
-    except Exception as e:
+
+    except Exception:
         db.rollback()
         logger.exception("Failed to create vector store")
-        raise HTTPException(
+        raise HTTPException(  # noqa: B904
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to create vector store"
         )
@@ -216,7 +217,7 @@ async def get_vector_store(
             # Store exists in DB but not OpenAI - clean up
             db.delete(vector_store)
             db.commit()
-            raise HTTPException(
+            raise HTTPException(  # noqa: B904
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Vector store no longer exists"
             )
@@ -259,23 +260,23 @@ async def update_vector_store(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Vector store not found"
         )
-    
+
     try:
         openai_processor = OpenAIProcessor()
-        
+
         # Update in OpenAI if name is being changed
         if update_data.name and update_data.name != vector_store.name:
             await openai_processor.modify_vector_store(
-                vector_store_id, 
+                vector_store_id,
                 name=update_data.name
             )
-        
+
         # Update in database
         if update_data.name:
             vector_store.name = update_data.name
         if update_data.description is not None:
             vector_store.description = update_data.description
-            
+
         vector_store.updated_at = datetime.utcnow()
         db.commit()
         db.refresh(vector_store)
@@ -285,7 +286,7 @@ async def update_vector_store(
 
         # Get current OpenAI status
         openai_store = await openai_processor.get_vector_store(vector_store_id)
-        
+
         return VectorStoreResponse(
             id=vector_store.id,
             name=vector_store.name,
@@ -297,11 +298,11 @@ async def update_vector_store(
             status=openai_store.get("status", "unknown"),
             total_bytes=openai_store.get("usage_bytes", 0)
         )
-        
-    except Exception as e:
+
+    except Exception:
         db.rollback()
         logger.exception("Failed to update vector store")
-        raise HTTPException(
+        raise HTTPException(  # noqa: B904
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to update vector store"
         )
@@ -318,7 +319,7 @@ async def refresh_vector_stores_cache(
     except Exception as e:
         logger.error(f"Failed to clear cache: {e}")
         logger.exception("Failed to clear cache")
-        raise HTTPException(
+        raise HTTPException(  # noqa: B904
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to clear cache"
         )
@@ -347,7 +348,7 @@ async def refresh_single_vector_store_cache(
     except Exception as e:
         logger.error(f"Failed to clear cache for store {vector_store_id}: {e}")
         logger.exception("Failed to clear cache")
-        raise HTTPException(
+        raise HTTPException(  # noqa: B904
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to clear cache"
         )
@@ -372,23 +373,23 @@ async def delete_vector_store(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Vector store not found"
         )
-    
+
     try:
         openai_processor = OpenAIProcessor()
-        
+
         # Delete from OpenAI (ignore 404s)
         try:
             await openai_processor.delete_vector_store(vector_store_id)
         except Exception as openai_error:
             if "404" not in str(openai_error):
                 raise openai_error
-        
+
         # Remove session assignments
         from app.models.vector_store import SessionVectorStore
         db.query(SessionVectorStore).filter(
             SessionVectorStore.vector_store_id == vector_store_id
         ).delete()
-        
+
         # Delete from database
         db.delete(vector_store)
         db.commit()
@@ -397,11 +398,11 @@ async def delete_vector_store(
         CacheInvalidator.invalidate_vector_store_cache(vector_store_id)
 
         return {"message": "Vector store deleted successfully"}
-        
-    except Exception as e:
+
+    except Exception:
         db.rollback()
         logger.exception("Failed to delete vector store")
-        raise HTTPException(
+        raise HTTPException(  # noqa: B904
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to delete vector store"
         )

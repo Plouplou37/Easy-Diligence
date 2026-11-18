@@ -5,8 +5,7 @@ No FastAPI here: callers turn a None or False result into the HTTP answer.
 import hashlib
 import hmac
 import secrets
-from datetime import datetime, timedelta, timezone
-from typing import Optional
+from datetime import UTC, datetime, timedelta
 
 import bcrypt
 import jwt
@@ -26,7 +25,7 @@ def _secret() -> str:
 
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 # --- Passwords -------------------------------------------------------------
@@ -73,7 +72,7 @@ def _encode(payload: dict) -> str:
                       algorithm=settings.jwt_algorithm)
 
 
-def decode_token(token: str) -> Optional[dict]:
+def decode_token(token: str) -> dict | None:
     """Decode and verify a JWT (signature and expiry). None if invalid."""
     if not token:
         return None
@@ -83,7 +82,7 @@ def decode_token(token: str) -> Optional[dict]:
         return None
 
 
-def verify_token(token: str, token_type: str = "access") -> Optional[dict]:
+def verify_token(token: str, token_type: str = "access") -> dict | None:
     """Decode a JWT and check its type ("access" or "refresh")."""
     payload = decode_token(token)
     if payload and payload.get("type") == token_type:
@@ -91,13 +90,13 @@ def verify_token(token: str, token_type: str = "access") -> Optional[dict]:
     return None
 
 
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
+def create_access_token(data: dict, expires_delta: timedelta | None = None) -> str:
     """Create a JWT access token."""
     expire = _now() + (expires_delta or timedelta(minutes=settings.access_token_expire_minutes))
     return _encode({**data, "exp": expire, "type": "access"})
 
 
-def create_refresh_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
+def create_refresh_token(data: dict, expires_delta: timedelta | None = None) -> str:
     """Create a JWT refresh token."""
     expire = _now() + (expires_delta or timedelta(days=settings.refresh_token_expire_days))
     return _encode({**data, "exp": expire, "type": "refresh"})
@@ -128,7 +127,7 @@ def create_password_reset_token(email: str, password_hash: str) -> str:
     })
 
 
-def read_password_reset_token(token: str) -> Optional[dict]:
+def read_password_reset_token(token: str) -> dict | None:
     """Return the token's {"email", "fp"} if it is a valid reset token."""
     payload = decode_token(token)
     if not payload or payload.get("type") != "password_reset":

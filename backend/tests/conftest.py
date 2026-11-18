@@ -1,19 +1,20 @@
-import pytest
-import asyncio
 from unittest.mock import patch
+
+import pytest
 from httpx import AsyncClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from app.main import app
-from app.core.database import get_db, Base
-from app.models.user import User
-from app.models.company import Company
+from app.core.database import Base, get_db
 from app.core.security import get_password_hash
+from app.main import app
+from app.models.company import Company
+from app.models.user import User
 
-
-# Test database setup
+# Test database setup. A file (ignored by git), not memory: some tests import
+# this module a second time as tests.conftest, and must reach the same tables.
+# The event loop comes from pytest-asyncio (asyncio_mode = "auto" in pyproject.toml).
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL,
@@ -21,14 +22,6 @@ engine = create_engine(
     poolclass=StaticPool,
 )
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-
-@pytest.fixture(scope="session")
-def event_loop():
-    """Create an instance of the default event loop for the test session."""
-    loop = asyncio.new_event_loop()
-    yield loop
-    loop.close()
 
 
 @pytest.fixture
@@ -52,10 +45,10 @@ def override_get_db():
 async def async_client(test_db):
     """Create async HTTP client for API testing."""
     app.dependency_overrides[get_db] = override_get_db
-    
+
     async with AsyncClient(app=app, base_url="http://test") as client:
         yield client
-    
+
     app.dependency_overrides.clear()
 
 
@@ -74,7 +67,7 @@ def test_user_data():
 def test_admin_data():
     """Test admin user data fixture."""
     return {
-        "email": "admin@example.com", 
+        "email": "admin@example.com",
         "username": "admin",
         "password": "adminpass123",
         "role": "admin"
@@ -95,7 +88,7 @@ def test_company_data():
 def create_test_user(test_db):
     """Create a test user in the database."""
     db = TestingSessionLocal()
-    
+
     def _create_user(email="test@example.com", password="testpass123", role="user"):
         hashed_password = get_password_hash(password)
         user = User(
@@ -109,7 +102,7 @@ def create_test_user(test_db):
         db.commit()
         db.refresh(user)
         return user
-    
+
     yield _create_user
     db.close()
 
@@ -118,7 +111,7 @@ def create_test_user(test_db):
 def create_test_company(test_db):
     """Create a test company in the database."""
     db = TestingSessionLocal()
-    
+
     def _create_company(name="Test Company", website_url="https://test.com"):
         company = Company(
             name=name,
@@ -129,8 +122,8 @@ def create_test_company(test_db):
         db.commit()
         db.refresh(company)
         return company
-    
-    yield _create_company  
+
+    yield _create_company
     db.close()
 
 

@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Literal, Optional, get_args
+from typing import Literal, get_args
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
@@ -13,9 +13,9 @@ class UserProfile(BaseModel):
     """What a person says about themselves, without any privilege."""
     email: EmailStr
     username: str = Field(..., min_length=3, max_length=30, pattern="^[a-zA-Z0-9._-]+$")
-    full_name: Optional[str] = None
-    company: Optional[str] = None
-    phone: Optional[str] = None
+    full_name: str | None = None
+    company: str | None = None
+    phone: str | None = None
 
 
 class UserBase(UserProfile):
@@ -47,10 +47,10 @@ class UserRegister(UserProfile):
 
 
 class UserUpdate(BaseModel):
-    full_name: Optional[str] = None
-    company: Optional[str] = None
-    phone: Optional[str] = None
-    email: Optional[EmailStr] = None
+    full_name: str | None = None
+    company: str | None = None
+    phone: str | None = None
+    email: EmailStr | None = None
 
 
 class UserInDB(UserBase):
@@ -60,8 +60,8 @@ class UserInDB(UserBase):
     is_active: bool
     is_verified: bool
     created_at: datetime
-    updated_at: Optional[datetime]
-    last_login: Optional[datetime]
+    updated_at: datetime | None
+    last_login: datetime | None
 
 
 class User(UserInDB):
@@ -75,7 +75,7 @@ class UserLogin(BaseModel):
 
 class Token(BaseModel):
     access_token: str
-    refresh_token: Optional[str] = None
+    refresh_token: str | None = None
     token_type: str = "bearer"
 
 
@@ -86,9 +86,9 @@ class RefreshRequest(BaseModel):
 
 
 class TokenData(BaseModel):
-    user_id: Optional[int] = None
-    email: Optional[str] = None
-    role: Optional[str] = None
+    user_id: int | None = None
+    email: str | None = None
+    role: str | None = None
 
 
 class PasswordChange(BaseModel):

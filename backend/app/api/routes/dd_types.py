@@ -1,22 +1,22 @@
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
-from sqlalchemy.orm import Session
-from app.core.database import get_db
-from app.models.dd_types import DDType as DDTypeModel, DEFAULT_DD_TYPE_ICON
-from app.models.questions import DDSection, DDQuestion
-from app.models.user import User
-from app.api.deps import get_current_active_user, get_current_admin_user
-from app.api.uploads import QUESTIONNAIRE_EXTENSIONS, read_upload
-from app.services.authz import (
-    filter_dd_types_for_user,
-    assert_dd_type_view,
-    assert_dd_type_ownership,
-)
-from app.schemas.dd_types import DDTypeCreate, DDTypeUpdate, DDTypeResponse
-from app.core.cache import cache_response, CacheInvalidator
-from app.services.file_parser import DDTypeFileParser, FileParsingError
-from typing import Optional, List
-from datetime import datetime
 import logging
+
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from sqlalchemy.orm import Session
+
+from app.api.deps import get_current_active_user
+from app.api.uploads import QUESTIONNAIRE_EXTENSIONS, read_upload
+from app.core.database import get_db
+from app.models.dd_types import DEFAULT_DD_TYPE_ICON
+from app.models.dd_types import DDType as DDTypeModel
+from app.models.questions import DDQuestion, DDSection
+from app.models.user import User
+from app.schemas.dd_types import DDTypeCreate, DDTypeResponse, DDTypeUpdate
+from app.services.authz import (
+    assert_dd_type_ownership,
+    assert_dd_type_view,
+    filter_dd_types_for_user,
+)
+from app.services.file_parser import DDTypeFileParser, FileParsingError
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +34,7 @@ def get_dd_type_by_code(db: Session, code: str) -> DDTypeModel:
     return dd_type
 
 
-@router.get("/", response_model=List[DDTypeResponse])
+@router.get("/", response_model=list[DDTypeResponse])
 async def list_dd_types(
     active_only: bool = True,
     skip: int = 0,
@@ -58,8 +58,8 @@ async def list_dd_types(
 async def create_dd_type_from_file(
     code: str = Form(...),
     name: str = Form(...),
-    description: Optional[str] = Form(None),
-    icon: Optional[str] = Form(None),
+    description: str | None = Form(None),
+    icon: str | None = Form(None),
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
@@ -103,7 +103,7 @@ async def create_dd_type_from_file(
         db.flush()
 
         # Create sections and questions
-        for section_order, section_data in enumerate(sections_data):
+        for _section_order, section_data in enumerate(sections_data):
             # Create section
             db_section = DDSection(
                 dd_type_id=db_dd_type.id,
@@ -139,7 +139,7 @@ async def create_dd_type_from_file(
 
     except FileParsingError as e:
         # The parser's own messages describe what is wrong with the file.
-        raise HTTPException(
+        raise HTTPException(  # noqa: B904
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"File parsing error: {e}"
         )
@@ -148,7 +148,7 @@ async def create_dd_type_from_file(
     except Exception:
         logger.exception("Error creating DD type from file")
         db.rollback()
-        raise HTTPException(
+        raise HTTPException(  # noqa: B904
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error creating DD type from file"
         )
@@ -170,7 +170,7 @@ async def get_dd_type(
     return dd_type
 
 @router.get("/code/{code}", response_model=DDTypeResponse)
-async def get_dd_type_by_code(
+async def get_dd_type_by_code(  # noqa: F811
     code: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
@@ -210,7 +210,7 @@ async def create_dd_type(
         is_system=False,
         created_by=current_user.id
     )
-    
+
     db.add(db_dd_type)
     db.commit()
     db.refresh(db_dd_type)
@@ -241,7 +241,7 @@ async def update_dd_type(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Cannot change code of system DD type"
         )
-    
+
     # Check if new code conflicts with existing one
     if dd_type_update.code and dd_type_update.code != dd_type.code:
         existing = db.query(DDTypeModel).filter(DDTypeModel.code == dd_type_update.code).first()
@@ -250,15 +250,15 @@ async def update_dd_type(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="DD type code already exists"
             )
-    
+
     # Update fields
     update_data = dd_type_update.dict(exclude_unset=True)
     for field, value in update_data.items():
         setattr(dd_type, field, value)
-    
+
     db.commit()
     db.refresh(dd_type)
-    
+
     return dd_type
 
 @router.delete("/{dd_type_code}")
@@ -284,7 +284,7 @@ async def delete_dd_type(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Cannot delete system DD type"
         )
-    
+
     # Check if it's in use (has execution records)
     # Sections are just structure and can be cascade-deleted
     if dd_type.executions:
@@ -292,7 +292,7 @@ async def delete_dd_type(
             status_code=status.HTTP_409_CONFLICT,
             detail="Cannot delete DD type that is in use. Set to inactive instead."
         )
-    
+
     db.delete(dd_type)
     db.commit()
 
@@ -366,7 +366,7 @@ async def validate_dd_type(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"DD type '{dd_type.name}' is already validated and locked"
         )
-    
+
     # Validate the DD type by setting is_validated to True
     dd_type.is_validated = True
 

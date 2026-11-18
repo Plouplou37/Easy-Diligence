@@ -19,15 +19,14 @@ Two paths share the same prompts and the same request body:
 """
 import asyncio
 import logging
-from typing import Dict, List, Optional, Tuple
 
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import ConflictError, InvalidRequestError, NotFoundError
 from app.engine.openai_client import OpenAIProcessor
-from app.models.answer import DDAnswer, AnswerStatus
-from app.models.questions import DDSection, DDQuestion
+from app.models.answer import AnswerStatus, DDAnswer
 from app.models.dd_types import DDType
+from app.models.questions import DDQuestion, DDSection
 from app.models.summary import DDSummary, DDSummaryBatch
 
 logger = logging.getLogger(__name__)
@@ -77,7 +76,7 @@ def _custom_id_for(section_id: int) -> str:
     return f"{_CUSTOM_ID_PREFIX}{section_id}"
 
 
-def _section_id_from(custom_id: str) -> Optional[int]:
+def _section_id_from(custom_id: str) -> int | None:
     if not custom_id.startswith(_CUSTOM_ID_PREFIX):
         return None
     try:
@@ -178,7 +177,7 @@ async def _generate_and_upsert_synthesis(
     company: str,
     section_summary_pairs,
     processor: OpenAIProcessor,
-) -> Optional[DDSummary]:
+) -> DDSummary | None:
     """Build the DD-type synthesis from the section summaries and store it.
 
     Always synchronous, on both paths: it consumes the section summaries, so it
@@ -205,7 +204,7 @@ async def _generate_and_upsert_synthesis(
     return synthesis_row
 
 
-async def generate_summaries_for_dd_type(db: Session, session, dd_type_code: str) -> List[DDSummary]:
+async def generate_summaries_for_dd_type(db: Session, session, dd_type_code: str) -> list[DDSummary]:
     """Generate (and persist) section summaries + the DD-type synthesis.
 
     Synchronous path: everything is produced within the request. Returns the list
@@ -232,9 +231,9 @@ async def generate_summaries_for_dd_type(db: Session, session, dd_type_code: str
         for _, user_prompt in section_prompts
     ])
 
-    upserted: List[DDSummary] = []
+    upserted: list[DDSummary] = []
     section_summary_pairs = []  # (section, text) for synthesis prompt
-    for (section, _), text in zip(section_prompts, section_texts):
+    for (section, _), text in zip(section_prompts, section_texts, strict=False):
         text = (text or "").strip()
         if not text:
             continue
@@ -259,7 +258,7 @@ async def generate_summaries_for_dd_type(db: Session, session, dd_type_code: str
 
 
 def submit_section_summaries_batch(
-    db: Session, session, dd_type_code: str, user_id: Optional[int] = None
+    db: Session, session, dd_type_code: str, user_id: int | None = None
 ) -> DDSummaryBatch:
     """Enqueue the section summaries of a (session, DD type) as an OpenAI batch.
 
@@ -319,7 +318,7 @@ def submit_section_summaries_batch(
 
 async def collect_section_summaries_batch(
     db: Session, session, dd_type_code: str
-) -> Tuple[Optional[DDSummaryBatch], Dict]:
+) -> tuple[DDSummaryBatch | None, dict]:
     """Refresh a batch's state and, once complete, store its results.
 
     On completion: the section summaries are stored, then the synthesis is
@@ -413,7 +412,7 @@ async def collect_section_summaries_batch(
 
 def cancel_section_summaries_batch(
     db: Session, session, dd_type_code: str
-) -> Tuple[Optional[DDSummaryBatch], Dict]:
+) -> tuple[DDSummaryBatch | None, dict]:
     """Cancel the pending section-summaries batch of a (session, DD type).
 
     The state is refreshed from OpenAI first. The stored status only moves when

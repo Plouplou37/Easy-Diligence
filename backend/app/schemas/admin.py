@@ -1,8 +1,9 @@
-from pydantic import BaseModel, ConfigDict, EmailStr
-from typing import Optional, List
 from datetime import datetime
 
+from pydantic import BaseModel, ConfigDict, EmailStr
+
 from app.schemas.user import Role
+
 
 class UserListItem(BaseModel):
     """User information for admin list view"""
@@ -11,17 +12,17 @@ class UserListItem(BaseModel):
     id: int
     username: str
     email: EmailStr
-    full_name: Optional[str]
-    company: Optional[str]
+    full_name: str | None
+    company: str | None
     role: str
     is_active: bool
     is_verified: bool
-    last_login: Optional[datetime]
+    last_login: datetime | None
     created_at: datetime
 
 class UserListResponse(BaseModel):
     """Paginated user list response"""
-    users: List[UserListItem]
+    users: list[UserListItem]
     total: int
     page: int
     per_page: int
@@ -43,4 +44,4 @@ class AdminActionResponse(BaseModel):
     """Standard response for admin actions"""
     success: bool
     message: str
-    user_id: Optional[int] = None
+    user_id: int | None = None

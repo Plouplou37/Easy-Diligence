@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import List, Literal
+from typing import Literal
 
 from pydantic import SecretStr, ValidationError, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -57,7 +57,7 @@ class Settings(BaseSettings):
     login_window_seconds: int = 900
 
     # CORS
-    cors_origins: List[str] = ["http://localhost:5173", "http://localhost:5174", "http://localhost:5175", "http://localhost:5176", "http://localhost:5177", "http://localhost:5178", "http://localhost:5179", "http://localhost:3000"]
+    cors_origins: list[str] = ["http://localhost:5173", "http://localhost:5174", "http://localhost:5175", "http://localhost:5176", "http://localhost:5177", "http://localhost:5178", "http://localhost:5179", "http://localhost:3000"]
 
     # Rate limiting between questions.
     # Measured on the account: 10 000 requests/min and 10 000 000 tokens/min,
@@ -112,7 +112,7 @@ class Settings(BaseSettings):
     # File uploads (vector store documents, regeneration attachments). Size in
     # bytes; extensions lowercase, without the dot.
     max_upload_size: int = 104857600  # 100 MB
-    allowed_extensions: List[str] = [
+    allowed_extensions: list[str] = [
         "pdf", "doc", "docx", "pptx", "txt", "md", "html", "json", "csv", "xls", "xlsx",
     ]
 
@@ -150,7 +150,7 @@ class Settings(BaseSettings):
 
     @field_validator("allowed_extensions")
     @classmethod
-    def _normalise_extensions(cls, value: List[str]) -> List[str]:
+    def _normalise_extensions(cls, value: list[str]) -> list[str]:
         return [ext.lower().lstrip(".") for ext in value]
 
 

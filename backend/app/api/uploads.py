@@ -7,8 +7,8 @@ receives a file reads it with read_upload.
 The size is checked while reading, after the multipart parser has received the
 body; the reverse proxy in front of the API should cap the body size as well.
 """
+from collections.abc import Iterable
 from pathlib import PurePath
-from typing import Iterable, Optional
 
 from fastapi import HTTPException, UploadFile
 
@@ -20,12 +20,12 @@ _CHUNK_SIZE = 1024 * 1024
 QUESTIONNAIRE_EXTENSIONS = ("xlsx", "xls", "csv", "json")
 
 
-def file_extension(filename: Optional[str]) -> str:
+def file_extension(filename: str | None) -> str:
     """'Report.PDF' -> 'pdf'; '' when there is none."""
     return PurePath(filename or "").suffix.lower().lstrip(".")
 
 
-async def read_upload(file: UploadFile, allowed_extensions: Optional[Iterable[str]] = None) -> bytes:
+async def read_upload(file: UploadFile, allowed_extensions: Iterable[str] | None = None) -> bytes:
     """Return the file's bytes, or refuse it with a 400 (type) or a 413 (size).
 
     `allowed_extensions` defaults to settings.allowed_extensions.

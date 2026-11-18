@@ -1,25 +1,32 @@
-from fastapi import APIRouter, Depends, HTTPException, Form, File, UploadFile
-from fastapi.responses import Response
-from sqlalchemy.orm import Session
-from sqlalchemy import func
-from app.core.database import get_db
-from app.models.answer import DDAnswer, AnswerStatus
-from app.models.answer_history import DDAnswerHistory
-from app.models.session import DDSession
-from app.models.questions import DDSection, DDQuestion
-from app.models.user import User
-from app.api.deps import get_current_active_user
-from app.api.uploads import read_upload
-from app.services.authz import filter_sessions_for_user, assert_session_access, user_is_admin
-from app.schemas.answer import AnswerUpdate, AnswerResponse, AnswerWithHistory, AnswerListResponse, PaginatedAnswerResponse
-from app.schemas.answer_history import AnswerVersionHistory, AnswerHistoryResponse
-from app.core.pagination import PaginationParams, paginate_query, PaginationMeta
-from app.exports.answers import AnswerExporter
-from app.core.utils import build_company_info, get_session_by_identifier
-from typing import Optional, List, Dict, Any
 import asyncio
 import json
 import logging
+from typing import Any
+
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from sqlalchemy import func
+from sqlalchemy.orm import Session
+
+from app.api.deps import get_current_active_user
+from app.api.uploads import read_upload
+from app.core.database import get_db
+from app.core.pagination import PaginationMeta, PaginationParams, paginate_query
+from app.core.utils import build_company_info, get_session_by_identifier
+from app.exports.answers import AnswerExporter
+from app.models.answer import AnswerStatus, DDAnswer
+from app.models.answer_history import DDAnswerHistory
+from app.models.questions import DDQuestion, DDSection
+from app.models.session import DDSession
+from app.models.user import User
+from app.schemas.answer import (
+    AnswerListResponse,
+    AnswerResponse,
+    AnswerUpdate,
+    AnswerWithHistory,
+    PaginatedAnswerResponse,
+)
+from app.schemas.answer_history import AnswerHistoryResponse, AnswerVersionHistory
+from app.services.authz import assert_session_access, filter_sessions_for_user, user_is_admin
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -48,7 +55,7 @@ def get_answer_with_access(answer_id: int, db: Session, current_user: User) -> D
     return answer
 
 
-@router.get("/by-execution/{execution_id}", response_model=List[AnswerResponse])
+@router.get("/by-execution/{execution_id}", response_model=list[AnswerResponse])
 async def get_answers_by_execution(
     execution_id: int,
     db: Session = Depends(get_db),
@@ -71,7 +78,7 @@ async def get_answers_by_execution(
         .filter(DDAnswer.is_current == True)\
         .order_by(DDAnswer.section_code, DDAnswer.question_code)\
         .all()
-    
+
     # Convert to response format
     response_answers = []
     for answer in answers:
@@ -98,17 +105,17 @@ async def get_answers_by_execution(
             # Otherwise keep the array as-is
         elif sources_data is None:
             sources_data = {}
-        
+
         # Create response with fixed sources and all data
         answer_dict = answer.__dict__.copy()
         answer_dict['sources'] = sources_data
-        
+
         # Add related data to dict
         answer_dict['session_name'] = execution.session.name if execution.session else None
         answer_dict['section_name'] = answer.section.title if answer.section else None
         answer_dict['question_text'] = answer.question.question_text if answer.question else None
         answer_dict['editor_name'] = answer.editor.username if answer.editor else None
-        
+
         # Map answer status to validation_status for backward compatibility
         status_to_validation = {
             'approved': 'approved',
@@ -118,7 +125,7 @@ async def get_answers_by_execution(
         }
         answer_dict['validation_status'] = status_to_validation.get(answer.status.value, None)
         answer_dict['total_validations'] = 1 if answer.status.value in ['approved', 'rejected'] else 0
-        
+
         # Get OpenAI message IDs from related responses
         openai_message_ids = []
         if answer.execution_id:
@@ -130,29 +137,29 @@ async def get_answers_by_execution(
             ).all()
             openai_message_ids = [mid[0] for mid in message_ids if mid[0]]
         answer_dict['openai_message_ids'] = openai_message_ids
-        
+
         # Remove SQLAlchemy internal attributes
         answer_dict.pop('_sa_instance_state', None)
-        
+
         answer_response = AnswerResponse(**answer_dict)
-        
+
         response_answers.append(answer_response)
-    
+
     return response_answers
 
 
 @router.get("/all", response_model=AnswerListResponse)
 async def get_all_answers(
-    session_id: Optional[int] = None,
-    dd_type: Optional[str] = None,
-    status: Optional[str] = None,
-    validation_status: Optional[str] = None,
-    user_id: Optional[int] = None,
-    date_from: Optional[str] = None,
-    date_to: Optional[str] = None,
+    session_id: int | None = None,
+    dd_type: str | None = None,
+    status: str | None = None,
+    validation_status: str | None = None,
+    user_id: int | None = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
     page: int = 1,
     limit: int = 50,
-    search: Optional[str] = None,
+    search: str | None = None,
     include_stats: bool = False,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
@@ -175,7 +182,7 @@ async def get_all_answers(
 
     # Track applied filters
     filters = {}
-    
+
     # Apply filters
     if session_id:
         query = query.filter(DDAnswer.session_id == session_id)
@@ -186,23 +193,23 @@ async def get_all_answers(
         dd_type_obj = get_dd_type_by_code(db, dd_type)
         query = query.filter(DDAnswer.dd_type_id == dd_type_obj.id)
         filters["dd_type"] = dd_type
-        
+
     if status:
         query = query.filter(DDAnswer.status == status)
         filters["status"] = status
-        
+
     if user_id:
         query = query.filter(DDAnswer.edited_by == user_id)
         filters["user_id"] = user_id
-        
+
     if date_from:
         query = query.filter(DDAnswer.created_at >= date_from)
         filters["date_from"] = date_from
-        
+
     if date_to:
         query = query.filter(DDAnswer.created_at <= date_to)
         filters["date_to"] = date_to
-    
+
     if search:
         # Search in answer text and question text
         search_term = f"%{search}%"
@@ -211,10 +218,10 @@ async def get_all_answers(
             (DDQuestion.question_text.ilike(search_term))
         )
         filters["search"] = search
-    
+
     # Only get current versions by default
     query = query.filter(DDAnswer.is_current == True)
-    
+
     # Apply answer status filter if provided (replaces validation_status)
     if validation_status:
         # Map validation status to answer status for backward compatibility
@@ -230,17 +237,17 @@ async def get_all_answers(
             else:
                 query = query.filter(DDAnswer.status == status_filter)
         filters["validation_status"] = validation_status
-    
+
     # Order by creation date (most recent first)
     query = query.order_by(DDAnswer.created_at.desc())
-    
+
     # Get total count before pagination
     total_count = query.count()
-    
+
     # Apply pagination
     paginated_query = paginate_query(query, pagination_params)
     answers = paginated_query.all()
-    
+
     # Convert to response format
     response_answers = []
     for answer in answers:
@@ -267,17 +274,17 @@ async def get_all_answers(
             # Otherwise keep the array as-is
         elif sources_data is None:
             sources_data = {}
-        
+
         # Create response with fixed sources and all data
         answer_dict = answer.__dict__.copy()
         answer_dict['sources'] = sources_data
-        
+
         # Add related data to dict
         answer_dict['session_name'] = answer.session.name if answer.session else None
         answer_dict['section_name'] = answer.section.title if answer.section else None
         answer_dict['question_text'] = answer.question.question_text if answer.question else None
         answer_dict['editor_name'] = answer.editor.username if answer.editor else None
-        
+
         # Map answer status to validation_status for backward compatibility
         status_to_validation = {
             'approved': 'approved',
@@ -287,7 +294,7 @@ async def get_all_answers(
         }
         answer_dict['validation_status'] = status_to_validation.get(answer.status.value, None)
         answer_dict['total_validations'] = 1 if answer.status.value in ['approved', 'rejected'] else 0
-        
+
         # Get OpenAI message IDs from related responses
         openai_message_ids = []
         if answer.execution_id:
@@ -299,14 +306,14 @@ async def get_all_answers(
             ).all()
             openai_message_ids = [mid[0] for mid in message_ids if mid[0]]
         answer_dict['openai_message_ids'] = openai_message_ids
-        
+
         # Remove SQLAlchemy internal attributes
         answer_dict.pop('_sa_instance_state', None)
-        
+
         answer_response = AnswerResponse(**answer_dict)
-        
+
         response_answers.append(answer_response)
-    
+
     # Generate statistics if requested
     stats = None
     if include_stats:
@@ -314,7 +321,7 @@ async def get_all_answers(
         total_with_answers = sum(1 for a in response_answers if a.answer_text)
         total_validated = sum(1 for a in response_answers if a.validation_status == 'approved')
         avg_confidence = sum(a.confidence_score or 0 for a in response_answers) / len(response_answers) if response_answers else 0
-        
+
         stats = {
             "total_answers": len(response_answers),
             "answers_with_content": total_with_answers,
@@ -322,14 +329,14 @@ async def get_all_answers(
             "average_confidence": round(avg_confidence, 2),
             "validation_rate": round(total_validated / len(response_answers) * 100, 2) if response_answers else 0
         }
-    
+
     # Create paginated response
     meta = PaginationMeta.from_params(pagination_params, total_count)
     paginated_response = PaginatedAnswerResponse(items=response_answers, meta=meta)
-    
+
     # Return formatted response with filters and stats
     return AnswerListResponse.from_paginated(
-        paginated_response, 
+        paginated_response,
         filters=filters,
         stats=stats
     )
@@ -389,7 +396,7 @@ async def get_answer_statistics(
         DDAnswer.edited_by.isnot(None),
         DDAnswer.is_current == True
     ).count()
-    
+
     return {
         "total_answers": total_answers,
         "status_counts": status_counts,
@@ -405,13 +412,13 @@ async def get_answer_statistics(
 @router.get("/session/{session_identifier}", response_model=AnswerListResponse)
 async def get_session_answers(
     session_identifier: str,
-    dd_type: Optional[str] = None,
-    section_code: Optional[str] = None,
-    execution_id: Optional[int] = None,
+    dd_type: str | None = None,
+    section_code: str | None = None,
+    execution_id: int | None = None,
     include_history: bool = False,
     page: int = 1,
     limit: int = 100,
-    search: Optional[str] = None,
+    search: str | None = None,
     include_stats: bool = False,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
@@ -442,26 +449,26 @@ async def get_session_answers(
         joinedload(DDAnswer.question),
         joinedload(DDAnswer.editor)
     ).filter(DDAnswer.session_id == session_id)
-    
+
     # Track applied filters
     filters = {"session_id": session_id}
-    
+
     # Apply filters
     if dd_type:
         # Get DD type by code to filter by ID
         dd_type_obj = get_dd_type_by_code(db, dd_type)
         query = query.filter(DDAnswer.dd_type_id == dd_type_obj.id)
         filters["dd_type"] = dd_type
-        
+
     if section_code:
         # Join with section to filter by section_code
         query = query.join(DDSection, DDAnswer.section_id == DDSection.id).filter(DDSection.section_code == section_code)
         filters["section_code"] = section_code
-        
+
     if execution_id:
         query = query.filter(DDAnswer.execution_id == execution_id)
         filters["execution_id"] = execution_id
-    
+
     if search:
         # Search in answer text and question text
         search_term = f"%{search}%"
@@ -470,22 +477,22 @@ async def get_session_answers(
             (DDQuestion.question_text.ilike(search_term))
         )
         filters["search"] = search
-    
+
     # Only get current versions by default
     if not include_history:
         query = query.filter(DDAnswer.is_current == True)
         filters["include_history"] = include_history
-    
+
     # Order by creation date
     query = query.order_by(DDAnswer.created_at)
-    
+
     # Get total count before pagination
     total_count = query.count()
-    
+
     # Apply pagination
     paginated_query = paginate_query(query, pagination_params)
     answers = paginated_query.all()
-    
+
     # Convert to response format
     response_answers = []
     for answer in answers:
@@ -512,18 +519,18 @@ async def get_session_answers(
             # Otherwise keep the array as-is
         elif sources_data is None:
             sources_data = {}
-        
+
         # Create response with fixed sources and all data
         answer_dict = answer.__dict__.copy()
         answer_dict['sources'] = sources_data
-        
+
         # Add related data to dict
         answer_dict['session_name'] = session.name
         answer_dict['section_name'] = answer.section.title if answer.section else None
         answer_dict['question_text'] = answer.question.question_text if answer.question else None
         answer_dict['editor_name'] = answer.editor.username if answer.editor else None
         answer_dict['dd_type_code'] = answer.dd_type_obj.code if answer.dd_type_obj else None
-        
+
         # Map answer status to validation_status for backward compatibility
         status_to_validation = {
             'approved': 'approved',
@@ -533,7 +540,7 @@ async def get_session_answers(
         }
         answer_dict['validation_status'] = status_to_validation.get(answer.status.value, None)
         answer_dict['total_validations'] = 1 if answer.status.value in ['approved', 'rejected'] else 0
-        
+
         # Get OpenAI message IDs from related responses
         openai_message_ids = []
         if answer.execution_id:
@@ -545,14 +552,14 @@ async def get_session_answers(
             ).all()
             openai_message_ids = [mid[0] for mid in message_ids if mid[0]]
         answer_dict['openai_message_ids'] = openai_message_ids
-        
+
         # Remove SQLAlchemy internal attributes
         answer_dict.pop('_sa_instance_state', None)
-        
+
         answer_response = AnswerResponse(**answer_dict)
-        
+
         response_answers.append(answer_response)
-    
+
     # Generate statistics if requested
     stats = None
     if include_stats:
@@ -560,7 +567,7 @@ async def get_session_answers(
         total_with_answers = sum(1 for a in response_answers if a.answer_text)
         total_validated = sum(1 for a in response_answers if a.validation_status == 'approved')
         avg_confidence = sum(a.confidence_score or 0 for a in response_answers) / len(response_answers) if response_answers else 0
-        
+
         stats = {
             "session_name": session.name,
             "total_answers": len(response_answers),
@@ -569,14 +576,14 @@ async def get_session_answers(
             "average_confidence": round(avg_confidence, 2),
             "validation_rate": round(total_validated / len(response_answers) * 100, 2) if response_answers else 0
         }
-    
+
     # Create paginated response
     meta = PaginationMeta.from_params(pagination_params, total_count)
     paginated_response = PaginatedAnswerResponse(items=response_answers, meta=meta)
-    
+
     # Return formatted response with filters and stats
     return AnswerListResponse.from_paginated(
-        paginated_response, 
+        paginated_response,
         filters=filters,
         stats=stats
     )
@@ -624,9 +631,9 @@ async def update_answer(
 @router.post("/{answer_id}/regenerate", response_model=AnswerResponse)
 async def regenerate_answer(
     answer_id: int,
-    instruction: Optional[str] = Form(None),
-    reference_url: Optional[str] = Form(None),
-    file: Optional[UploadFile] = File(None),
+    instruction: str | None = Form(None),
+    reference_url: str | None = Form(None),
+    file: UploadFile | None = File(None),
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
@@ -652,11 +659,11 @@ async def regenerate_answer(
         )
 
     # Resolve the DD type code, the vector stores and the company context
-    from app.engine.processor import DDProcessor
     from app.api.routes.processing import get_vector_store_ids_for_processing
-    from app.engine.openai_client import OpenAIProcessor
-    from app.models.vector_store import VectorStore, SessionVectorStore
     from app.core.cache import CacheInvalidator
+    from app.engine.openai_client import OpenAIProcessor
+    from app.engine.processor import DDProcessor
+    from app.models.vector_store import SessionVectorStore, VectorStore
 
     dd_type_obj = answer.execution.dd_type
     dd_type_code = dd_type_obj.code if dd_type_obj else None
@@ -723,7 +730,7 @@ async def regenerate_answer(
         )
     except Exception:
         logger.exception("Failed to regenerate answer %s", answer_id)
-        raise HTTPException(status_code=500, detail="Failed to regenerate answer")
+        raise HTTPException(status_code=500, detail="Failed to regenerate answer")  # noqa: B904
 
     return AnswerResponse.from_orm(updated)
 
@@ -896,7 +903,7 @@ async def get_answer_history(
     history_entries = db.query(DDAnswerHistory).filter(
         DDAnswerHistory.answer_id == answer_id
     ).order_by(DDAnswerHistory.version.desc()).all()
-    
+
     # Convert to response format
     history_responses = []
     for entry in history_entries:
@@ -904,7 +911,7 @@ async def get_answer_history(
         if entry.editor:
             history_response.editor_name = entry.editor.username
         history_responses.append(history_response)
-    
+
     return AnswerVersionHistory(
         answer_id=answer_id,
         current_version=answer.version,
@@ -965,12 +972,12 @@ async def get_answer_with_history(
 
     # Get answer response
     answer_response = AnswerResponse.from_orm(answer)
-    
+
     # Get history
     history_entries = db.query(DDAnswerHistory).filter(
         DDAnswerHistory.answer_id == answer_id
     ).order_by(DDAnswerHistory.version.desc()).all()
-    
+
     history_data = []
     for entry in history_entries:
         history_dict = {
@@ -983,7 +990,7 @@ async def get_answer_with_history(
             "created_at": entry.created_at.isoformat()
         }
         history_data.append(history_dict)
-    
+
     # Create validation data from answer status for backward compatibility
     validation_data = []
     if answer.status.value in ['approved', 'rejected']:
@@ -995,14 +1002,14 @@ async def get_answer_with_history(
             "validated_at": answer.updated_at.isoformat() if answer.updated_at else answer.created_at.isoformat()
         }
         validation_data.append(validation_dict)
-    
+
     return AnswerWithHistory(
         answer=answer_response,
         history=history_data,
         validations=validation_data
     )
 
-@router.get("/{answer_id}/versions/{version}", response_model=Dict[str, Any])
+@router.get("/{answer_id}/versions/{version}", response_model=dict[str, Any])
 async def get_answer_version(
     answer_id: int,
     version: int,
@@ -1010,7 +1017,7 @@ async def get_answer_version(
     current_user: User = Depends(get_current_active_user)
 ):
     """Get a specific version of an answer"""
-    answer = get_answer_with_access(answer_id, db, current_user)
+    get_answer_with_access(answer_id, db, current_user)
 
     # Get specific version from history
     history_entry = db.query(DDAnswerHistory).filter(
@@ -1031,14 +1038,14 @@ async def get_answer_version(
         "created_at": history_entry.created_at.isoformat()
     }
 
-@router.get("/{answer_id}/original", response_model=Dict[str, Any])
+@router.get("/{answer_id}/original", response_model=dict[str, Any])
 async def get_original_answer(
     answer_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Get the original AI-generated answer (version 1)"""
-    answer = get_answer_with_access(answer_id, db, current_user)
+    get_answer_with_access(answer_id, db, current_user)
 
     # Get version 1 from history (original AI answer)
     original_history = db.query(DDAnswerHistory).filter(
@@ -1089,7 +1096,7 @@ async def export_session_answers(
         .join(DDType, DDAnswer.dd_type_id == DDType.id, isouter=True)\
         .filter(DDAnswer.session_id == session_id)\
         .order_by(DDType.code, DDSection.section_code, DDQuestion.question_code).all()
-    
+
     if not answers:
         raise HTTPException(status_code=404, detail="No answers found for session")
 
@@ -1103,4 +1110,4 @@ async def export_session_answers(
     else:
         raise HTTPException(status_code=400, detail="Format must be 'pdf' or 'excel'")
 
-# Export functions moved to app.exports.answers for better code organization 
+# Export functions moved to app.exports.answers for better code organization

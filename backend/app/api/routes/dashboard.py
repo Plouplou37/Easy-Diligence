@@ -10,17 +10,16 @@ Read-only. In particular the summary batches are read from
 OpenAI and writes to the database, which a dashboard must never fan out.
 """
 import json
+from collections.abc import Iterable
 from datetime import datetime
-from typing import Dict, Iterable, List, Optional
 
 from fastapi import APIRouter, Depends
 from sqlalchemy import and_, case, func
 from sqlalchemy.orm import Session, joinedload
 
-from app.services.authz import filter_sessions_for_user
-from app.engine.summarizer import PENDING_BATCH_STATUSES
-from app.core.database import get_db
 from app.api.deps import get_current_active_user
+from app.core.database import get_db
+from app.engine.summarizer import PENDING_BATCH_STATUSES
 from app.models.answer import DDAnswer
 from app.models.dd_types import DDType
 from app.models.execution import DDExecution
@@ -28,6 +27,7 @@ from app.models.questions import DDQuestion, DDSection
 from app.models.session import DDSession
 from app.models.summary import DDSummary, DDSummaryBatch
 from app.models.user import User
+from app.services.authz import filter_sessions_for_user
 
 router = APIRouter()
 
@@ -48,16 +48,16 @@ def _execution_status(status) -> str:
     return "completed" if value == "generated" else value
 
 
-def _latest(*values) -> Optional[datetime]:
+def _latest(*values) -> datetime | None:
     present = [v for v in values if v is not None]
     return max(present) if present else None
 
 
-def _iso(value: Optional[datetime]) -> Optional[str]:
+def _iso(value: datetime | None) -> str | None:
     return value.isoformat() if value else None
 
 
-def _selected_codes(dd_types_json: Optional[str]) -> List[str]:
+def _selected_codes(dd_types_json: str | None) -> list[str]:
     """Codes stored on the session at creation (`[{"code", "name"}]`)."""
     try:
         return [t["code"] for t in json.loads(dd_types_json or "[]") if t.get("code")]
@@ -72,8 +72,8 @@ def build_dashboard_rows(
     answered_counts: Iterable,
     summaries: Iterable,
     batches: Iterable,
-    question_totals: Dict[int, int],
-    dd_types_by_code: Dict[str, object],
+    question_totals: dict[int, int],
+    dd_types_by_code: dict[str, object],
 ) -> dict:
     """Assemble the dashboard payload from the rows of the grouped queries.
 
@@ -85,7 +85,7 @@ def build_dashboard_rows(
     - summaries: (session_id, dd_type_id, has_synthesis, synthesis_updated_at, last_updated)
     - batches: (session_id, dd_type_id, status, updated_at)
     """
-    per_dd: Dict[tuple, dict] = {}
+    per_dd: dict[tuple, dict] = {}
 
     def entry(session_id, dd_type_id):
         key = (session_id, dd_type_id)

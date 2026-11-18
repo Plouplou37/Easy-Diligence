@@ -3,7 +3,6 @@
 In Docker: `docker compose exec backend uv run python -m app.cli <command>`.
 """
 import re
-from typing import Optional
 
 import typer
 from pydantic import ValidationError
@@ -33,7 +32,7 @@ def _username_from_email(email: str) -> str:
 def create_admin(
     email: str = typer.Argument(..., help="Email address, used to log in."),
     full_name: str = typer.Argument(..., help="Full name, e.g. \"Jane Doe\"."),
-    username: Optional[str] = typer.Option(
+    username: str | None = typer.Option(
         None, help="Username. Default: the part of the email before '@'."),
 ) -> None:
     """Create an administrator account. The password is asked for, never passed

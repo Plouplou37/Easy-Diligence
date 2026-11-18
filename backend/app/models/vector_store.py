@@ -1,11 +1,13 @@
-from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, BigInteger, Boolean
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
+
 from app.core.database import Base
+
 
 class VectorStore(Base):
     __tablename__ = "vector_stores"
-    
+
     # Minimal tracking - all metadata fetched from OpenAI API
     id = Column(String(255), primary_key=True, index=True)  # OpenAI vector store ID
     name = Column(String(255), nullable=False)  # Vector store name
@@ -13,7 +15,7 @@ class VectorStore(Base):
     created_by = Column(Integer, ForeignKey("users.id"), nullable=False)  # Ownership tracking
     created_at = Column(DateTime(timezone=True), server_default=func.now())  # Our record tracking
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())  # Our record tracking
-    
+
     # Relationships
     creator = relationship("User")
     session_assignments = relationship("SessionVectorStore", back_populates="vector_store")
@@ -32,7 +34,7 @@ class SessionVectorStore(Base):
     session = relationship("DDSession")
     vector_store = relationship("VectorStore", back_populates="session_assignments")
     assignee = relationship("User")
-    
+
     # Constraints: unique assignment per session/dd_type combination
     __table_args__ = (
         # This ensures no duplicate assignments

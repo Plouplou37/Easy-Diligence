@@ -1,9 +1,10 @@
-import aiosmtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from jinja2 import Template
-from typing import List, Optional
 import logging
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+
+import aiosmtplib
+from jinja2 import Template
+
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -23,9 +24,9 @@ class EmailService:
         to_email: str,
         subject: str,
         html_content: str,
-        text_content: Optional[str] = None,
-        cc: Optional[List[str]] = None,
-        bcc: Optional[List[str]] = None
+        text_content: str | None = None,
+        cc: list[str] | None = None,
+        bcc: list[str] | None = None
     ) -> bool:
         """Send an email using SMTP."""
         try:
@@ -34,7 +35,7 @@ class EmailService:
             message["Subject"] = subject
             message["From"] = f"{self.mail_from_name} <{self.mail_from}>"
             message["To"] = to_email
-            
+
             if cc:
                 message["Cc"] = ", ".join(cc)
             if bcc:
@@ -78,7 +79,7 @@ class EmailService:
     async def send_password_reset_email(self, to_email: str, reset_token: str, user_name: str = "") -> bool:
         """Send password reset email."""
         reset_link = f"{self.frontend_url}/reset-password?token={reset_token}"
-        
+
         # HTML template
         html_template = Template("""
 <!DOCTYPE html>
@@ -138,16 +139,16 @@ class EmailService:
         <h1>🔐 Password Reset Request</h1>
         <p>Due Diligence Automation Platform</p>
     </div>
-    
+
     <div class="content">
         <h2>Hello{% if user_name %} {{ user_name }}{% endif %}!</h2>
-        
+
         <p>We received a request to reset your password for your Due Diligence Automation account.</p>
-        
+
         <p>Click the button below to reset your password:</p>
-        
+
         <a href="{{ reset_link }}" class="button">Reset My Password</a>
-        
+
         <div class="warning">
             <p><strong>Important Security Information:</strong></p>
             <ul>
@@ -156,16 +157,16 @@ class EmailService:
                 <li>Never share this link with anyone</li>
             </ul>
         </div>
-        
+
         <p>If the button doesn't work, copy and paste this link into your browser:</p>
         <p style="word-break: break-all; background: #e9ecef; padding: 10px; border-radius: 5px;">{{ reset_link }}</p>
-        
+
         <p>If you have any questions or need assistance, please contact our support team.</p>
-        
+
         <p>Best regards,<br>
         <strong>Due Diligence Automation Team</strong></p>
     </div>
-    
+
     <div class="footer">
         <p>This is an automated message. Please do not reply to this email.</p>
         <p>© 2025 Due Diligence Automation Platform. All rights reserved.</p>
@@ -173,7 +174,7 @@ class EmailService:
 </body>
 </html>
         """)
-        
+
         # Text template (fallback)
         text_template = Template("""
 Password Reset Request - Due Diligence Automation
@@ -204,7 +205,7 @@ This is an automated message. Please do not reply to this email.
             reset_link=reset_link,
             user_name=user_name
         )
-        
+
         text_content = text_template.render(
             reset_link=reset_link,
             user_name=user_name

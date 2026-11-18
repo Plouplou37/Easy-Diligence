@@ -1,22 +1,29 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
-from app.core.database import get_db
-from app.models.session import DDSession, SessionStatus
-from app.models.company import Company
-from app.models.questions import DDSection, DDQuestion
-from app.models.dd_types import DDType as DDTypeModel
-from app.models.user import User
-from app.api.deps import get_current_active_user
-from app.services.authz import assert_company_view
-from app.schemas.session import SessionCreate, SessionResponse, SessionStatusResponse, SessionListResponse, PaginatedSessionResponse
-from app.core.cache import cache_response, CacheInvalidator
-from app.core.pagination import PaginationParams, paginate_query
-from typing import Optional, List
-from datetime import datetime
-import secrets
-import string
 import json
 import logging
+import secrets
+import string
+from datetime import datetime
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+
+from app.api.deps import get_current_active_user
+from app.core.cache import CacheInvalidator
+from app.core.database import get_db
+from app.core.pagination import PaginationParams, paginate_query
+from app.models.company import Company
+from app.models.dd_types import DDType as DDTypeModel
+from app.models.questions import DDQuestion, DDSection
+from app.models.session import DDSession, SessionStatus
+from app.models.user import User
+from app.schemas.session import (
+    PaginatedSessionResponse,
+    SessionCreate,
+    SessionListResponse,
+    SessionResponse,
+    SessionStatusResponse,
+)
+from app.services.authz import assert_company_view
 
 logger = logging.getLogger(__name__)
 
@@ -74,22 +81,22 @@ async def create_session(
         name_part = ''.join(name.split())[:3].upper()
         if not name_part:
             name_part = 'SES'
-        
+
         # Add user identifier
         user_part = str(user_id)[-2:].zfill(2)
-        
+
         # Add random suffix for uniqueness
         random_part = ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(4))
-        
+
         # Combine: NAME-USER-RANDOM
         return f"{name_part}-{user_part}-{random_part}"
-    
+
     session_code = generate_session_code(session.name, current_user.id)
-    
+
     # Ensure uniqueness
     while db.query(DDSession).filter(DDSession.session_code == session_code).first():
         session_code = generate_session_code(session.name, current_user.id)
-    
+
     # Create session with user tracking and unique code
     db_session = DDSession(
         session_code=session_code,
@@ -103,10 +110,10 @@ async def create_session(
     db.add(db_session)
     db.commit()
     db.refresh(db_session)
-    
+
     # Invalidate session caches after creating new session
     CacheInvalidator.invalidate_session_cache()
-    
+
     # Initialize progress for selected DD types (or all active if none specified)
     if session.dd_type_ids:
         # Use the specified DD type IDs
@@ -117,28 +124,28 @@ async def create_session(
     else:
         # Default: all active DD types
         selected_dd_types = db.query(DDTypeModel).filter(DDTypeModel.is_active == True).all()
-    
+
     for dd_type in selected_dd_types:
         # Get sections directly from the DD type (consolidated structure)
         sections = db.query(DDSection).filter(DDSection.dd_type_id == dd_type.id).all()
-        
+
         total_questions = 0
         if sections:
             # Count all questions in all sections of this DD type
             for section in sections:
                 questions_count = db.query(DDQuestion).filter(DDQuestion.section_id == section.id).count()
                 total_questions += questions_count
-            
+
             # Progress tracking is handled by dd_executions table
         else:
             # No sections found for this DD type - continue
             pass
-    
+
     # Store the selected DD types in the session for frontend reference
     if selected_dd_types:
         dd_types_data = [{"code": dd_type.code, "name": dd_type.name} for dd_type in selected_dd_types]
         db_session.dd_types_json = json.dumps(dd_types_data)
-    
+
     db.commit()
     return db_session
 
@@ -161,7 +168,7 @@ async def get_session(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Session not found"
         )
-    
+
     # Check permissions: admin can see all, others only their own
     if current_user.role != "admin":
         if session.created_by != current_user.id and session.assigned_to != current_user.id:
@@ -169,7 +176,7 @@ async def get_session(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="You don't have permission to view this session"
             )
-    
+
     # Use custom serialization to ensure dd_types_json is included
     return SessionResponse.from_db_model(session)
 
@@ -193,7 +200,7 @@ async def get_session_status(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Session not found"
         )
-    
+
     # Check permissions
     if current_user.role != "admin":
         if session.created_by != current_user.id and session.assigned_to != current_user.id:
@@ -201,16 +208,17 @@ async def get_session_status(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="You don't have permission to view this session"
             )
-    
+
     # Get executions with preloaded relationships for efficiency
-    from app.models.execution import DDExecution
     from sqlalchemy.orm import joinedload
+
+    from app.models.execution import DDExecution
     execution_records = db.query(DDExecution).options(
         joinedload(DDExecution.dd_type)
     ).filter(
         DDExecution.session_id == session.id
     ).all()
-    
+
     # If no executions, return empty progress (new sessions won't have progress until executions are created)
     if not execution_records:
         return SessionStatusResponse(
@@ -218,11 +226,12 @@ async def get_session_status(
             status=session.status,
             progress=[]
         )
-    
+
     # Optimize: Get all answer statistics in one query instead of N separate queries
-    from app.models.answer import DDAnswer, AnswerStatus
-    from sqlalchemy import distinct, func, case
-    
+    from sqlalchemy import case, distinct, func
+
+    from app.models.answer import AnswerStatus, DDAnswer
+
     # Get answer statistics for all executions in one query
     answer_stats = db.query(
         DDAnswer.execution_id,
@@ -241,7 +250,7 @@ async def get_session_status(
     ).filter(
         DDAnswer.execution_id.in_([ex.id for ex in execution_records])
     ).group_by(DDAnswer.execution_id).all()
-    
+
     # Create a lookup dict for answer stats
     stats_lookup = {
         stats.execution_id: {
@@ -250,18 +259,17 @@ async def get_session_status(
         }
         for stats in answer_stats
     }
-    
+
     progress_data = []
     for execution in execution_records:
         # Get DD type info from preloaded relationship
         dd_type_code = execution.dd_type.code if execution.dd_type else None
         dd_type_name = execution.dd_type.name if execution.dd_type else None
-        
+
         # Get answer statistics from our optimized lookup
         execution_stats = stats_lookup.get(execution.id, {'answered': 0, 'completed': 0})
         unique_questions_answered = execution_stats['answered']
-        unique_questions_completed = execution_stats['completed']
-        
+
         # Map execution status to UI progress status
         if execution.status == "not_started":
             ui_status = "not_started"
@@ -287,20 +295,20 @@ async def get_session_status(
         total_questions_in_type = db.query(DDQuestion).join(DDSection).filter(
             DDSection.dd_type_id == execution.dd_type_id
         ).count()
-        
+
         # Calculate percentage
         percentage = (questions_processed / total_questions_in_type * 100) if total_questions_in_type > 0 else 0
-        
+
         # Get sections progress data for this DD type
         sections_progress = []
         sections = db.query(DDSection).filter(
             DDSection.dd_type_id == execution.dd_type_id
         ).order_by(DDSection.order_index).all()
-        
+
         # Optimize: Get section statistics in batch queries instead of per-section
         section_question_counts = {}
         section_answer_counts = {}
-        
+
         if sections:
             # Get all question counts for all sections in one query
             section_counts_query = db.query(
@@ -309,12 +317,12 @@ async def get_session_status(
             ).filter(
                 DDQuestion.section_id.in_([s.id for s in sections])
             ).group_by(DDQuestion.section_id).all()
-            
+
             section_question_counts = {
-                row.section_id: row.total_questions 
+                row.section_id: row.total_questions
                 for row in section_counts_query
             }
-            
+
             # Get all answered questions counts for this execution in one query
             section_answer_query = db.query(
                 DDQuestion.section_id,
@@ -324,19 +332,19 @@ async def get_session_status(
                 DDQuestion.section_id.in_([s.id for s in sections]),
                 DDAnswer.answer_text.isnot(None)
             ).group_by(DDQuestion.section_id).all()
-            
+
             section_answer_counts = {
-                row.section_id: row.answered_questions 
+                row.section_id: row.answered_questions
                 for row in section_answer_query
             }
-        
+
         for section in sections:
             # Get counts from our optimized batch queries
             section_total_questions = section_question_counts.get(section.id, 0)
             section_questions_answered = section_answer_counts.get(section.id, 0)
-            
+
             section_percentage = (section_questions_answered / section_total_questions * 100) if section_total_questions > 0 else 0
-            
+
             # Determine section status
             if section_questions_answered == 0:
                 section_status = "not_started"
@@ -344,7 +352,7 @@ async def get_session_status(
                 section_status = "completed"
             else:
                 section_status = "in_progress"
-            
+
             sections_progress.append({
                 "name": section.title,
                 "status": section_status,
@@ -352,7 +360,7 @@ async def get_session_status(
                 "total_questions": section_total_questions,
                 "percentage": section_percentage
             })
-        
+
         # Get analytics data from answers. Only the current version of each:
         # superseded versions and failed retries stay in the table, and counting
         # their tokens inflated the total well past what the run actually cost.
@@ -417,7 +425,7 @@ async def get_session_status(
             "current_question": None,  # Not tracked in new system
             "last_error": last_error,  # Error message when status is failed
         })
-    
+
     return SessionStatusResponse(
         id=session.id,
         status=session.status,
@@ -426,45 +434,45 @@ async def get_session_status(
 
 @router.get("/", response_model=SessionListResponse)
 async def list_sessions(
-    company_id: Optional[int] = None,
+    company_id: int | None = None,
     page: int = 1,
     limit: int = 50,
-    status: Optional[str] = None,
-    created_by: Optional[int] = None,
-    search: Optional[str] = None,
+    status: str | None = None,
+    created_by: int | None = None,
+    search: str | None = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """List sessions with improved pagination and filtering"""
     # Create pagination params
     pagination_params = PaginationParams(page=page, limit=limit)
-    
+
     # Build base query
     query = db.query(DDSession)
-    
+
     # Apply filters
     filters = {}
-    
+
     # User permission filter
     if current_user.role != "admin":
         query = query.filter(
-            (DDSession.created_by == current_user.id) | 
+            (DDSession.created_by == current_user.id) |
             (DDSession.assigned_to == current_user.id)
         )
-    
+
     if company_id:
         query = query.filter(DDSession.company_id == company_id)
         filters["company_id"] = company_id
-    
+
     if status:
         from app.models.session import SessionStatus
         query = query.filter(DDSession.status == SessionStatus(status))
         filters["status"] = status
-    
+
     if created_by:
         query = query.filter(DDSession.created_by == created_by)
         filters["created_by"] = created_by
-    
+
     if search:
         # Search in session name and description
         search_term = f"%{search}%"
@@ -473,7 +481,7 @@ async def list_sessions(
             (DDSession.description.ilike(search_term))
         )
         filters["search"] = search
-    
+
     # Add eager loading for related data to avoid N+1 queries
     from sqlalchemy.orm import joinedload
     query = query.options(
@@ -481,34 +489,34 @@ async def list_sessions(
         joinedload(DDSession.creator),
         joinedload(DDSession.assignee)
     )
-    
+
     # Order by creation date (most recent first)
     query = query.order_by(DDSession.created_at.desc())
-    
+
     # Get total count before pagination
     total_count = query.count()
-    
+
     # Apply pagination
     paginated_query = paginate_query(query, pagination_params)
     sessions = paginated_query.all()
-    
+
     # Convert to response objects
     session_responses = []
     for session in sessions:
         # Use custom serialization method
         session_response = SessionResponse.from_db_model(session)
-        
+
         # Add username if available from preloaded relationship
         if session.creator:
             session_response.created_by_username = session.creator.username or session.creator.email
-        
+
         session_responses.append(session_response)
-    
+
     # Create paginated response
     from app.core.pagination import PaginationMeta
     meta = PaginationMeta.from_params(pagination_params, total_count)
     paginated_response = PaginatedSessionResponse(items=session_responses, meta=meta)
-    
+
     # Return formatted response with filters
     return SessionListResponse.from_paginated(paginated_response, filters=filters)
 

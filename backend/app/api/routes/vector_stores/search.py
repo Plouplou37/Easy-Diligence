@@ -2,15 +2,17 @@
 Vector Store Search Functionality
 Handle search operations within vector stores
 """
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from app.core.database import get_db
-from app.models.vector_store import VectorStore
-from app.models.user import User
+
 from app.api.deps import get_current_active_user
+from app.core.database import get_db
 from app.engine.openai_client import OpenAIProcessor
+from app.models.user import User
+from app.models.vector_store import VectorStore
 from app.schemas.vector_stores import VectorStoreSearchRequest, VectorStoreSearchResponse
-import logging
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -29,16 +31,16 @@ async def search_vector_store(
         VectorStore.id == vector_store_id,
         VectorStore.created_by == current_user.id
     ).first()
-    
+
     if not vector_store:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Vector store not found"
         )
-    
+
     try:
         openai_processor = OpenAIProcessor()
-        
+
         # Perform vector search using OpenAI
         search_results = await openai_processor.search_vector_store(
             vector_store_id=vector_store_id,
@@ -46,7 +48,7 @@ async def search_vector_store(
             limit=search_request.limit or 10,
             filter_metadata=search_request.filter if hasattr(search_request, 'filter') else None
         )
-        
+
         return VectorStoreSearchResponse(
             query=search_request.query,
             vector_store_id=vector_store_id,
@@ -54,19 +56,19 @@ async def search_vector_store(
             total_results=len(search_results.get("results", [])),
             processing_time_ms=search_results.get("processing_time_ms", 0)
         )
-        
+
     except Exception as e:
         # If vector store doesn't exist in OpenAI, clean up database
         if "404" in str(e):
             db.delete(vector_store)
             db.commit()
-            raise HTTPException(
+            raise HTTPException(  # noqa: B904
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Vector store no longer exists"
             )
-        
+
         logger.exception("Search failed")
-        raise HTTPException(
+        raise HTTPException(  # noqa: B904
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Search failed"
         )

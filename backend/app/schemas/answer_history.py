@@ -1,27 +1,29 @@
-from pydantic import BaseModel, field_validator
-from typing import Optional, Dict, Any, List
-from datetime import datetime
 import json
+from datetime import datetime
+from typing import Any
+
+from pydantic import BaseModel, field_validator
+
 
 class AnswerHistoryCreate(BaseModel):
     answer_id: int
     version: int
     content: str
-    sources: Optional[Dict[str, Any]] = None
-    edit_reason: Optional[str] = None
+    sources: dict[str, Any] | None = None
+    edit_reason: str | None = None
 
 class AnswerHistoryResponse(BaseModel):
     id: int
     answer_id: int
     version: int
     content: str
-    sources: Optional[Any] = None
-    edited_by: Optional[int]
-    edit_reason: Optional[str]
+    sources: Any | None = None
+    edited_by: int | None
+    edit_reason: str | None
     created_at: datetime
 
     # Relationships
-    editor_name: Optional[str] = None
+    editor_name: str | None = None
 
     @field_validator('sources', mode='before')
     @classmethod
@@ -48,9 +50,9 @@ class AnswerVersionHistory(BaseModel):
     """Complete version history for an answer"""
     answer_id: int
     current_version: int
-    versions: List[AnswerHistoryResponse]
+    versions: list[AnswerHistoryResponse]
     total_versions: int
-    
+
     class Config:
         from_attributes = True
 
@@ -61,9 +63,9 @@ class VersionComparison(BaseModel):
     version_b: int
     content_a: str
     content_b: str
-    sources_a: Optional[Dict[str, Any]]
-    sources_b: Optional[Dict[str, Any]]
-    editor_a: Optional[str]
-    editor_b: Optional[str]
+    sources_a: dict[str, Any] | None
+    sources_b: dict[str, Any] | None
+    editor_a: str | None
+    editor_b: str | None
     created_a: datetime
     created_b: datetime

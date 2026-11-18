@@ -1,25 +1,19 @@
 [project]
-name = "due-diligence-automation"
-version = "1.0.0"
-description = "AI-powered Due Diligence Automation Platform"
+name = "easy-diligence"
+version = "0.1.0"
+description = "Easy Diligence: AI-assisted due diligence of investment funds"
 authors = [
     {name = "Easy-Diligence contributors"}
 ]
-license = {text = "MIT"}
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 keywords = ["due-diligence", "automation", "ai", "fastapi", "openai"]
 classifiers = [
-    "Development Status :: 4 - Beta",
-    "Intended Audience :: Financial and Insurance Industry",
-    "License :: OSI Approved :: MIT License",
+    "Private :: Do Not Upload",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Framework :: FastAPI",
-    "Topic :: Office/Business :: Financial",
 ]
 
-# Production Dependencies
 dependencies = [
     # Web Framework
     "fastapi>=0.115",
@@ -27,28 +21,21 @@ dependencies = [
     # Database
     "sqlalchemy>=2.0.23,<2.1",
     "pymysql>=1.1.1",
-    "cryptography>=46",
-    # AI & Machine Learning
+    "cryptography>=46",  # MySQL 8 authentication (caching_sha2_password)
+    # AI
     # Pinned: the engine (Responses API parameters, compaction via extra_body)
     # was tuned and measured on this exact SDK version.
     "openai==2.2.0",
-    # Caching & Message Queue
+    # Cache (falls back to memory when Redis is unreachable)
     "redis==5.0.1",
-    "celery==5.3.4",
-    # Web & File Handling
+    # Uploads (FastAPI form and file parsing)
     "python-multipart>=0.0.31",
-    "websockets==12.0",
-    "aiofiles==23.2.1",
-    "httpx>=0.27",
-    # Data Validation & Configuration
+    # Validation & configuration (pydantic-settings reads backend/.env)
     "pydantic[email]>=2.7,<3",
     "pydantic-settings>=2.6,<3",
-    "python-dotenv>=1.2.2",
-    "python-dateutil==2.8.2",
-    # Authentication & Security
+    # Authentication & security
     "bcrypt>=4.2",
     "pyjwt>=2.10",
-    "email-validator>=2.2",
     # Email
     "aiosmtplib>=5.1.2",
     "jinja2>=3.1.6",
@@ -60,34 +47,22 @@ dependencies = [
     "typer>=0.12",
 ]
 
-# Optional Dependencies
-[project.optional-dependencies]
-# Development dependencies
+# Installed by `uv sync`, left out of the Docker image by `uv sync --no-dev`.
+[dependency-groups]
 dev = [
-    "pytest==7.4.3",
-    "pytest-asyncio==0.21.1",
-    "pytest-mock==3.12.0",
+    "pytest>=9",
+    "pytest-asyncio>=1",
+    "pytest-mock>=3.14",
     "pytest-env>=1.1",
-    "fakeredis==2.20.1",
-    "ruff>=0.1.0",
-    "black>=23.0.0",
-    "mypy>=1.7.0",
-    "pre-commit>=3.0.0",
+    "httpx>=0.27",  # FastAPI's TestClient
+    "ruff>=0.17",
+    "mypy>=1.18",
+    "pre-commit>=4",
+    "pip-audit>=2.9",
 ]
 
-# Production monitoring and profiling
-monitoring = [
-    "sentry-sdk[fastapi]>=1.38.0",
-    "prometheus-client>=0.19.0",
-    "opentelemetry-api>=1.20.0",
-]
-
-# Documentation
-docs = [
-    "mkdocs>=1.5.0",
-    "mkdocs-material>=9.4.0",
-    "mkdocstrings[python]>=0.24.0",
-]
+[tool.uv]
+required-version = ">=0.9.17"
 
 [build-system]
 requires = ["hatchling"]
@@ -96,10 +71,14 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["app"]
 
-# Tool configurations
+# --- Ruff: lint and format ------------------------------------------------------
+
 [tool.ruff]
-target-version = "py311"
+target-version = "py312"
 line-length = 100
+extend-exclude = ["migrations"]
+
+[tool.ruff.lint]
 select = [
     "E",  # pycodestyle errors
     "W",  # pycodestyle warnings
@@ -110,53 +89,79 @@ select = [
     "UP", # pyupgrade
 ]
 ignore = [
-    "E501", # line too long, handled by black
-    "B008", # do not perform function calls in argument defaults
+    "E501",  # line length: left to the formatter
+    "B008",  # Depends(...) in argument defaults is how FastAPI declares dependencies
+    "E712",  # `column == True` builds a SQLAlchemy filter; `is True` would break it
+    "UP042", # (str, Enum) members format differently from StrEnum ones: kept as is
+    "UP046", # Pydantic generic models keep the Generic[T] spelling
 ]
+# Older code carries `# noqa: <rule>` where it breaks a rule (mostly B904,
+# raise without `from`): new code is held to every rule, and each marker goes
+# away as the module around it is reworked.
 
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]
+# The scripts put backend/ on sys.path before importing the app.
+"scripts/*.py" = ["E402"]
 
-[tool.black]
-target-version = ['py311']
-line-length = 100
-include = '\.pyi?$'
-extend-exclude = '''
-/(
-  # directories
-  \.eggs
-  | \.git
-  | \.hg
-  | \.mypy_cache
-  | \.tox
-  | \.venv
-  | build
-  | dist
-)/
-'''
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+
+# --- Mypy -------------------------------------------------------------------------
 
 [tool.mypy]
-python_version = "3.11"
-warn_return_any = true
+python_version = "3.12"
+# Permissive start: most of the code has no annotations yet. Tighten module by
+# module, through [[tool.mypy.overrides]], as the code is refactored.
+ignore_missing_imports = true
 warn_unused_configs = true
-disallow_untyped_defs = true
-disallow_incomplete_defs = true
-check_untyped_defs = true
-disallow_untyped_decorators = true
-no_implicit_optional = true
 warn_redundant_casts = true
-warn_unused_ignores = true
-warn_no_return = true
-warn_unreachable = true
-strict_equality = true
+no_implicit_optional = true
+plugins = ["pydantic.mypy"]
+
+# Not checked yet. Nearly every error here comes from the models being declared
+# with Column(...), which mypy cannot type: a module leaves this list once the
+# models move to Mapped[...] (with the Alembic migration) or once it is
+# reworked into services. New modules never go in it.
+[[tool.mypy.overrides]]
+module = [
+    "app.api.routes.answers",
+    "app.api.routes.auth",
+    "app.api.routes.company",
+    "app.api.routes.dashboard",
+    "app.api.routes.dd_types",
+    "app.api.routes.documents",
+    "app.api.routes.executions",
+    "app.api.routes.processing",
+    "app.api.routes.questions",
+    "app.api.routes.session",
+    "app.api.routes.summaries",
+    "app.api.routes.vector_stores.*",
+    "app.core.cache",
+    "app.core.utils",
+    "app.engine.openai_client",
+    "app.engine.processor",
+    "app.engine.summarizer",
+    "app.exports.answers",
+    "app.models.answer",
+    "app.models.session",
+    "app.services.auth",
+    "app.services.authz",
+    "app.services.file_parser",
+]
+ignore_errors = true
+
+# --- Pytest -----------------------------------------------------------------------
 
 [tool.pytest.ini_options]
-minversion = "6.0"
+minversion = "9.0"
 addopts = "-ra -q --strict-markers"
 testpaths = ["tests"]
 python_files = ["test_*.py", "*_test.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "integration: marks tests as integration tests",

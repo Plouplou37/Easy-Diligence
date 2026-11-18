@@ -1,21 +1,20 @@
-from app.engine.openai_client import OpenAIProcessor
-from app.engine.rate_limiter import RateLimiter
-from app.models.answer import DDAnswer, AnswerStatus, ErrorType
-from app.models.answer_history import DDAnswerHistory
-from app.models.execution import DDExecution, ExecutionStatus
-from app.models.response import DDResponse
-from app.models.message import DDMessage
-from app.models.questions import DDQuestion, DDSection
-from app.core.database import get_db
+import logging
+import time
+import uuid
+from datetime import datetime
+
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import func
-import logging
-import asyncio
-import time
-from typing import Dict, Any, Optional, Tuple
-from datetime import datetime
-import json
-import uuid
+
+from app.core.database import get_db
+from app.engine.openai_client import OpenAIProcessor
+from app.engine.rate_limiter import RateLimiter
+from app.models.answer import AnswerStatus, DDAnswer, ErrorType
+from app.models.answer_history import DDAnswerHistory
+from app.models.execution import DDExecution, ExecutionStatus
+from app.models.message import DDMessage
+from app.models.questions import DDQuestion, DDSection
+from app.models.response import DDResponse
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +35,7 @@ class DDProcessor:
         self.last_global_error_type = None
         self.circuit_open = False
 
-    def _categorize_error(self, error: Exception) -> Tuple[ErrorType, bool]:
+    def _categorize_error(self, error: Exception) -> tuple[ErrorType, bool]:
         """
         Categorize error and determine if it's retryable
         Returns: (ErrorType, is_retryable)
@@ -176,21 +175,21 @@ class DDProcessor:
             # Create or get execution record
             self.execution = self._get_or_create_execution(db)
             self.conversation_id = str(uuid.uuid4())
-            
+
             # Update execution status to in_progress
             self.execution.status = ExecutionStatus.IN_PROGRESS
             self.execution.conversation_id = self.conversation_id
             db.commit()
-            
+
             # Get questions to process
             questions = self._get_questions_to_process(db)
 
             logger.info(f"Starting processing for execution {self.execution.id} with {len(questions)} questions")
-            
+
             # Track success and failure counts
             successful_count = 0
             failed_count = 0
-            
+
             # Process each question
             for idx, question in enumerate(questions):
                 # Check if processing should continue (user may have paused)
@@ -252,7 +251,7 @@ class DDProcessor:
                             self.circuit_open = False
 
                     continue
-            
+
             # Determine final status based on results
             total_questions = len(questions)
             success_rate = (successful_count / total_questions * 100) if total_questions > 0 else 0
@@ -270,12 +269,12 @@ class DDProcessor:
                 # All questions succeeded
                 self.execution.status = ExecutionStatus.GENERATED
                 logger.info(f"Full success: All {successful_count} questions processed successfully")
-            
+
             db.commit()
-            
+
             logger.info(f"Processing completed for execution {self.execution.id}")
             return True
-            
+
         except Exception as e:
             logger.error(f"Error in DD processing: {e}")
             if self.execution:
@@ -284,7 +283,7 @@ class DDProcessor:
             return False
         finally:
             db.close()
-    
+
     def resume_processing(self, vector_store_ids: list, company_info: dict) -> bool:
         """Resume processing from where it left off, preserving conversation context"""
         logger.info(f"RESUME: Starting resume_processing for session={self.session_id}, dd_type={self.dd_type}")
@@ -472,9 +471,9 @@ class DDProcessor:
                 db.commit()
             return False
         finally:
-            logger.info(f"RESUME: Completed resume_processing (finally block)")
+            logger.info("RESUME: Completed resume_processing (finally block)")
             db.close()
-    
+
     def _get_questions_to_process(self, db: Session) -> list:
         """Get all questions for the DD type"""
         # Find DD type by code first, then get its sections directly
@@ -492,7 +491,7 @@ class DDProcessor:
             raise ValueError(f"No questions found for DD type {self.dd_type}")
 
         return questions
-    
+
     def _get_or_create_execution(self, db: Session) -> DDExecution:
         """Get existing execution or create new one"""
         # Get dd_type_id from code
@@ -516,9 +515,9 @@ class DDProcessor:
             db.commit()
             db.refresh(execution)
             logger.info(f"Created new execution {execution.id} for session {self.session_id}, DD type {self.dd_type}")
-        
+
         return execution
-    
+
     def _store_openai_response(self, db: Session, result: dict) -> DDResponse:
         """Store the complete OpenAI response"""
         response_record = DDResponse(
@@ -530,14 +529,14 @@ class DDProcessor:
         db.add(response_record)
         db.commit()
         db.refresh(response_record)
-        
+
         logger.debug(f"Stored OpenAI response {response_record.response_id}")
         return response_record
-    
+
     def _store_response_messages(self, db: Session, response_record: DDResponse, result: dict):
         """Extract and store messages from OpenAI response"""
         messages = result.get('messages', [])
-        
+
         # Add null check for messages iteration
         if messages and isinstance(messages, list):
             for idx, message in enumerate(messages):
@@ -553,13 +552,13 @@ class DDProcessor:
                     openai_message_id=openai_msg_id
                 )
                 db.add(message_record)
-            
+
             if len(messages) > 0:
                 db.commit()
                 logger.debug(f"Stored {len(messages)} messages for response {response_record.response_id}")
-    
+
     def _process_single_question(
-        self, db: Session, question: DDQuestion, 
+        self, db: Session, question: DDQuestion,
         vector_store_ids: list, company_info: dict, question_index: int
     ):
         """Process a single question with full response tracking"""
@@ -575,11 +574,11 @@ class DDProcessor:
                 raise ValueError(f"Question {question.question_code} section has no section_code")
             if not question.question_text:
                 raise ValueError(f"Question {question.question_code} has no question_text")
-                
+
             logger.info(f"Starting to process question {question.question_code}")
             logger.debug(f"Question text: {question.question_text[:100]}...")
             logger.debug(f"Section code: {question.section.section_code}")
-            
+
             # ISSUE #7 FIX: Get previous response_id using question order, not created_at
             # This ensures correct context chain when retrying failed questions
             previous_response_id = None
@@ -617,7 +616,6 @@ class DDProcessor:
 
             result = None
             last_error = None
-            last_error_type = ErrorType.UNKNOWN
             retry_count = 0
 
             for attempt in range(self.MAX_RETRIES):
@@ -628,7 +626,7 @@ class DDProcessor:
                         previous_response_id=previous_response_id,
                         company_info=company_info
                     )
-                    logger.info(f"OpenAI processing completed successfully")
+                    logger.info("OpenAI processing completed successfully")
                     break  # Success, exit retry loop
 
                 except Exception as e:
@@ -637,7 +635,6 @@ class DDProcessor:
 
                     # Categorize error
                     error_type, is_retryable = self._categorize_error(e)
-                    last_error_type = error_type
 
                     logger.error(f"Error in OpenAI call (attempt {retry_count}/{self.MAX_RETRIES}): {str(e)}")
                     logger.error(f"Error categorized as: {error_type.value}, Retryable: {is_retryable}")
@@ -698,17 +695,17 @@ class DDProcessor:
             import traceback
             logger.error(f"Full traceback: {traceback.format_exc()}")
             raise
-        
+
         # Store OpenAI response
         response_record = self._store_openai_response(db, result)
-        
+
         # Extract and store messages
         self._store_response_messages(db, response_record, result)
-        
+
         # CRITICAL FIX: Ensure sources are properly formatted for JSONB storage
         sources_data = result.get('sources', {})
-        
-        
+
+
         # Ensure sources is always a dict, never a string or list
         if sources_data is None:
             sources_data = {}
@@ -723,7 +720,7 @@ class DDProcessor:
                 "web": [s for s in sources_data if isinstance(s, dict) and s.get("type") == "web_search"],
                 "total_count": len(sources_data)
             }
-        
+
         # Final validation - ensure it's a dict
         if not isinstance(sources_data, dict):
             logger.error(f"Sources is not a dict after processing! Type: {type(sources_data)}, Value: {sources_data}")
@@ -940,4 +937,4 @@ class DDProcessor:
         db.refresh(answer)
         logger.info(f"Regenerated answer {answer.id} (new version {new_version})")
         return answer
-    
+

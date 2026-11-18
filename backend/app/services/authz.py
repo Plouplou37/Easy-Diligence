@@ -13,12 +13,12 @@ pattern is not duplicated in every router:
   shared and visible to everyone. Admins see everything.
 """
 
-from sqlalchemy import or_
 from fastapi import HTTPException, status
+from sqlalchemy import or_
 
-from app.models.session import DDSession
-from app.models.dd_types import DDType
 from app.models.company import Company
+from app.models.dd_types import DDType
+from app.models.session import DDSession
 from app.models.user import User
 
 

@@ -38,12 +38,12 @@ import sys
 
 sys.path.insert(0, ".")
 
-from sqlalchemy import or_                               # noqa: E402
+from sqlalchemy import or_  # noqa: E402
 
-from app.core.database import SessionLocal                    # noqa: E402
-from app.models.answer import DDAnswer                   # noqa: E402
-from app.models.dd_types import DDType                   # noqa: E402
-from app.models.questions import DDSection, DDQuestion   # noqa: E402
+from app.core.database import SessionLocal  # noqa: E402
+from app.models.answer import DDAnswer  # noqa: E402
+from app.models.dd_types import DDType  # noqa: E402
+from app.models.questions import DDQuestion, DDSection  # noqa: E402
 
 # "A.01" -- the reviewer's own numbering on every reference question. Where both
 # sides have it, it proves the alignment far better than the rank does: a
@@ -132,7 +132,7 @@ def check_structure(db_sections, file_sections) -> list:
                         f"{len(file_sections)} dans le fichier")
 
     for rank, ((section, questions), (title, texts)) in enumerate(
-            zip(db_sections, file_sections), 1):
+            zip(db_sections, file_sections, strict=False), 1):
         where = f"section {rank} '{section.title}'"
 
         if (section.title or "").strip() != title:
@@ -144,7 +144,7 @@ def check_structure(db_sections, file_sections) -> list:
             problems.extend(f"  {line}" for line in describe_gap(questions, texts))
             continue
 
-        for rank_q, (question, (text, _, ref)) in enumerate(zip(questions, texts), 1):
+        for rank_q, (question, (text, _, ref)) in enumerate(zip(questions, texts, strict=False), 1):
             old, new = db_reference_of(question), file_reference_of(ref, text)
             if old and new and old != new:
                 problems.append(
@@ -227,8 +227,8 @@ def update_questionnaire(path: str, code: str, apply: bool, answered: bool) -> N
         # alone: they may have been edited by an analyst, and no file wins over
         # that.
         changed = []
-        for (_, questions), (_, texts) in zip(db_sections, file_sections):
-            for question, (text, context, _ref) in zip(questions, texts):
+        for (_, questions), (_, texts) in zip(db_sections, file_sections, strict=False):
+            for question, (text, context, _ref) in zip(questions, texts, strict=False):
                 text_moved = (question.question_text or "") != text
                 fill_context = bool(context) and not (question.context_prompt or "").strip()
                 if text_moved or fill_context:

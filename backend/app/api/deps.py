@@ -31,10 +31,10 @@ def get_current_active_user(
     if not payload:
         raise credentials_exception
 
-    try:
-        user_id = int(payload.get("sub"))
-    except (TypeError, ValueError):
-        raise credentials_exception from None
+    subject = payload.get("sub")
+    if not isinstance(subject, str) or not subject.isdigit():
+        raise credentials_exception
+    user_id = int(subject)
 
     user = get_user(db, user_id)
     if user is None:

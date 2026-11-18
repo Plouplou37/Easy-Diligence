@@ -1,16 +1,18 @@
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, status
+import logging
+
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy.orm import Session
+
+from app.api.deps import get_current_active_user
 from app.core.database import get_db
-from app.models.session import DDSession
+from app.core.utils import build_company_info, get_session_by_identifier
+from app.engine.processor import DDProcessor
 from app.models.company import Company
 from app.models.execution import DDExecution, ExecutionStatus
-from app.models.vector_store import SessionVectorStore
+from app.models.session import DDSession
 from app.models.user import User
-from app.engine.processor import DDProcessor
-from app.core.utils import get_session_by_identifier, build_company_info
+from app.models.vector_store import SessionVectorStore
 from app.services.authz import assert_session_access
-from app.api.deps import get_current_active_user
-import logging
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -80,7 +82,7 @@ def get_vector_store_ids_for_processing(db: Session, session_id: int, dd_type: s
         SessionVectorStore.session_id == session_id,
         SessionVectorStore.dd_type_id == dd_type_obj.id
     ).all()
-    
+
     if dd_assignments:
         vector_store_ids = [assignment.vector_store_id for assignment in dd_assignments]
     else:
@@ -89,10 +91,10 @@ def get_vector_store_ids_for_processing(db: Session, session_id: int, dd_type: s
             SessionVectorStore.session_id == session_id,
             SessionVectorStore.dd_type_id.is_(None)  # NULL means all DD types
         ).all()
-        
+
         if session_assignments:
             vector_store_ids = [assignment.vector_store_id for assignment in session_assignments]
-    
+
     return vector_store_ids
 
 @router.post("/session/{session_identifier}/dd/{dd_type}/start")
@@ -110,7 +112,7 @@ async def start_dd_processing(
     # Get company info
     company = db.query(Company).filter(Company.id == session.company_id).first()
     company_info = build_company_info(company)
-    
+
     # Get DD type by code to get its ID
     dd_type_obj = get_dd_type_by_code(db, dd_type)
 
@@ -179,7 +181,7 @@ async def start_dd_processing(
         db.commit()
         db.refresh(execution)
         logger.info(f"Created new execution {execution.id} for session {session_id}, DD type {dd_type}")
-    
+
     # Start processing in background with error handling
     processor = DDProcessor(session_id, dd_type)
     background_tasks.add_task(
@@ -190,9 +192,9 @@ async def start_dd_processing(
         vector_store_ids,
         company_info
     )
-    
+
     return {
-        "message": f"Started {dd_type} processing", 
+        "message": f"Started {dd_type} processing",
         "session_id": session_id,
         "execution_id": execution.id
     }
@@ -298,7 +300,7 @@ async def resume_dd_processing(
 
     # Resume processing using the new resume method with error handling
     processor = DDProcessor(session_id, dd_type)
-    logger.info(f"RESUME ENDPOINT: Adding background task for resume_processing")
+    logger.info("RESUME ENDPOINT: Adding background task for resume_processing")
     background_tasks.add_task(
         safe_background_task,
         processor.resume_processing,
@@ -307,7 +309,7 @@ async def resume_dd_processing(
         vector_store_ids,
         company_info
     )
-    logger.info(f"RESUME ENDPOINT: Background task added, returning response")
+    logger.info("RESUME ENDPOINT: Background task added, returning response")
 
     return {
         "message": f"Resumed {dd_type} processing",
@@ -334,7 +336,7 @@ async def get_dd_progress(
         DDExecution.session_id == session_id,
         DDExecution.dd_type_id == dd_type_obj.id
     ).first()
-    
+
     if execution:
         # Use execution-based progress
         return {
@@ -345,6 +347,6 @@ async def get_dd_progress(
             "updated_at": execution.updated_at,
             "conversation_id": execution.conversation_id
         }
-    
+
     # No execution found - this DD type hasn't been started yet
     raise HTTPException(status_code=404, detail="No execution record found for this DD type")

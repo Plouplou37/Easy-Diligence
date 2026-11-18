@@ -1,5 +1,4 @@
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
 
@@ -15,10 +14,10 @@ from app.schemas.user import Role, UserProfile
 
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
-def authenticate_user(db: Session, email: str, password: str) -> Optional[User]:
+def authenticate_user(db: Session, email: str, password: str) -> User | None:
     """Authenticate a user by email and password."""
     user = db.query(User).filter(User.email == email).first()
     if not user:
@@ -62,17 +61,17 @@ def create_user(db: Session, profile: UserProfile, password: str, role: Role = "
     return db_user
 
 
-def get_user(db: Session, user_id: int) -> Optional[User]:
+def get_user(db: Session, user_id: int) -> User | None:
     """Get a user by ID."""
     return db.query(User).filter(User.id == user_id).first()
 
 
-def get_user_by_email(db: Session, email: str) -> Optional[User]:
+def get_user_by_email(db: Session, email: str) -> User | None:
     """Get a user by email."""
     return db.query(User).filter(User.email == email).first()
 
 
-def update_user(db: Session, user_id: int, user_update: dict) -> Optional[User]:
+def update_user(db: Session, user_id: int, user_update: dict) -> User | None:
     """Update user information."""
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
@@ -114,8 +113,8 @@ def set_password(db: Session, user: User, new_password: str) -> None:
 
 
 def create_user_session(db: Session, user_id: int, access_token: str, refresh_token: str,
-                        ip_address: Optional[str] = None,
-                        user_agent: Optional[str] = None) -> UserSession:
+                        ip_address: str | None = None,
+                        user_agent: str | None = None) -> UserSession:
     """Record a login. Only the tokens' SHA-256 is stored."""
     session = UserSession(
         user_id=user_id,
@@ -154,7 +153,7 @@ def invalidate_user_sessions(db: Session, user_id: int) -> None:
     db.commit()
 
 
-def validate_refresh_token(db: Session, refresh_token: str) -> Optional[User]:
+def validate_refresh_token(db: Session, refresh_token: str) -> User | None:
     """Return the user of a live session holding this refresh token."""
     session = db.query(UserSession).filter(
         UserSession.refresh_token_hash == hash_token(refresh_token),

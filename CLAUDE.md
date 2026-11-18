@@ -4,7 +4,9 @@ Guide court pour un agent qui travaille sur Easy Diligence. Le reste est dans :
 - [`README.md`](README.md) : installer, lancer, tester ;
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) : la conception (moteur,
   cloisonnement, synthèses, export, design system) ;
-- [`VERSION.md`](VERSION.md) : les versions.
+- [`VERSION.md`](VERSION.md) : la version de l'application et des outils ;
+- [`CHANGELOG.md`](CHANGELOG.md) : le journal des changements, à compléter à
+  chaque changement visible.
 
 ## Repères
 
@@ -55,11 +57,16 @@ Guide court pour un agent qui travaille sur Easy Diligence. Le reste est dans :
 ```bash
 # backend/
 uv run pytest tests/test_auth_security.py tests/test_citation_format.py tests/test_dashboard.py
-uv run ruff check .
+uv run ruff check . && uv run ruff format --check .
+uv run mypy app
 # frontend/
 npm run build
 npm run lint
 ```
 
-Ruff et ESLint signalent déjà de nombreux problèmes dans le code existant : le
-critère est de n'en ajouter aucun.
+- Ruff et mypy passent sur tout le backend. **Ne pas ajouter de `# noqa`**, ni
+  de module dans la liste `ignore_errors` de mypy (`pyproject.toml`) : ces
+  exceptions marquent l'ancien code, et chacune disparaît quand son module est
+  repris.
+- ESLint signale déjà de nombreux problèmes dans le frontend : le critère est de
+  n'en ajouter aucun.

@@ -1,26 +1,26 @@
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from typing import List, Optional
 
-from app.core.database import get_db
-from app.models.summary import DDSummary
-from app.models.session import DDSession
-from app.models.dd_types import DDType
-from app.models.user import User
 from app.api.deps import get_current_active_user
-from app.services.authz import assert_session_access
+from app.core.database import get_db
+from app.core.utils import get_session_by_identifier
 from app.engine.summarizer import (
     cancel_section_summaries_batch,
     collect_section_summaries_batch,
     generate_summaries_for_dd_type,
     submit_section_summaries_batch,
 )
-from app.core.utils import get_session_by_identifier
+from app.models.dd_types import DDType
+from app.models.session import DDSession
+from app.models.summary import DDSummary
+from app.models.user import User
 from app.schemas.summary import (
     DDSummaryBatchResponse,
     DDSummaryResponse,
     DDSummaryUpdate,
 )
+from app.services.authz import assert_session_access
 
 router = APIRouter()
 
@@ -49,7 +49,7 @@ def _load_session_or_404(db: Session, session_id: int) -> DDSession:
     return session
 
 
-@router.post("/session/{session_identifier}/dd/{dd_type}/generate", response_model=List[DDSummaryResponse])
+@router.post("/session/{session_identifier}/dd/{dd_type}/generate", response_model=list[DDSummaryResponse])
 async def generate_summaries(
     session_identifier: str,
     dd_type: str,
@@ -156,10 +156,10 @@ async def cancel_summary_batch(
     )
 
 
-@router.get("/session/{session_identifier}", response_model=List[DDSummaryResponse])
+@router.get("/session/{session_identifier}", response_model=list[DDSummaryResponse])
 async def list_summaries(
     session_identifier: str,
-    dd_type: Optional[str] = None,
+    dd_type: str | None = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
