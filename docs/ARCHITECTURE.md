@@ -25,8 +25,9 @@ du frontend. Pour installer et lancer l'application, voir le
   (GPT-5.x), nom de l'outil web (`web_search` ou `web_search_preview`), budget de
   sortie et `reasoning.effort`. Passer de `gpt-5.6-luna` à `gpt-4o` ne demande donc
   que de changer cette variable.
-- **Authentification** : jetons JWT (accès et rafraîchissement), rôles `admin`
-  et `analyst`.
+- **Authentification** : jetons JWT (PyJWT) d'accès et de rafraîchissement,
+  mots de passe hachés avec bcrypt, rôles `admin` et `analyst`. Voir
+  « Authentification et sécurité ».
 - **Tâches longues** : les `BackgroundTasks` de FastAPI, dans le processus web.
 
 ## Base de données
@@ -224,6 +225,55 @@ cassé.
   Un redémarrage du serveur en plein traitement laisse l'exécution en
   `in_progress` : il faut alors la relancer avec « Reprendre ».
 
+## Authentification et sécurité
+
+- **Réglages obligatoires** :
+  - `DATABASE_URL`, `OPENAI_API_KEY` et `JWT_SECRET_KEY` (32 caractères au moins)
+    n'ont pas de valeur par défaut. Il s'agit de `SecretStr`, qui ne
+    s'affichent ni dans les journaux ni dans les représentations ;
+  - s'il en manque un, `core/config.py` arrête le démarrage avec la liste des
+    variables à renseigner ;
+  - `backend/.env` est trouvé quel que soit le dossier de lancement, et les
+    variables d'environnement priment sur lui.
+- **Rôles** : `Literal["admin", "analyst"]` (`schemas/user.py`).
+  - L'inscription (`UserRegister`) n'a pas de champ `role` et refuse tout champ
+    inconnu : un nouveau compte est toujours analyste.
+  - Le premier administrateur se crée avec `python -m app.cli create-admin`
+    (`app/cli.py`), qui demande le mot de passe au clavier.
+- **Une seule dépendance d'authentification** : `api/deps.py`
+  (`get_current_active_user`, alias `get_current_user`, et
+  `get_current_admin_user`). C'est le seul endroit où un jeton est décodé, et
+  où un compte inactif est refusé.
+- **Jetons** (`core/security.py`) :
+  - chaque jeton porte un `jti` aléatoire. Sans lui, deux jetons émis dans la
+    même seconde étaient identiques ;
+  - `user_sessions` ne stocke que leur SHA-256 ;
+  - le jeton de rafraîchissement passe dans le corps de `POST /auth/refresh`,
+    jamais dans l'URL, et il est remplacé à chaque usage ;
+  - le jeton de réinitialisation du mot de passe porte une empreinte du mot de
+    passe en cours : il cesse de fonctionner dès que le mot de passe change.
+    Il ne sert donc qu'une fois, sans être stocké.
+- **Connexion limitée** (`core/login_throttle.py`) : après `LOGIN_MAX_ATTEMPTS`
+  échecs en `LOGIN_WINDOW_SECONDS`, le compte reçoit un 429 avec `Retry-After`.
+  Une même adresse a droit à quatre fois plus d'échecs. Le compteur vit en
+  mémoire, ce qui suffit à un seul processus backend.
+- **Mots de passe** : 8 caractères au moins, avec majuscule, minuscule et
+  chiffre, et 72 octets au plus, la limite que lit bcrypt.
+- **Fichiers envoyés** : `api/uploads.read_upload` applique `MAX_UPLOAD_SIZE`
+  (413) et `ALLOWED_EXTENSIONS` (400). L'import de questionnaires a sa propre
+  liste d'extensions.
+- **Erreurs** :
+  - les erreurs attendues sont des exceptions de `core/exceptions.py`, sans
+    FastAPI, que `main.py` traduit en code HTTP. Leur message est écrit pour
+    l'utilisateur ;
+  - toute autre exception est journalisée avec sa trace et reçoit
+    « Internal server error ». Ni le message d'un pilote ni une réponse
+    d'OpenAI ne partent vers le navigateur ;
+  - le dernier filet (`UnhandledErrorMiddleware`) est placé sous le middleware
+    CORS, si bien que même une 500 porte les en-têtes CORS.
+- **Documentation de l'API** : `/docs`, `/redoc` et `/openapi.json` ne sont
+  servis que si `DOCS_ENABLED=true`.
+
 ## Cloisonnement par utilisateur
 
 Règle : **l'administrateur voit tout**, les autres ne voient que leurs données.
@@ -384,7 +434,11 @@ Le parser est `services/file_parser.py`, et un exemple se trouve dans
 
 ### Scripts
 
-Ils se lancent depuis `backend/` : `uv run python scripts/<script>.py`.
+La commande d'administration se lance depuis `backend/` :
+`uv run python -m app.cli --help`. Elle ne compte pour l'instant que
+`create-admin`.
+
+Les scripts se lancent aussi depuis `backend/` : `uv run python scripts/<script>.py`.
 
 - `xlsx_to_questionnaire.py` : convertit un classeur de questionnaire en JSON
   d'import.
@@ -473,9 +527,10 @@ Ils se lancent depuis `backend/` : `uv run python scripts/<script>.py`.
 
 ## Dépannage
 
-- **Une erreur « CORS » sur l'API cache souvent une erreur 500.** Une exception
-  non gérée part sans en-tête CORS, et le navigateur l'affiche comme une erreur
-  CORS. Chercher la trace Python dans la console d'uvicorn.
+- **« Internal server error »** : le message est volontairement générique. La
+  trace complète est dans la console d'uvicorn.
+- **Le démarrage échoue sur « Invalid configuration »** : le message liste les
+  variables manquantes ou invalides. Voir `.env.template`.
 - **Un traitement reste en `in_progress` après un redémarrage** : le relancer avec
   « Reprendre ».
 - **Une synthèse revient `incomplete`** : relever la constante

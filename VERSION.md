@@ -23,24 +23,29 @@ Il n'y a pas encore d'image Docker.
 
 | Paquet | Version |
 | --- | --- |
-| fastapi | 0.104.1 |
-| starlette | 0.27.0 |
-| uvicorn | 0.24.0 |
+| fastapi | 0.164.0 |
+| starlette | 1.10.0 |
+| uvicorn | 0.50.1 |
 | sqlalchemy | 2.0.23 |
-| pymysql | 1.1.0 |
-| pydantic | 2.5.0 |
-| pydantic-settings | 2.1.0 |
-| openai | 2.2.0 |
-| httpx | 0.25.2 |
+| pymysql | 1.2.4 |
+| cryptography | 50.0.2 |
+| pydantic | 2.14.3 |
+| pydantic-settings | 2.16.3 |
+| openai | 2.2.0 (figée : le moteur est réglé sur cette version) |
+| httpx | 0.28.1 |
 | redis | 5.0.1 |
-| python-jose | 3.3.0 |
-| passlib | 1.7.4 |
-| bcrypt | 4.1.2 |
+| pyjwt | 2.15.1 |
+| bcrypt | 5.0.0 |
+| python-multipart | 0.0.34 |
+| jinja2 | 3.1.6 |
+| aiosmtplib | 5.1.3 |
+| typer | 0.29.2 |
 | reportlab | 4.4.4 |
 | pandas | 2.3.2 |
 | openpyxl | 3.1.5 |
 | pytest (dev) | 7.4.3 |
 | pytest-asyncio (dev) | 0.21.1 |
+| pytest-env (dev) | 1.1.3 |
 | ruff (dev) | 0.13.2 |
 
 ## Frontend (`frontend/package-lock.json`)
@@ -65,6 +70,30 @@ Il n'y a pas encore d'image Docker.
 | prettier | 3.6.2 |
 
 ## Journal des changements
+
+### Non publié
+
+- **Structure du backend** : les fichiers sont rangés en `api/routes`, `core`,
+  `engine`, `services` et `exports`, sans changement de logique.
+- **Sécurité** :
+  - l'inscription ne peut plus choisir son rôle : un nouveau compte est toujours
+    analyste. Le premier administrateur se crée avec
+    `python -m app.cli create-admin` ;
+  - `DATABASE_URL`, `OPENAI_API_KEY` et `JWT_SECRET_KEY` sont obligatoires, et
+    l'application refuse de démarrer sans eux ;
+  - les jetons sont stockés hachés et rendus uniques, le jeton de
+    rafraîchissement passe dans le corps de la requête, et le jeton de
+    réinitialisation du mot de passe ne sert qu'une fois ;
+  - la connexion est limitée après des échecs répétés ;
+  - la taille et le type des fichiers envoyés sont vérifiés ;
+  - une erreur imprévue renvoie un message générique, sa trace part dans les
+    journaux ;
+  - `/docs` est fermé par défaut (`DOCS_ENABLED`) ;
+  - les deux WebSockets inutilisés sont supprimés.
+- **Dépendances** : PyJWT et bcrypt remplacent python-jose et passlib ;
+  FastAPI, Starlette, python-multipart, jinja2, cryptography et les dépendances
+  qu'elles entraînent sont montés. Les dépendances d'exécution n'ont plus de
+  faille connue d'après `pip-audit`.
 
 ### 0.1.0 — 18/11/2026
 

@@ -8,6 +8,7 @@ from app.core.database import get_db
 from app.models.vector_store import VectorStore
 from app.models.user import User
 from app.api.deps import get_current_active_user
+from app.api.uploads import read_upload
 from app.services.authz import user_is_admin
 from app.engine.openai_client import OpenAIProcessor
 from app.core.cache import cache_response, CacheInvalidator
@@ -64,9 +65,10 @@ async def list_vector_store_files(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Vector store no longer exists"
             )
+        logger.exception("Failed to list files")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to list files: {str(e)}"
+            detail="Failed to list files"
         )
 
 
@@ -79,10 +81,10 @@ async def upload_file_to_vector_store(
 ):
     """Upload a file to a vector store"""
     vector_store = _get_owned_vector_store(vector_store_id, db, current_user)
-    
+    file_content = await read_upload(file)
+
     try:
         openai_processor = OpenAIProcessor()
-        file_content = await file.read()
 
         # Upload and add to vector store
         file_id = await openai_processor.upload_file(file_content, file.filename)
@@ -99,9 +101,10 @@ async def upload_file_to_vector_store(
         }
         
     except Exception as e:
+        logger.exception("Failed to upload file")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to upload file: {str(e)}"
+            detail="Failed to upload file"
         )
 
 
@@ -131,9 +134,10 @@ async def delete_file_from_vector_store(
         # If file is already gone, that's fine
         if "404" in str(e):
             return {"message": "File was already deleted"}
+        logger.exception("Failed to delete file")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to delete file: {str(e)}"
+            detail="Failed to delete file"
         )
 
 
@@ -175,10 +179,13 @@ async def get_file_content(
 
         return response
         
-    except Exception as e:
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Failed to get file content")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get file content: {str(e)}"
+            detail="Failed to get file content"
         )
 
 
@@ -221,8 +228,11 @@ async def download_original_file(
 
         return response
         
-    except Exception as e:
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Failed to download file")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to download file: {str(e)}"
+            detail="Failed to download file"
         )

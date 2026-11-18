@@ -75,8 +75,9 @@ uv sync
 uv run uvicorn app.main:app --reload --port 8000
 ```
 
-L'API répond sur `http://localhost:8000/api`, et sa documentation interactive
-sur `http://localhost:8000/docs`.
+L'API répond sur `http://localhost:8000/api`. Sa documentation interactive,
+`http://localhost:8000/docs`, est fermée par défaut : pour l'ouvrir en
+développement, mettre `DOCS_ENABLED=true` dans `backend/.env`.
 
 Sous Windows, si `uv sync` échoue avec « os error 1224 », relancer la commande
 avec la variable `UV_LINK_MODE=copy`.
@@ -93,12 +94,15 @@ L'application s'ouvre sur `http://localhost:5173`.
 
 ### 5. Premier administrateur
 
-Créer un compte depuis la page d'inscription, puis lui donner le rôle
-administrateur dans la base :
+Un compte créé depuis la page d'inscription est toujours analyste. Le premier
+administrateur se crée en ligne de commande, depuis `backend/` :
 
-```sql
-UPDATE users SET role = 'admin' WHERE email = '<adresse du compte>';
+```bash
+uv run python -m app.cli create-admin <adresse e-mail> "<Prénom Nom>"
 ```
+
+Le mot de passe est demandé au clavier. Un administrateur peut ensuite changer
+le rôle des autres comptes depuis l'interface.
 
 ### 6. Premier questionnaire
 
@@ -125,10 +129,9 @@ renvoi de toutes les routes vers `index.html`. Le backend se lance alors sans
 ## Tests et qualité
 
 ```bash
-# Backend, depuis backend/ : les tests qui tournent sans base ni clé OpenAI
-DATABASE_URL=sqlite:// uv run pytest tests/test_citation_format.py tests/test_dashboard.py --noconftest
-
-# Backend : lint
+# Backend, depuis backend/
+uv run pytest tests/test_auth_security.py tests/test_citation_format.py tests/test_dashboard.py
+uv run pytest                 # toute la suite
 uv run ruff check .
 
 # Frontend, depuis frontend/
@@ -136,12 +139,13 @@ npm run lint
 npm run build
 ```
 
-Sous PowerShell, définir la variable à part :
-`$env:DATABASE_URL = "sqlite://"`.
+Les tests n'ont besoin ni de base ni de clé OpenAI. Leurs réglages sont fixés
+dans `pyproject.toml` (section `[tool.pytest.ini_options]`, via pytest-env) et
+priment sur `backend/.env` : un test ne peut pas atteindre une vraie base.
 
-Le reste de la suite backend charge l'application complète (`conftest.py`) et
-demande une base MySQL. Ruff et ESLint signalent encore de nombreux problèmes
-dans le code existant.
+La suite complète compte encore des tests anciens en échec, qui sont en cours
+de reprise. Ruff et ESLint signalent aussi de nombreux problèmes dans le code
+existant.
 
 ## Structure du dépôt
 

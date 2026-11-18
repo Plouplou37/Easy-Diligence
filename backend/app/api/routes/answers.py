@@ -9,6 +9,7 @@ from app.models.session import DDSession
 from app.models.questions import DDSection, DDQuestion
 from app.models.user import User
 from app.api.deps import get_current_active_user
+from app.api.uploads import read_upload
 from app.services.authz import filter_sessions_for_user, assert_session_access, user_is_admin
 from app.schemas.answer import AnswerUpdate, AnswerResponse, AnswerWithHistory, AnswerListResponse, PaginatedAnswerResponse
 from app.schemas.answer_history import AnswerVersionHistory, AnswerHistoryResponse
@@ -676,8 +677,8 @@ async def regenerate_answer(
     # source descriptor so it shows up in the regenerated answer's sources.
     extra_file_source = None
     if file is not None and file.filename:
+        content = await read_upload(file)
         openai_processor = OpenAIProcessor()
-        content = await file.read()
 
         # Target store: an existing session/DD-type store, otherwise create one.
         store_id = vector_store_ids[0] if vector_store_ids else None
@@ -720,9 +721,9 @@ async def regenerate_answer(
             db, answer, vector_store_ids, company_info,
             instruction, reference_url, extra_file_source,
         )
-    except Exception as e:
-        logger.error(f"Failed to regenerate answer {answer_id}: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to regenerate answer: {str(e)}")
+    except Exception:
+        logger.exception("Failed to regenerate answer %s", answer_id)
+        raise HTTPException(status_code=500, detail="Failed to regenerate answer")
 
     return AnswerResponse.from_orm(updated)
 

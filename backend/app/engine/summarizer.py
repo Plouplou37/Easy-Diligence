@@ -23,6 +23,7 @@ from typing import Dict, List, Optional, Tuple
 
 from sqlalchemy.orm import Session
 
+from app.core.exceptions import ConflictError, InvalidRequestError, NotFoundError
 from app.engine.openai_client import OpenAIProcessor
 from app.models.answer import DDAnswer, AnswerStatus
 from app.models.questions import DDSection, DDQuestion
@@ -114,7 +115,7 @@ def _load_sections_with_answers(db: Session, session, dd_type_code: str):
     """
     dd_type_obj = db.query(DDType).filter(DDType.code == dd_type_code).first()
     if not dd_type_obj:
-        raise ValueError(f"DD type with code '{dd_type_code}' not found")
+        raise NotFoundError(f"DD type with code '{dd_type_code}' not found")
 
     # Current answers for this session + DD type, joined to section/question, ordered
     answers = db.query(DDAnswer)\
@@ -130,7 +131,7 @@ def _load_sections_with_answers(db: Session, session, dd_type_code: str):
         .all()
 
     if not answers:
-        raise ValueError("No current answers found for this session and DD type")
+        raise InvalidRequestError("No current answers found for this session and DD type")
 
     # Group answers by section (preserve order)
     sections = []  # list of (section_obj, [answers])
@@ -274,7 +275,7 @@ def submit_section_summaries_batch(
         DDSummaryBatch.dd_type_id == dd_type_obj.id,
     ).first()
     if existing and existing.status in PENDING_BATCH_STATUSES:
-        raise ValueError(
+        raise ConflictError(
             f"A summary batch is already running for this DD type "
             f"(status: {existing.status})"
         )
@@ -329,7 +330,7 @@ async def collect_section_summaries_batch(
     """
     dd_type_obj = db.query(DDType).filter(DDType.code == dd_type_code).first()
     if not dd_type_obj:
-        raise ValueError(f"DD type with code '{dd_type_code}' not found")
+        raise NotFoundError(f"DD type with code '{dd_type_code}' not found")
 
     row = db.query(DDSummaryBatch).filter(
         DDSummaryBatch.session_id == session.id,
@@ -424,14 +425,14 @@ def cancel_section_summaries_batch(
     """
     dd_type_obj = db.query(DDType).filter(DDType.code == dd_type_code).first()
     if not dd_type_obj:
-        raise ValueError(f"DD type with code '{dd_type_code}' not found")
+        raise NotFoundError(f"DD type with code '{dd_type_code}' not found")
 
     row = db.query(DDSummaryBatch).filter(
         DDSummaryBatch.session_id == session.id,
         DDSummaryBatch.dd_type_id == dd_type_obj.id,
     ).first()
     if not row:
-        raise ValueError("No summary batch for this DD type")
+        raise NotFoundError("No summary batch for this DD type")
 
     if row.status == "collected":
         return row, {"status": "collected",

@@ -14,7 +14,7 @@ class User(Base):
     full_name = Column(String(255))
     company = Column(String(255))
     phone = Column(String(50))
-    role = Column(String(50), default='analyst')  # admin, analyst, viewer
+    role = Column(String(50), default='analyst')  # admin, analyst (schemas.user.Role)
     is_active = Column(Boolean, default=True)
     is_verified = Column(Boolean, default=False)
     last_login = Column(DateTime(timezone=True))
@@ -28,12 +28,14 @@ class User(Base):
     companies_updated = relationship("Company", back_populates="updater", foreign_keys="Company.updated_by")
 
 class UserSession(Base):
+    """One login. Tokens are never stored: only their SHA-256 (security.hash_token),
+    so a copy of this table cannot be replayed."""
     __tablename__ = "user_sessions"
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"))
-    access_token = Column(String(500), unique=True, nullable=False)
-    refresh_token = Column(String(500), unique=True)
+    access_token_hash = Column(String(64), unique=True, nullable=False)
+    refresh_token_hash = Column(String(64), unique=True)
     expires_at = Column(DateTime(timezone=True), nullable=False)
     ip_address = Column(String(45))  # Supports IPv6
     user_agent = Column(Text)

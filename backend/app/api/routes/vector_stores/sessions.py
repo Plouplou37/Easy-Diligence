@@ -188,9 +188,10 @@ async def assign_vector_store_to_session(
         
     except Exception as e:
         db.rollback()
+        logger.exception("Failed to assign vector store")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to assign vector store: {str(e)}"
+            detail="Failed to assign vector store"
         )
 
 
@@ -269,7 +270,8 @@ async def unassign_vector_store_from_session(
         
     except Exception as e:
         db.rollback()
+        logger.exception("Failed to unassign vector store")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to unassign vector store: {str(e)}"
+            detail="Failed to unassign vector store"
         )

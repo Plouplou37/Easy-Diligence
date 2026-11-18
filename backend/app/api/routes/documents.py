@@ -4,11 +4,15 @@ from app.core.database import get_db
 from app.models.session import DDSession, SessionStatus
 from app.models.user import User
 from app.api.deps import get_current_active_user
+from app.api.uploads import read_upload
 from app.engine.openai_client import OpenAIProcessor
 from typing import List, Optional
 import json
+import logging
 from pydantic import BaseModel
 from datetime import datetime
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -85,13 +89,15 @@ async def upload_documents_to_vector_store(
     if not vector_store:
         raise HTTPException(status_code=404, detail="Vector store not found or access denied")
     
+    # Every file is checked (type, size) before any of them is sent.
+    contents = [await read_upload(file) for file in files]
+
     openai_processor = OpenAIProcessor()
-    
+
     try:
         # Upload files to existing vector store
         file_ids = []
-        for file in files:
-            content = await file.read()
+        for file, content in zip(files, contents):
             openai_file = openai_processor.upload_file_to_vector_store(
                 vector_store_id=vector_store_id,
                 file_content=content,
@@ -115,4 +121,5 @@ async def upload_documents_to_vector_store(
         }
         
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
+        logger.exception("Upload failed")
+        raise HTTPException(status_code=500, detail="Upload failed")

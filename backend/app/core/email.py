@@ -63,15 +63,16 @@ class EmailService:
                 port=self.smtp_port,
                 start_tls=True,
                 username=self.smtp_user,
-                password=self.smtp_password,
+                password=self.smtp_password.get_secret_value(),
                 recipients=recipients
             )
-            
-            logger.info(f"Email sent successfully to {to_email}")
+
+            # No address in the logs: they are personal data.
+            logger.info("Email sent: %s", subject)
             return True
-            
-        except Exception as e:
-            logger.error(f"Failed to send email to {to_email}: {str(e)}")
+
+        except Exception:
+            logger.exception("Failed to send email: %s", subject)
             return False
 
     async def send_password_reset_email(self, to_email: str, reset_token: str, user_name: str = "") -> bool:

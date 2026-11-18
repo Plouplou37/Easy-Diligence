@@ -65,7 +65,8 @@ async def search_vector_store(
                 detail="Vector store no longer exists"
             )
         
+        logger.exception("Search failed")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Search failed: {str(e)}"
+            detail="Search failed"
         )

@@ -1,53 +1,22 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from typing import Optional
+import logging
 import math
 
+from app.api.deps import get_current_admin_user
 from app.core.database import get_db
 from app.schemas.admin import (
-    UserListResponse, UserListItem, UserRoleUpdate, 
+    UserListResponse, UserListItem, UserRoleUpdate,
     UserStatusUpdate, AdminActionResponse
 )
 from app.services.auth import (
-    get_all_users, update_user_role, update_user_status, 
-    is_admin, get_user
+    get_all_users, update_user_role, update_user_status, get_user
 )
-from app.core.security import verify_token
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
-
-async def get_current_admin_user(
-    token: str = Depends(oauth2_scheme),
-    db: Session = Depends(get_db)
-):
-    """Dependency to verify admin user."""
-    # Verify token
-    payload = verify_token(token, token_type="access")
-    if not payload:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid access token",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    
-    user_id = int(payload.get("sub"))
-    user = get_user(db, user_id)
-    
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
-        )
-    
-    if not is_admin(user):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin access required"
-        )
-    
-    return user
 
 @router.get("/users", response_model=UserListResponse)
 async def list_users(
@@ -78,7 +47,7 @@ async def list_users(
     total_pages = math.ceil(total / per_page)
     
     # Convert to response format
-    user_items = [UserListItem.from_orm(user) for user in users]
+    user_items = [UserListItem.model_validate(user) for user in users]
     
     return UserListResponse(
         users=user_items,
@@ -95,15 +64,7 @@ async def update_user_role_endpoint(
     current_user = Depends(get_current_admin_user),
     db: Session = Depends(get_db)
 ):
-    """Update user role (admin only)."""
-    # Validate role
-    valid_roles = ["admin", "analyst"]
-    if role_update.role not in valid_roles:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid role. Must be one of: {valid_roles}"
-        )
-    
+    """Update user role (admin only). The role itself is checked by the schema."""
     # Prevent self-demotion
     if user_id == current_user.id and role_update.role != "admin":
         raise HTTPException(
@@ -196,7 +157,8 @@ async def delete_user_endpoint(
             message=f"User {user_to_delete.full_name or user_to_delete.username} deleted successfully",
             user_id=user_id
         )
-    except Exception as e:
+    except Exception:
+        logger.exception("Failed to delete user %s", user_id)
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

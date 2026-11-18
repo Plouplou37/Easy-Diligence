@@ -5,6 +5,7 @@ from app.models.dd_types import DDType as DDTypeModel, DEFAULT_DD_TYPE_ICON
 from app.models.questions import DDSection, DDQuestion
 from app.models.user import User
 from app.api.deps import get_current_active_user, get_current_admin_user
+from app.api.uploads import QUESTIONNAIRE_EXTENSIONS, read_upload
 from app.services.authz import (
     filter_dd_types_for_user,
     assert_dd_type_view,
@@ -15,6 +16,9 @@ from app.core.cache import cache_response, CacheInvalidator
 from app.services.file_parser import DDTypeFileParser, FileParsingError
 from typing import Optional, List
 from datetime import datetime
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -70,10 +74,11 @@ async def create_dd_type_from_file(
             detail="DD type code already exists"
         )
 
+    file_content = await read_upload(file, allowed_extensions=QUESTIONNAIRE_EXTENSIONS)
+
     try:
         # Parse the uploaded file
         parser = DDTypeFileParser()
-        file_content = await file.read()
         sections_data = parser.parse_file(file_content, file.filename)
 
         if not sections_data:
@@ -133,15 +138,19 @@ async def create_dd_type_from_file(
         return db_dd_type
 
     except FileParsingError as e:
+        # The parser's own messages describe what is wrong with the file.
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"File parsing error: {str(e)}"
+            detail=f"File parsing error: {e}"
         )
-    except Exception as e:
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Error creating DD type from file")
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error creating DD type from file: {str(e)}"
+            detail="Error creating DD type from file"
         )
 
 @router.get("/{dd_type_code}", response_model=DDTypeResponse)

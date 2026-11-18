@@ -22,39 +22,42 @@ classifiers = [
 # Production Dependencies
 dependencies = [
     # Web Framework
-    "fastapi==0.104.1",
-    "uvicorn[standard]==0.24.0",
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
     # Database
-    "sqlalchemy==2.0.23",
-    "pymysql==1.1.0",
-    "cryptography==41.0.7",
+    "sqlalchemy>=2.0.23,<2.1",
+    "pymysql>=1.1.1",
+    "cryptography>=46",
     # AI & Machine Learning
+    # Pinned: the engine (Responses API parameters, compaction via extra_body)
+    # was tuned and measured on this exact SDK version.
     "openai==2.2.0",
     # Caching & Message Queue
     "redis==5.0.1",
     "celery==5.3.4",
     # Web & File Handling
-    "python-multipart==0.0.6",
+    "python-multipart>=0.0.31",
     "websockets==12.0",
     "aiofiles==23.2.1",
-    "httpx==0.25.2",
+    "httpx>=0.27",
     # Data Validation & Configuration
-    "pydantic==2.5.0",
-    "pydantic[email]==2.5.0",
-    "pydantic-settings==2.1.0",
-    "python-dotenv==1.0.0",
+    "pydantic[email]>=2.7,<3",
+    "pydantic-settings>=2.6,<3",
+    "python-dotenv>=1.2.2",
     "python-dateutil==2.8.2",
     # Authentication & Security
-    "bcrypt==4.1.2",
-    "python-jose[cryptography]==3.3.0",
-    "passlib==1.7.4",
-    "email-validator==2.1.0.post1",
+    "bcrypt>=4.2",
+    "pyjwt>=2.10",
+    "email-validator>=2.2",
     # Email
-    "aiosmtplib==3.0.1",
-    "jinja2==3.1.2",
+    "aiosmtplib>=5.1.2",
+    "jinja2>=3.1.6",
+    # Exports
     "reportlab>=4.4.4",
-    "pandas>=2.3.2",
+    "pandas>=2.3.2,<3",
     "openpyxl>=3.1.5",
+    # Command line (app/cli.py)
+    "typer>=0.12",
 ]
 
 # Optional Dependencies
@@ -64,6 +67,7 @@ dev = [
     "pytest==7.4.3",
     "pytest-asyncio==0.21.1",
     "pytest-mock==3.12.0",
+    "pytest-env>=1.1",
     "fakeredis==2.20.1",
     "ruff>=0.1.0",
     "black>=23.0.0",
@@ -157,6 +161,19 @@ markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "integration: marks tests as integration tests",
     "unit: marks tests as unit tests",
+    "api: API tests",
+    "auth: authentication tests",
+    "db: tests that need a database",
+]
+# Test settings, set by pytest-env before anything is imported. Environment
+# variables win over backend/.env, so a test can never reach a real database
+# or a real OpenAI key, whatever that file contains.
+env = [
+    "DATABASE_URL=sqlite://",
+    "OPENAI_API_KEY=sk-test-not-a-real-key",
+    "JWT_SECRET_KEY=test-only-jwt-secret-not-for-production",
+    "REDIS_URL=redis://127.0.0.1:1/0",
+    "DOCS_ENABLED=true",
 ]
 
 [tool.coverage.run]

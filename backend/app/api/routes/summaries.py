@@ -60,10 +60,7 @@ async def generate_summaries(
     session, session_id = get_session_by_identifier(db, session_identifier)
     assert_session_access(session, current_user)
 
-    try:
-        summaries = await generate_summaries_for_dd_type(db, session, dd_type)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    summaries = await generate_summaries_for_dd_type(db, session, dd_type)
 
     return [_to_response(s) for s in summaries]
 
@@ -88,10 +85,7 @@ async def generate_summaries_via_batch(
     session, session_id = get_session_by_identifier(db, session_identifier)
     assert_session_access(session, current_user)
 
-    try:
-        row = submit_section_summaries_batch(db, session, dd_type, current_user.id)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    row = submit_section_summaries_batch(db, session, dd_type, current_user.id)
 
     return DDSummaryBatchResponse(
         status=row.status,
@@ -119,10 +113,7 @@ async def get_summary_batch_status(
     session, session_id = get_session_by_identifier(db, session_identifier)
     assert_session_access(session, current_user)
 
-    try:
-        row, info = await collect_section_summaries_batch(db, session, dd_type)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    row, info = await collect_section_summaries_batch(db, session, dd_type)
 
     return DDSummaryBatchResponse(
         status=info["status"],
@@ -152,10 +143,7 @@ async def cancel_summary_batch(
     session, session_id = get_session_by_identifier(db, session_identifier)
     assert_session_access(session, current_user)
 
-    try:
-        row, info = cancel_section_summaries_batch(db, session, dd_type)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    row, info = cancel_section_summaries_batch(db, session, dd_type)
 
     return DDSummaryBatchResponse(
         status=info["status"],

@@ -159,9 +159,10 @@ async def create_vector_store(
         
     except Exception as e:
         db.rollback()
+        logger.exception("Failed to create vector store")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to create vector store: {str(e)}"
+            detail="Failed to create vector store"
         )
 
 
@@ -299,9 +300,10 @@ async def update_vector_store(
         
     except Exception as e:
         db.rollback()
+        logger.exception("Failed to update vector store")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to update vector store: {str(e)}"
+            detail="Failed to update vector store"
         )
 
 
@@ -315,9 +317,10 @@ async def refresh_vector_stores_cache(
         return {"message": "Vector stores cache cleared successfully"}
     except Exception as e:
         logger.error(f"Failed to clear cache: {e}")
+        logger.exception("Failed to clear cache")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to clear cache: {str(e)}"
+            detail="Failed to clear cache"
         )
 
 
@@ -343,9 +346,10 @@ async def refresh_single_vector_store_cache(
         return {"message": f"Cache cleared for vector store {vector_store_id}"}
     except Exception as e:
         logger.error(f"Failed to clear cache for store {vector_store_id}: {e}")
+        logger.exception("Failed to clear cache")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to clear cache: {str(e)}"
+            detail="Failed to clear cache"
         )
 
 
@@ -396,7 +400,8 @@ async def delete_vector_store(
         
     except Exception as e:
         db.rollback()
+        logger.exception("Failed to delete vector store")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to delete vector store: {str(e)}"
+            detail="Failed to delete vector store"
         )

@@ -1,14 +1,91 @@
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+import logging
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from app.core.config import settings
+from fastapi.responses import JSONResponse
+from starlette.types import ASGIApp, Message, Receive, Scope, Send
+
 from app.api.router import api_router
-from app.core.database import engine, Base
-import redis
-import json
-from typing import Dict
+from app.core.config import settings
+from app.core.database import Base, engine
+from app.core.exceptions import (
+    AppError,
+    ConflictError,
+    ExternalServiceError,
+    InvalidRequestError,
+    NotFoundError,
+    PermissionDeniedError,
+    TooManyRequestsError,
+)
 
-app = FastAPI(title=settings.app_name, debug=settings.debug)
+logger = logging.getLogger(__name__)
 
+# HTTP status of each business error (core/exceptions.py).
+ERROR_STATUS = {
+    InvalidRequestError: 400,
+    PermissionDeniedError: 403,
+    NotFoundError: 404,
+    ConflictError: 409,
+    TooManyRequestsError: 429,
+    ExternalServiceError: 502,
+}
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    Base.metadata.create_all(bind=engine)
+    yield
+
+
+class UnhandledErrorMiddleware:
+    """Last safety net: an unexpected exception is logged with its traceback
+    and answered with a generic 500, never with its message.
+
+    Installed inside CORSMiddleware, so that answer still carries the CORS
+    headers. Without it, a 500 reached the browser without them and showed up
+    as a misleading "CORS error". Plain ASGI rather than BaseHTTPMiddleware,
+    which interferes with background tasks.
+    """
+
+    def __init__(self, app: ASGIApp):
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        response_started = False
+
+        async def send_tracking(message: Message) -> None:
+            nonlocal response_started
+            if message["type"] == "http.response.start":
+                response_started = True
+            await send(message)
+
+        try:
+            await self.app(scope, receive, send_tracking)
+        except Exception:
+            logger.exception("Unhandled error on %s %s", scope.get("method"), scope.get("path"))
+            if response_started:
+                raise
+            response = JSONResponse({"detail": "Internal server error"}, status_code=500)
+            await response(scope, receive, send)
+
+
+app = FastAPI(
+    title=settings.app_name,
+    debug=settings.debug,
+    lifespan=lifespan,
+    docs_url="/docs" if settings.docs_enabled else None,
+    redoc_url="/redoc" if settings.docs_enabled else None,
+    openapi_url="/openapi.json" if settings.docs_enabled else None,
+)
+
+# Order matters: the middleware added last runs first. CORS must wrap the
+# safety net so that its 500s get CORS headers too.
+app.add_middleware(UnhandledErrorMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
@@ -17,48 +94,27 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+@app.exception_handler(AppError)
+async def app_error_handler(_request: Request, exc: AppError) -> JSONResponse:
+    status_code = next(
+        (code for cls, code in ERROR_STATUS.items() if isinstance(exc, cls)), 400
+    )
+    headers = None
+    if isinstance(exc, TooManyRequestsError):
+        headers = {"Retry-After": str(exc.retry_after)}
+    if status_code >= 500:
+        logger.error("%s: %s", type(exc).__name__, exc.message, exc_info=exc)
+    return JSONResponse({"detail": exc.message}, status_code=status_code, headers=headers)
+
+
 app.include_router(api_router, prefix="/api")
 
-# WebSocket connection manager
-class ConnectionManager:
-    def __init__(self):
-        self.active_connections: Dict[str, WebSocket] = {}
-        self.redis_client = redis.from_url(settings.redis_url)
-
-    async def connect(self, websocket: WebSocket, session_id: str):
-        await websocket.accept()
-        self.active_connections[session_id] = websocket
-
-    def disconnect(self, session_id: str):
-        if session_id in self.active_connections:
-            del self.active_connections[session_id]
-
-    async def send_personal_message(self, message: dict, session_id: str):
-        if session_id in self.active_connections:
-            await self.active_connections[session_id].send_text(json.dumps(message))
-
-    async def broadcast_progress(self, session_id: str, progress_data: dict):
-        await self.send_personal_message(progress_data, session_id)
-
-manager = ConnectionManager()
-
-@app.websocket("/ws/{session_id}")
-async def websocket_endpoint(websocket: WebSocket, session_id: str):
-    await manager.connect(websocket, session_id)
-    try:
-        while True:
-            data = await websocket.receive_text()
-            # Handle incoming WebSocket messages if needed
-    except WebSocketDisconnect:
-        manager.disconnect(session_id)
-
-@app.on_event("startup")
-async def startup_event():
-    Base.metadata.create_all(bind=engine)
 
 @app.get("/")
 async def root():
-    return {"message": "Due Diligence Automation API"}
+    return {"message": f"{settings.app_name} API"}
+
 
 @app.get("/health")
 async def health():

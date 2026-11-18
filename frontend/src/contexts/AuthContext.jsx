@@ -102,8 +102,7 @@ export const AuthProvider = ({ children }) => {
         email: email,
         username: username,
         password: password,
-        full_name: name,
-        role: 'analyst'
+        full_name: name
       });
       
       const userData = response.data;

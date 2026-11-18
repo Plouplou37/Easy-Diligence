@@ -1,101 +1,143 @@
-from datetime import datetime, timedelta
-from typing import Optional, Union
-from jose import JWTError, jwt
-from passlib.context import CryptContext
+"""Password hashing, JWT tokens and token fingerprints.
+
+No FastAPI here: callers turn a None or False result into the HTTP answer.
+"""
+import hashlib
+import hmac
+import secrets
+from datetime import datetime, timedelta, timezone
+from typing import Optional
+
+import bcrypt
+import jwt
+
 from app.core.config import settings
 
-# Password hashing
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# bcrypt only reads the first 72 bytes of a password; bcrypt >= 5 refuses
+# longer ones outright. The password rules (core/validation.py) cap the length
+# so a user never sets a password that would be silently cut.
+BCRYPT_MAX_PASSWORD_BYTES = 72
 
-# JWT settings
-SECRET_KEY = settings.jwt_secret_key if hasattr(settings, 'jwt_secret_key') else "your-secret-key-change-this-in-production"
-ALGORITHM = settings.jwt_algorithm if hasattr(settings, 'jwt_algorithm') else "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = settings.access_token_expire_minutes if hasattr(settings, 'access_token_expire_minutes') else 30
-REFRESH_TOKEN_EXPIRE_DAYS = settings.refresh_token_expire_days if hasattr(settings, 'refresh_token_expire_days') else 7
+PASSWORD_RESET_EXPIRE_HOURS = 24
 
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify a plain password against a hashed password."""
-    return pwd_context.verify(plain_password, hashed_password)
+
+def _secret() -> str:
+    return settings.jwt_secret_key.get_secret_value()
+
+
+def _now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+# --- Passwords -------------------------------------------------------------
 
 def get_password_hash(password: str) -> str:
-    """Hash a password."""
-    return pwd_context.hash(password)
+    """Hash a password with bcrypt."""
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("ascii")
 
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
-    """Create a JWT access token."""
-    to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.utcnow() + expires_delta
-    else:
-        expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    
-    to_encode.update({"exp": expire, "type": "access"})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
 
-def create_refresh_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
-    """Create a JWT refresh token."""
-    to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.utcnow() + expires_delta
-    else:
-        expire = datetime.utcnow() + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
-    
-    to_encode.update({"exp": expire, "type": "refresh"})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """Check a password against its bcrypt hash. Never raises."""
+    try:
+        return bcrypt.checkpw(plain_password.encode("utf-8"), hashed_password.encode("ascii"))
+    except (ValueError, TypeError):
+        # Malformed hash, or a password bcrypt refuses (over 72 bytes).
+        return False
+
+
+# --- Stored token fingerprints ---------------------------------------------
+
+def hash_token(token: str) -> str:
+    """SHA-256 of a token, as stored in user_sessions instead of the token."""
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def _password_fingerprint(password_hash: str) -> str:
+    """A short digest of the current password hash.
+
+    Embedded in a password-reset token: once the password changes, the
+    fingerprint no longer matches and the token stops working. That makes the
+    token single-use without storing it.
+    """
+    return hashlib.sha256(password_hash.encode("utf-8")).hexdigest()[:32]
+
+
+# --- JWT -------------------------------------------------------------------
+
+def _encode(payload: dict) -> str:
+    # A random "jti" makes every token unique. Without it a JWT is
+    # deterministic: two tokens issued in the same second for the same user
+    # were identical, so a rotated refresh token stayed valid and two logins in
+    # one second collided on the unique access-token column.
+    return jwt.encode({**payload, "jti": secrets.token_urlsafe(16)}, _secret(),
+                      algorithm=settings.jwt_algorithm)
+
 
 def decode_token(token: str) -> Optional[dict]:
-    """Decode a JWT token."""
+    """Decode and verify a JWT (signature and expiry). None if invalid."""
     if not token:
         return None
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        return payload
-    except JWTError:
+        return jwt.decode(token, _secret(), algorithms=[settings.jwt_algorithm])
+    except jwt.PyJWTError:
         return None
 
+
 def verify_token(token: str, token_type: str = "access") -> Optional[dict]:
-    """Verify a JWT token and check its type."""
+    """Decode a JWT and check its type ("access" or "refresh")."""
     payload = decode_token(token)
     if payload and payload.get("type") == token_type:
         return payload
     return None
 
+
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
+    """Create a JWT access token."""
+    expire = _now() + (expires_delta or timedelta(minutes=settings.access_token_expire_minutes))
+    return _encode({**data, "exp": expire, "type": "access"})
+
+
+def create_refresh_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
+    """Create a JWT refresh token."""
+    expire = _now() + (expires_delta or timedelta(days=settings.refresh_token_expire_days))
+    return _encode({**data, "exp": expire, "type": "refresh"})
+
+
 def create_tokens(user_id: int, email: str, role: str) -> dict:
     """Create both access and refresh tokens for a user."""
-    token_data = {
-        "sub": str(user_id),
-        "email": email,
-        "role": role
-    }
-    
-    access_token = create_access_token(token_data)
-    refresh_token = create_refresh_token(token_data)
-    
+    token_data = {"sub": str(user_id), "email": email, "role": role}
     return {
-        "access_token": access_token,
-        "refresh_token": refresh_token,
-        "token_type": "bearer"
+        "access_token": create_access_token(token_data),
+        "refresh_token": create_refresh_token(token_data),
+        "token_type": "bearer",
     }
 
-def create_password_reset_token(email: str) -> str:
-    """Create a password reset token."""
-    to_encode = {
+
+def refresh_token_expiry() -> datetime:
+    """When a refresh token created now expires (stored with the session)."""
+    return _now() + timedelta(days=settings.refresh_token_expire_days)
+
+
+def create_password_reset_token(email: str, password_hash: str) -> str:
+    """Create a single-use password reset token (see _password_fingerprint)."""
+    return _encode({
         "email": email,
+        "fp": _password_fingerprint(password_hash),
         "type": "password_reset",
-        "exp": datetime.utcnow() + timedelta(hours=24)  # 24 hour expiry
-    }
-    
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
+        "exp": _now() + timedelta(hours=PASSWORD_RESET_EXPIRE_HOURS),
+    })
 
-def verify_password_reset_token(token: str) -> Optional[str]:
-    """Verify a password reset token and return the email."""
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        if payload.get("type") == "password_reset":
-            return payload.get("email")
-    except JWTError:
-        pass
-    return None
+
+def read_password_reset_token(token: str) -> Optional[dict]:
+    """Return the token's {"email", "fp"} if it is a valid reset token."""
+    payload = decode_token(token)
+    if not payload or payload.get("type") != "password_reset":
+        return None
+    if not payload.get("email") or not payload.get("fp"):
+        return None
+    return {"email": payload["email"], "fp": payload["fp"]}
+
+
+def reset_token_matches(token_fingerprint: str, password_hash: str) -> bool:
+    """True if the reset token was issued for the current password."""
+    return hmac.compare_digest(token_fingerprint, _password_fingerprint(password_hash))

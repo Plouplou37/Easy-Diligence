@@ -32,8 +32,18 @@ Guide court pour un agent qui travaille sur Easy Diligence. Le reste est dans :
   restent dans `branding/`, et les vrais questionnaires dans `questionnaires/` :
   les deux dossiers sont ignorés par git.
 - **Ne jamais lancer de test contre une vraie base.** `db.rollback()` n'annule
-  rien, à cause de l'autocommit du pilote (voir `docs/ARCHITECTURE.md`). Utiliser
-  un faux client OpenAI et une fausse session.
+  rien, à cause de l'autocommit du pilote (voir `docs/ARCHITECTURE.md`). Les
+  réglages de test de `pyproject.toml` (pytest-env) imposent une base SQLite
+  en mémoire et une fausse clé OpenAI : ne pas les retirer.
+- **Erreurs** : ne jamais renvoyer `str(e)` au client. Pour une erreur attendue,
+  lever une exception de `core/exceptions.py`, dont le message est écrit pour
+  l'utilisateur. Pour le reste, `logger.exception(...)` puis un message
+  générique.
+- **Authentification** : tout endpoint qui demande un utilisateur passe par
+  `api/deps.py` (`get_current_active_user`, `get_current_admin_user`). Ne pas
+  décoder un jeton ailleurs.
+- **Fichiers envoyés** : les lire avec `api/uploads.read_upload`, qui applique
+  la taille et les extensions autorisées.
 - **Frontend** : uniquement des tokens de couleur du thème, ni palette Tailwind,
   ni variante `dark:`. Ajouter une classe de couleur à `Button` est interdit.
 - **Un champ envoyé au modèle doit être visible dans l'interface.**
@@ -44,7 +54,7 @@ Guide court pour un agent qui travaille sur Easy Diligence. Le reste est dans :
 
 ```bash
 # backend/
-DATABASE_URL=sqlite:// uv run pytest tests/test_citation_format.py tests/test_dashboard.py --noconftest
+uv run pytest tests/test_auth_security.py tests/test_citation_format.py tests/test_dashboard.py
 uv run ruff check .
 # frontend/
 npm run build

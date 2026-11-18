@@ -1,9 +1,13 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, ConfigDict, EmailStr
 from typing import Optional, List
 from datetime import datetime
 
+from app.schemas.user import Role
+
 class UserListItem(BaseModel):
     """User information for admin list view"""
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     username: str
     email: EmailStr
@@ -14,9 +18,6 @@ class UserListItem(BaseModel):
     is_verified: bool
     last_login: Optional[datetime]
     created_at: datetime
-    
-    class Config:
-        from_attributes = True
 
 class UserListResponse(BaseModel):
     """Paginated user list response"""
@@ -27,26 +28,16 @@ class UserListResponse(BaseModel):
     total_pages: int
 
 class UserRoleUpdate(BaseModel):
-    """Schema for updating user role"""
-    role: str
-    
-    class Config:
-        schema_extra = {
-            "example": {
-                "role": "admin"
-            }
-        }
+    """Schema for updating user role (anything but admin/analyst is a 422)"""
+    model_config = ConfigDict(json_schema_extra={"example": {"role": "admin"}})
+
+    role: Role
 
 class UserStatusUpdate(BaseModel):
     """Schema for updating user status"""
+    model_config = ConfigDict(json_schema_extra={"example": {"is_active": True}})
+
     is_active: bool
-    
-    class Config:
-        schema_extra = {
-            "example": {
-                "is_active": True
-            }
-        }
 
 class AdminActionResponse(BaseModel):
     """Standard response for admin actions"""

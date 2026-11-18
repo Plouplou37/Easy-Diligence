@@ -4,14 +4,9 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import QueuePool
 from app.core.config import settings
 
-if not settings.database_url:
-    raise RuntimeError(
-        "DATABASE_URL is not set. Copy .env.template to backend/.env and fill it in."
-    )
-
 # MySQL configuration with proper pooling and reconnect
 engine = create_engine(
-    settings.database_url,
+    settings.database_url.get_secret_value(),
     poolclass=QueuePool,
     pool_size=10,
     max_overflow=20,

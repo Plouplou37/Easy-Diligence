@@ -1,39 +1,64 @@
-from pydantic import field_validator
-from pydantic_settings import BaseSettings
-from typing import Optional, List
-import secrets
+from pathlib import Path
+from typing import List, Literal
+
+from pydantic import SecretStr, ValidationError, field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# backend/.env, wherever the process is started from. Environment variables
+# win over this file (that is how Docker and the tests configure the app).
+ENV_FILE = Path(__file__).resolve().parents[2] / ".env"
+
+# Shortest JWT signing key accepted: 32 characters. `openssl rand -hex 32`
+# gives 64.
+_JWT_SECRET_MIN_LENGTH = 32
+
+
+class ConfigurationError(RuntimeError):
+    """The settings are missing or invalid; the message lists every problem."""
+
 
 class Settings(BaseSettings):
-    # Database. Required: left empty here only so this module stays importable,
-    # app/core/database.py refuses to start without it.
+    model_config = SettingsConfigDict(
+        env_file=ENV_FILE,
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        extra="ignore",
+    )
+
+    # --- Required secrets: no default, the application refuses to start
+    # without them. SecretStr keeps them out of logs and reprs.
     # Form: mysql+pymysql://<user>:<password>@<host>:3306/<database>
-    database_url: str = ""
+    database_url: SecretStr
+    openai_api_key: SecretStr
+    jwt_secret_key: SecretStr
 
     # OpenAI
-    openai_api_key: str = "your-openai-api-key"
     openai_model: str = "gpt-4o"
-    
+
     # Redis
     redis_url: str = "redis://localhost:6379/0"
-    
+
     # App
     app_name: str = "Easy Diligence"
     debug: bool = False
-    
-    
-    # JWT Authentication. Unset: a random key per start (every restart signs
-    # users out). Set but empty is refused below: it would sign tokens with "".
-    jwt_secret_key: str = secrets.token_urlsafe(32)
-    jwt_algorithm: str = "HS256"
+    # Interactive API docs (/docs, /redoc, /openapi.json). Off unless asked for:
+    # they describe every endpoint to whoever can reach the server.
+    docs_enabled: bool = False
+
+    # JWT Authentication
+    jwt_algorithm: Literal["HS256", "HS384", "HS512"] = "HS256"
     access_token_expire_minutes: int = 30
     refresh_token_expire_days: int = 7
-    
+
+    # Login throttling: after this many failed attempts within the window, the
+    # account (and, at a higher count, the client address) is refused with a
+    # 429 until the window has passed. Kept in memory, per backend process.
+    login_max_attempts: int = 5
+    login_window_seconds: int = 900
+
     # CORS
     cors_origins: List[str] = ["http://localhost:5173", "http://localhost:5174", "http://localhost:5175", "http://localhost:5176", "http://localhost:5177", "http://localhost:5178", "http://localhost:5179", "http://localhost:3000"]
-    
-    # Security
-    bcrypt_rounds: int = 12
-    
+
     # Rate limiting between questions.
     # Measured on the account: 10 000 requests/min and 10 000 000 tokens/min,
     # while a run uses ~0.5 request/min. No pause is needed, and 429s are already
@@ -83,27 +108,22 @@ class Settings(BaseSettings):
     # management company suffer most: the fund documents describe the fund,
     # while the manager's public footprint only exists on the web.
     tool_choice: str = "web_search"
-    
-    # Worker settings
-    worker_timeout_seconds: int = 300
-    max_retries: int = 3
-    
-    # File Upload
-    max_upload_size: int = 104857600  # 100MB
-    allowed_extensions: List[str] = ["pdf", "docx", "xlsx", "pptx", "txt", "csv"]
-    upload_path: str = "./uploads"
 
-    # OpenAI Vector Store Management
-    vector_store_expiration_days: int = 30
+    # File uploads (vector store documents, regeneration attachments). Size in
+    # bytes; extensions lowercase, without the dot.
+    max_upload_size: int = 104857600  # 100 MB
+    allowed_extensions: List[str] = [
+        "pdf", "doc", "docx", "pptx", "txt", "md", "html", "json", "csv", "xls", "xlsx",
+    ]
 
     # Email Configuration
     smtp_hostname: str = "smtp.office365.com"
     smtp_port: int = 587
     smtp_user: str = ""
-    smtp_password: str = ""
+    smtp_password: SecretStr = SecretStr("")
     mail_from: str = ""
     mail_from_name: str = "Easy Diligence"
-    
+
     # Frontend URL for password reset links
     frontend_url: str = "http://localhost:5173"
 
@@ -111,19 +131,43 @@ class Settings(BaseSettings):
     # Empty means no banner; a path to a missing file is logged and ignored.
     brand_banner_path: str = ""
 
-    model_config = {
-        "env_file": ".env",
-        "case_sensitive": False,
-        "extra": "ignore"
-    }
+    @field_validator("database_url", "openai_api_key")
+    @classmethod
+    def _not_empty(cls, value: SecretStr) -> SecretStr:
+        if not value.get_secret_value().strip():
+            raise ValueError("must not be empty")
+        return value
 
     @field_validator("jwt_secret_key")
     @classmethod
-    def _jwt_secret_not_empty(cls, value: str) -> str:
-        if not value.strip():
+    def _jwt_secret_strong_enough(cls, value: SecretStr) -> SecretStr:
+        if len(value.get_secret_value().strip()) < _JWT_SECRET_MIN_LENGTH:
             raise ValueError(
-                "JWT_SECRET_KEY is empty. Generate one with: openssl rand -hex 32"
+                f"must be at least {_JWT_SECRET_MIN_LENGTH} characters "
+                "(generate one with: openssl rand -hex 32)"
             )
         return value
 
-settings = Settings()
+    @field_validator("allowed_extensions")
+    @classmethod
+    def _normalise_extensions(cls, value: List[str]) -> List[str]:
+        return [ext.lower().lstrip(".") for ext in value]
+
+
+def _load_settings() -> Settings:
+    """Build the settings, turning a validation failure into one clear message."""
+    try:
+        return Settings()
+    except ValidationError as exc:
+        problems = []
+        for error in exc.errors():
+            name = ".".join(str(part) for part in error["loc"]).upper()
+            reason = "required" if error["type"] == "missing" else error["msg"]
+            problems.append(f"  - {name}: {reason}")
+        raise ConfigurationError(
+            "Invalid configuration. Set these variables in backend/.env or in the "
+            "environment (see .env.template):\n" + "\n".join(problems)
+        ) from None
+
+
+settings = _load_settings()
