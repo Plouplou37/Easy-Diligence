@@ -1,5 +1,3 @@
-import React from 'react';
-
 const LOGO_WIDTHS = {
   lg: 'clamp(160px, 22vw, 280px)',
   xl: 'clamp(240px, 40vw, 520px)',

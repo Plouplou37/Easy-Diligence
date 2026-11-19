@@ -1,4 +1,3 @@
-import React from 'react';
 import { getSourceContent } from '@/entities/answer';
 
 /**

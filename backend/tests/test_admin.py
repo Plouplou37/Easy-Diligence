@@ -20,6 +20,17 @@ def test_search_looks_at_every_account_not_just_the_page(client, admin, make_use
     assert (len(everyone["users"]), everyone["total"], everyone["total_pages"]) == (2, 6, 3)
 
 
+def test_search_also_matches_the_company(client, db, admin, make_user, auth_headers):
+    """The page offered it when it filtered in the browser."""
+    make_user()
+    target = make_user()
+    target.company = "Example Partners"
+    db.commit()
+
+    body = client.get("/api/admin/users?search=partners", headers=auth_headers(admin)).json()
+    assert [u["id"] for u in body["users"]] == [target.id]
+
+
 def test_an_admin_cannot_demote_or_deactivate_themselves(client, admin, auth_headers):
     headers = auth_headers(admin)
     url = f"/api/admin/users/{admin.id}"

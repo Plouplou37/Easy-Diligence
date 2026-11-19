@@ -1,4 +1,3 @@
-import React from 'react';
 import { getToneStyles } from '@/shared/lib/status';
 
 // Historical variant names, plus the tone names of utils/statusStyles so a

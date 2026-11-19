@@ -1,62 +1,49 @@
-import React from 'react';
-import { Modal } from '@/shared/ui';
-import { Button, field } from '@/shared/ui';
+import { Button, Input, Modal, field, modalStyles } from '@/shared/ui';
 
+/** Create or edit a section: its title, and the theme told to the model. */
 const SectionEditor = ({ show, section, onChange, onSave, onCancel }) => {
   if (!show || !section) return null;
 
+  const submit = (event) => {
+    event.preventDefault();
+    onSave();
+  };
+
   return (
-    <Modal
-      isOpen={show}
-      onClose={onCancel}
-      title={section.id ? 'Edit Section' : 'Create Section'}
-    >
-      <div className="space-y-4">
-        <div>
-          <label className={field.label}>
-            Title *
-          </label>
-          <input
-            type="text"
-            value={section.title || ''}
-            onChange={(e) => onChange({ ...section, title: e.target.value })}
-            placeholder="e.g., Company Overview"
-            className="form-input w-full"
-            required
-          />
-        </div>
+    <Modal isOpen onClose={onCancel} title={section.id ? 'Edit Section' : 'Create Section'}>
+      <form onSubmit={submit} className="space-y-4">
+        <Input
+          label="Title"
+          required
+          value={section.title || ''}
+          onChange={(event) => onChange({ ...section, title: event.target.value })}
+          placeholder="e.g., Company Overview"
+        />
 
         <div>
-          <label className={field.label}>
+          <label htmlFor="section-description" className={field.label}>
             Contexte de la section
           </label>
           <textarea
+            id="section-description"
             value={section.description || ''}
-            onChange={(e) => onChange({ ...section, description: e.target.value })}
+            onChange={(event) => onChange({ ...section, description: event.target.value })}
             placeholder="Ce que couvre ce thème, à préciser au modèle..."
             rows={3}
-            className="form-input w-full"
+            className="form-input w-full px-3 py-2 text-sm"
           />
-          <p className={field.help}>
-            Facultatif. Transmis au modèle avec chaque question de la section.
-          </p>
+          <p className={field.help}>Facultatif. Transmis au modèle avec chaque question de la section.</p>
         </div>
 
-        <div className="flex justify-end space-x-2 pt-4 border-t border-border">
-          <Button
-            onClick={onCancel}
-            variant="secondary"
-          >
+        <div className={`${modalStyles.footer} -mx-5 -mb-4 mt-4`}>
+          <Button type="button" onClick={onCancel} variant="secondary">
             Cancel
           </Button>
-          <Button
-            onClick={onSave}
-            variant="primary"
-          >
+          <Button type="submit" variant="primary">
             {section.id ? 'Update' : 'Create'} Section
           </Button>
         </div>
-      </div>
+      </form>
     </Modal>
   );
 };

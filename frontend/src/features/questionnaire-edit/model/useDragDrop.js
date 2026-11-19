@@ -41,7 +41,7 @@ export const useDragDrop = (onSectionReorder, onQuestionReorder) => {
     e.dataTransfer.effectAllowed = 'move';
   };
 
-  const handleQuestionDragOver = (e, question, sectionId) => {
+  const handleQuestionDragOver = (e, question) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
     setDragOverQuestion(question.id);

@@ -1,85 +1,58 @@
 import { useState } from 'react';
-import { vectorStoresAPI } from '@/entities/vector-store';
 import toast from 'react-hot-toast';
+import { vectorStoresAPI } from '@/entities/vector-store';
 
+const setStatus = (id, status) => (files) =>
+  files.map((file) => (file.id === id ? { ...file, status } : file));
+
+/**
+ * Files chosen for a vector store, then sent one by one; each shows its own
+ * outcome. `onUploadComplete` runs once all were tried.
+ */
 export const useFileUpload = (selectedStore, onUploadComplete) => {
   const [stagedFiles, setStagedFiles] = useState([]);
   const [uploadLoading, setUploadLoading] = useState(false);
 
-  const handleFileSelection = (e) => {
-    const selectedFiles = Array.from(e.target.files);
-
-    const newStagedFiles = selectedFiles.map((file) => ({
-      id: `${file.name}-${Date.now()}`,
+  /** Stage the files of a file input or of a drop (a FileList). */
+  const addFiles = (fileList) => {
+    const added = Array.from(fileList).map((file, index) => ({
+      id: `${file.name}-${Date.now()}-${index}`,
       file,
       name: file.name,
       size: file.size,
-      status: 'pending'
+      status: 'pending',
     }));
-
-    setStagedFiles(prev => [...prev, ...newStagedFiles]);
+    setStagedFiles((previous) => [...previous, ...added]);
   };
 
   const removeStagedFile = (fileId) => {
-    setStagedFiles(prev => prev.filter(f => f.id !== fileId));
+    setStagedFiles((previous) => previous.filter((file) => file.id !== fileId));
   };
 
   const confirmUpload = async () => {
-    if (!stagedFiles.length) return;
-
-    try {
-      setUploadLoading(true);
-      let successCount = 0;
-      let failCount = 0;
-
-      for (let i = 0; i < stagedFiles.length; i++) {
-        const stagedFile = stagedFiles[i];
-
-        try {
-          setStagedFiles(prev => prev.map(f =>
-            f.id === stagedFile.id ? { ...f, status: 'uploading' } : f
-          ));
-
-          await vectorStoresAPI.uploadFile(selectedStore.id, stagedFile.file);
-
-          setStagedFiles(prev => prev.map(f =>
-            f.id === stagedFile.id ? { ...f, status: 'success' } : f
-          ));
-
-          successCount++;
-        } catch (error) {
-          setStagedFiles(prev => prev.map(f =>
-            f.id === stagedFile.id ? { ...f, status: 'error' } : f
-          ));
-
-          failCount++;
-        }
+    const pending = stagedFiles.filter((file) => file.status === 'pending');
+    if (!pending.length) return;
+    setUploadLoading(true);
+    let succeeded = 0;
+    let failed = 0;
+    for (const staged of pending) {
+      setStagedFiles(setStatus(staged.id, 'uploading'));
+      try {
+        await vectorStoresAPI.uploadFile(selectedStore.id, staged.file);
+        setStagedFiles(setStatus(staged.id, 'success'));
+        succeeded += 1;
+      } catch {
+        setStagedFiles(setStatus(staged.id, 'error'));
+        failed += 1;
       }
-
-      if (successCount > 0) {
-        toast.success(`${successCount} file${successCount > 1 ? 's' : ''} uploaded successfully`);
-      }
-      if (failCount > 0) {
-        toast.error(`${failCount} file${failCount > 1 ? 's' : ''} failed to upload`);
-      }
-
-      await onUploadComplete();
-
-      setTimeout(() => {
-        setStagedFiles([]);
-      }, 2000);
-    } catch (error) {
-      toast.error('Failed to upload files');
-    } finally {
-      setUploadLoading(false);
     }
+    if (succeeded > 0) toast.success(`${succeeded} file${succeeded > 1 ? 's' : ''} uploaded successfully`);
+    if (failed > 0) toast.error(`${failed} file${failed > 1 ? 's' : ''} failed to upload`);
+    setUploadLoading(false);
+    // The failed ones stay listed, so the user sees which.
+    setStagedFiles((previous) => previous.filter((file) => file.status === 'error'));
+    await onUploadComplete({ failed });
   };
 
-  return {
-    stagedFiles,
-    uploadLoading,
-    handleFileSelection,
-    removeStagedFile,
-    confirmUpload
-  };
+  return { stagedFiles, uploadLoading, addFiles, removeStagedFile, confirmUpload };
 };

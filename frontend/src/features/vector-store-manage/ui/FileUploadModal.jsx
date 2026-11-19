@@ -1,33 +1,13 @@
-import React from 'react';
 import { Modal } from '@/shared/ui';
 import FileUploader from './FileUploader';
 
-const FileUploadModal = ({
-  show,
-  onClose,
-  stagedFiles,
-  onFileSelect,
-  onRemoveFile,
-  onConfirmUpload,
-  uploading
-}) => {
-  return (
-    <Modal
-      isOpen={show}
-      onClose={onClose}
-      title="Upload Files to Vector Store"
-    >
-      <div className="py-4">
-        <FileUploader
-          stagedFiles={stagedFiles}
-          onFileSelect={onFileSelect}
-          onRemoveFile={onRemoveFile}
-          onConfirmUpload={onConfirmUpload}
-          uploading={uploading}
-        />
-      </div>
-    </Modal>
-  );
-};
+/** The upload window of a vector store. `upload`: useFileUpload. */
+const FileUploadModal = ({ isOpen, onClose, upload }) => (
+  <Modal isOpen={isOpen} onClose={upload.uploadLoading ? undefined : onClose} title="Upload Files to Vector Store">
+    <div className="py-4">
+      <FileUploader upload={upload} />
+    </div>
+  </Modal>
+);
 
 export default FileUploadModal;

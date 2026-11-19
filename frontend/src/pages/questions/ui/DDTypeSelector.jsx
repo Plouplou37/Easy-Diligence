@@ -1,4 +1,3 @@
-import React from 'react';
 import { CheckCircleIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { Button, Badge, field, panel } from '@/shared/ui';
 

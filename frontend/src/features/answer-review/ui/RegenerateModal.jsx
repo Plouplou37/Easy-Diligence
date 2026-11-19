@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { ArrowPathRoundedSquareIcon, PaperClipIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { Modal } from '@/shared/ui';
 import { Button, field } from '@/shared/ui';
@@ -86,7 +86,7 @@ const RegenerateModal = ({ isOpen, onClose, onSubmit, loading }) => {
             placeholder="https://exemple.com/page"
             className="form-input w-full px-3 py-2 text-sm"
           />
-          <p className={field.help}>Consulté par l'IA via la recherche web.</p>
+          <p className={field.help}>Consulté par l’IA via la recherche web.</p>
         </div>
 
         <div>

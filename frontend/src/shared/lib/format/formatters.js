@@ -6,25 +6,6 @@ export const formatBytes = (bytes) => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
 
-export const formatTimeRemaining = (expiresAt) => {
-  if (!expiresAt) return 'Never';
-  const now = new Date();
-  const expiry = new Date(expiresAt);
-  const diffTime = expiry - now;
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-  if (diffDays <= 0) return 'Expired';
-  if (diffDays === 1) return '1 day';
-  if (diffDays <= 7) return `${diffDays} days`;
-  if (diffDays <= 30) return `${Math.ceil(diffDays / 7)} weeks`;
-  return `${Math.ceil(diffDays / 30)} months`;
-};
-
-export const calculateTotalRawFileSize = (files) => {
-  if (!files || files.length === 0) return 0;
-  return files.reduce((total, file) => total + (file.size_bytes || 0), 0);
-};
-
 export const getExpirationStatus = (expiresAt) => {
   if (!expiresAt) return 'never';
   const now = new Date();
@@ -55,4 +36,18 @@ export const downloadBlob = (blob, filename) => {
   link.click();
   document.body.removeChild(link);
   window.URL.revokeObjectURL(url);
+};
+
+/** How long ago `iso` was, briefly ("5 min ago"), then the date after a week. */
+export const formatRelative = (iso) => {
+  if (!iso) return '—';
+  const date = new Date(iso);
+  const minutes = Math.round((Date.now() - date.getTime()) / 60000);
+  if (minutes < 1) return 'just now';
+  if (minutes < 60) return `${minutes} min ago`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours} h ago`;
+  const days = Math.round(hours / 24);
+  if (days < 7) return `${days} d ago`;
+  return date.toLocaleDateString();
 };

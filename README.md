@@ -178,8 +178,8 @@ leurs en-têtes d'authentification, des données de départ (sociétés, types d
 DD, sessions) et un faux client OpenAI pour les vector stores. Le moteur de
 réponses est testé avec un faux client lui aussi (`tests/test_processing.py`).
 
-ESLint signale encore des problèmes dans le code existant du frontend (85 à
-l'étape 4.1, contre 576 avant) : ils se résorbent au fil de sa réorganisation.
+`npm run lint` n'accepte aucun avertissement (`--max-warnings 0`) et vérifie
+aussi les couches du frontend.
 
 **Contrôles automatiques** :
 - **À chaque commit**, des hooks pre-commit lancent ruff et cherchent les
@@ -187,8 +187,8 @@ l'étape 4.1, contre 576 avant) : ils se résorbent au fil de sa réorganisation
   une fois, depuis la racine du dépôt :
   `uv run --project backend pre-commit install`.
 - **Sur GitHub**, la CI (`.github/workflows/ci.yml`) lance le lint, le
-  formatage, les types, les tests et l'audit du backend, puis le build du
-  frontend.
+  formatage, les types, les tests et l'audit du backend, puis le lint et le
+  build du frontend.
 
 ## Structure du dépôt
 
@@ -209,8 +209,10 @@ frontend/             application React (Vite, Tailwind)
   src/                Feature-Sliced Design, du haut vers le bas :
     app/              routeur, fournisseurs (thème, connexion), styles globaux
     pages/            une page par route
-    widgets/          blocs de page : mise en page, carte d'un type de DD
-    features/         actions de l'utilisateur
+    widgets/          blocs de page : mise en page, tableau de bord, carte d'un
+                      type de DD, réponses, vector stores
+    features/         actions de l'utilisateur : connexion, création de
+                      session, revue des réponses, administration
     entities/         objets métier : appels d'API, modèle, petits composants
     shared/           client HTTP, composants d'interface, utilitaires
 examples/             questionnaire d'exemple au format d'import

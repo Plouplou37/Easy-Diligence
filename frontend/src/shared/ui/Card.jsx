@@ -1,5 +1,3 @@
-import React from 'react';
-
 /**
  * Reusable Card component — panel on the wave background, uppercase section
  * title followed by a gradient hairline.

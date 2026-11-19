@@ -32,8 +32,8 @@ def _get(db: Session, user_id: int) -> User:
 def list_users(
     db: Session, page: int, per_page: int, search: str | None = None
 ) -> tuple[list[User], int]:
-    """A page of the accounts, matching `search` (name, e-mail or username) if
-    given, with the number of matching accounts."""
+    """A page of the accounts, matching `search` (name, e-mail, username or
+    company) if given, with the number of matching accounts."""
     query = db.query(User)
     if search:
         term = f"%{search.strip()}%"
@@ -42,6 +42,7 @@ def list_users(
                 col(User.full_name).ilike(term),
                 col(User.email).ilike(term),
                 col(User.username).ilike(term),
+                col(User.company).ilike(term),
             )
         )
     total = query.count()

@@ -1,4 +1,3 @@
-import React from 'react';
 import { DocumentIcon, TrashIcon, ClockIcon } from '@heroicons/react/24/outline';
 import { formatBytes } from '@/shared/lib/format';
 import { LoadingSpinner, Button, emptyState, tableStyles } from '@/shared/ui';

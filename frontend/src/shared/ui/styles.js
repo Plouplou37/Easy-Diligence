@@ -60,14 +60,12 @@ export const tableStyles = {
   empty: 'border border-border px-3 py-10 text-center text-sm text-content-muted',
 };
 
-// Modal windows. `overlay` is the fixed backdrop wrapper.
+// The parts of Modal, and its footer for the buttons of a form inside it.
 export const modalStyles = {
-  overlay: 'fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop animate-fade-in',
   panel: 'relative w-full bg-surface border border-border rounded-xl shadow-xl animate-scale-in',
   header: 'flex items-center justify-between px-5 py-3.5 border-b border-border',
   title: 'text-base font-semibold text-content',
   close: 'p-1 rounded-md text-content-secondary hover:text-content hover:bg-surface-hover transition-colors',
-  body: 'px-5 py-4',
   footer: 'flex items-center justify-end gap-2 px-5 py-3 border-t border-border bg-surface-bg rounded-b-xl',
 };
 

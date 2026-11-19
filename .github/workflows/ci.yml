@@ -58,6 +58,9 @@ jobs:
       - name: Install
         run: npm ci
 
-      # Lint joins once the frontend is reorganised: it fails on the existing code.
+      # No warning allowed (--max-warnings 0), and the FSD layers are enforced.
+      - name: Lint
+        run: npm run lint
+
       - name: Build
         run: npm run build

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { modalStyles } from './styles';
 

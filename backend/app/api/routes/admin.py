@@ -24,7 +24,9 @@ router = APIRouter()
 def list_users(
     page: int = Query(1, ge=1, description="Page number"),
     per_page: int = Query(20, ge=1, le=100, description="Items per page"),
-    search: str | None = Query(None, description="Search users by name, email, or username"),
+    search: str | None = Query(
+        None, description="Search users by name, email, username or company"
+    ),
     admin: User = Depends(get_current_admin_user),
     db: Session = Depends(get_db),
 ):

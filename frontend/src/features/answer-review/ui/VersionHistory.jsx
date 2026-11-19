@@ -1,4 +1,3 @@
-import React from 'react';
 import { ClockIcon, ArrowPathRoundedSquareIcon, UserIcon } from '@heroicons/react/24/outline';
 import { Badge } from '@/shared/ui';
 

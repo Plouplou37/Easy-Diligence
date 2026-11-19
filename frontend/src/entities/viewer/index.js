@@ -1,2 +1,3 @@
 export { authAPI } from './api/authApi';
-export { AuthProvider, useAuth } from './model/AuthContext';
+export { AuthProvider } from './model/AuthContext';
+export { useAuth } from './model/useAuth';

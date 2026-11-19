@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   FolderIcon,
   PencilIcon,
@@ -50,8 +50,11 @@ const SectionCard = ({
               </div>
             )}
             <button
+              type="button"
               onClick={() => setExpanded(!expanded)}
               className="text-content-muted hover:text-content"
+              aria-expanded={expanded}
+              aria-label={`${expanded ? 'Hide' : 'Show'} the questions of ${section.title}`}
             >
               {expanded ? (
                 <ChevronDownIcon className="h-5 w-5" />

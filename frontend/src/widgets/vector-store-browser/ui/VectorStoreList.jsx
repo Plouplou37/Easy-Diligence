@@ -1,4 +1,3 @@
-import React from 'react';
 import { ExclamationTriangleIcon, ClockIcon } from '@heroicons/react/24/outline';
 import { formatBytes, getExpirationStatus } from '@/shared/lib/format';
 import { panel, sectionHeader, tableStyles } from '@/shared/ui';

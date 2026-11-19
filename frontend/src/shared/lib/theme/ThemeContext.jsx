@@ -1,4 +1,5 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { ThemeContext } from './context';
 
 // Theme preference: 'light' | 'dark' | 'system', stored under DD_THEME. The
 // legacy `darkMode` key ('true'/'false') is still read, so nobody's theme
@@ -6,16 +7,6 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 // way before first paint; the resolved theme lives in `data-theme` on <html>.
 const STORAGE_KEY = 'DD_THEME';
 const LEGACY_KEY = 'darkMode';
-
-const ThemeContext = createContext({});
-
-export const useTheme = () => {
-  const context = useContext(ThemeContext);
-  if (!context) {
-    throw new Error('useTheme must be used within a ThemeProvider');
-  }
-  return context;
-};
 
 const getSystemTheme = () =>
   window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
@@ -90,4 +81,3 @@ export const ThemeProvider = ({ children }) => {
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 };
 
-export default ThemeContext;

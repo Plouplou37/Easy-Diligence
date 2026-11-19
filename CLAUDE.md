@@ -91,5 +91,8 @@ npm run lint
   de module dans la liste `ignore_errors` de mypy (`pyproject.toml`) : ces
   exceptions marquent l'ancien code, et chacune disparaît quand son module est
   repris.
-- ESLint signale déjà de nombreux problèmes dans le frontend : le critère est de
-  n'en ajouter aucun.
+- `npm run lint` passe sans aucun avertissement (`--max-warnings 0`), et la CI
+  le vérifie. Pas de `eslint-disable` : corriger le code.
+- **Frontend** : une confirmation passe par `useConfirm()`, une fenêtre par
+  `Modal` (jamais `window.confirm` ni une fenêtre faite à la main), un champ par
+  `Input` ou `PasswordInput` (`shared/ui`).

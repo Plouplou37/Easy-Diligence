@@ -1,4 +1,3 @@
-import React from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { PlusIcon, FolderIcon } from '@heroicons/react/24/outline';
 import { Button, EmptyState, LoadingSpinner, PageHeader, pageLayout, panel, sectionHeader } from '@/shared/ui';

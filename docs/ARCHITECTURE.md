@@ -570,12 +570,23 @@ Les scripts se lancent aussi depuis `backend/` : `uv run python scripts/<script>
     success ; sans enfant, c'est un bouton-icône. Ne pas lui ajouter de classes
     de couleur : l'ordre des feuilles de style déciderait alors du gagnant.
   - `LoadingSpinner` : en tailles lg et xl, le logo traversé par un reflet.
-  - `Modal` : se ferme avec Échap.
+  - `Modal` : se ferme avec Échap, la croix ou un clic à côté. C'est la seule
+    fenêtre de l'application : il n'y a plus de fenêtre faite à la main.
   - Confirmations : `const confirm = useConfirm()` (`shared/lib/confirm`),
     puis `await confirm({ title, message, confirmLabel, danger })`, qui rend
     `true` ou `false`. Jamais `window.confirm`.
+  - `Input` (libellé, icône, aide, erreur reliées au champ) et `PasswordInput`
+    (le même, avec un bouton pour afficher le mot de passe).
   - Dans `shared/ui/` : `PageHeader`, `StatTile`, `EmptyState`,
-    `SearchInput` et `StatusBadge`.
+    `SearchInput`, `StatusBadge` et `MiniProgressBar`.
+- **Tranches** : une page assemble des widgets et des features, et garde au plus
+  l'état de la page (l'onglet, l'élément ouvert). Les features : `auth`,
+  `session-create`, `session-actions`, `dd-run-control`, `answer-review`,
+  `summaries`, `questionnaire-edit`, `dd-type-admin`, `vector-store-manage`,
+  `vector-store-assign`, `user-admin` et `theme-toggle`. Les widgets :
+  `app-layout`, `sessions-overview` (tableau de bord), `dd-run-card`,
+  `session-progress`, `answers-board`, `questionnaire-tree` et
+  `vector-store-browser`.
 - **Gabarit** : toutes les pages utilisent `pageLayout.container` (`max-w-7xl`) et
   l'en-tête `PageHeader` (fil d'Ariane, titre, actions à droite). Les détails
   techniques (codes, identifiants, tokens) n'apparaissent qu'au survol (`title`).
@@ -583,8 +594,8 @@ Les scripts se lancent aussi depuis `backend/` : `uv run python scripts/<script>
 - **Police** : Roboto, auto-hébergée (`@fontsource/roboto`, importée dans
   `main.jsx`).
 - ⚠️ Ne jamais poser `filter`, `transform`, `backdrop-filter` ou `isolation` sur un
-  conteneur de page. Les fenêtres faites à la main (`fixed z-50` dans les pages)
-  passeraient alors sous la barre de navigation.
+  conteneur de page. `Modal` (`fixed z-50`) passerait alors sous la barre de
+  navigation.
 
 ### Affichage
 

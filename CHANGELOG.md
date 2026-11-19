@@ -2,6 +2,34 @@
 
 ## Non publié
 
+### Frontend : pages découpées (2/2)
+
+- La gestion des utilisateurs pagine et cherche côté serveur. Elle chargeait
+  les 100 premiers comptes et cherchait parmi eux : le 101e n'apparaissait
+  jamais. La recherche du serveur couvre aussi la société.
+- Une seule sorte de fenêtre, `Modal` : les six fenêtres faites à la main
+  (mot de passe oublié, changement de mot de passe, fiche et suppression d'un
+  utilisateur, type de DD, question) se ferment maintenant toutes avec Échap.
+  La suppression d'un utilisateur passe par la confirmation commune.
+- Les formulaires d'inscription et de changement de mot de passe disent la
+  règle du mot de passe d'avance, et signalent chaque champ fautif à côté du
+  champ. Le profil n'envoie plus le rôle (le serveur l'ignorait).
+- On peut déposer des fichiers dans la fenêtre d'envoi d'un vector store, comme
+  elle l'annonçait. Les fichiers en échec restent affichés, et la fenêtre reste
+  ouverte pour les renvoyer ou les retirer ; elle annonçait aussi une limite de
+  10 Mo que le serveur n'applique pas (100 Mo par défaut).
+- Retirés : la case « Remember me » et la case « Terms and Conditions » (lien
+  vide), qui n'avaient aucun effet, et le bouton « Edit user », qui affichait
+  « coming soon ».
+- Le choix d'une catégorie de type de DD ne range plus « Credit » ou
+  « Equity » parmi les types techniques (le mot « it » était cherché dans tout
+  le nom).
+- Tableau de bord, création de session, types de DD, utilisateurs, profil,
+  connexion, inscription et vector stores sont découpés en widgets et en
+  features ; aucun fichier du frontend ne dépasse 250 lignes (neuf dépassaient
+  400 lignes).
+- `npm run lint` passe sans aucun avertissement, et la CI le lance.
+
 ### Questionnaire d'exemple
 
 - Le questionnaire d'exemple est remplacé par un questionnaire fictif,

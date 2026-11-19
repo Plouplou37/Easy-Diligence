@@ -1,4 +1,3 @@
-import React from 'react';
 import { DocumentTextIcon, PencilIcon, TrashIcon, Bars3Icon } from '@heroicons/react/24/outline';
 import { Button } from '@/shared/ui';
 import { displayQuestionCode } from '@/entities/dd-type';
