@@ -165,6 +165,7 @@ uv run pip-audit --skip-editable # failles connues des dépendances
 
 # Frontend, depuis frontend/
 npm run lint
+npm run format                   # formatage (Prettier) ; format:check le vérifie
 npm run build
 ```
 
@@ -187,8 +188,8 @@ aussi les couches du frontend.
   une fois, depuis la racine du dépôt :
   `uv run --project backend pre-commit install`.
 - **Sur GitHub**, la CI (`.github/workflows/ci.yml`) lance le lint, le
-  formatage, les types, les tests et l'audit du backend, puis le lint et le
-  build du frontend.
+  formatage, les types, les tests et l'audit du backend, puis le lint, le
+  formatage et le build du frontend.
 
 ## Structure du dépôt
 

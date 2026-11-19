@@ -33,7 +33,9 @@ const SummaryBlock = ({ title, summary, onSaved }) => {
   return (
     <div className={`${panel.base} p-5`}>
       <div className="flex items-center justify-between gap-3 mb-3">
-        <h3 className="text-fluid-sm font-medium text-content uppercase tracking-[0.18em]">{title}</h3>
+        <h3 className="text-fluid-sm font-medium text-content uppercase tracking-[0.18em]">
+          {title}
+        </h3>
         <div className={sectionHeader.hairline} />
         {!editing && (
           <Button onClick={() => setEditing(true)} variant="secondary" size="sm" icon={PencilIcon}>
@@ -46,7 +48,7 @@ const SummaryBlock = ({ title, summary, onSaved }) => {
         <div className="space-y-3">
           <textarea
             value={text}
-            onChange={(event) => setText(event.target.value)}
+            onChange={event => setText(event.target.value)}
             rows={14}
             className="form-input w-full px-3 py-2 text-sm font-mono"
             aria-label={title}
@@ -55,7 +57,12 @@ const SummaryBlock = ({ title, summary, onSaved }) => {
             <Button onClick={save} variant="success" icon={CheckIcon} disabled={saving}>
               {saving ? 'Enregistrement…' : 'Enregistrer'}
             </Button>
-            <Button onClick={() => setEditing(false)} variant="secondary" icon={XMarkIcon} disabled={saving}>
+            <Button
+              onClick={() => setEditing(false)}
+              variant="secondary"
+              icon={XMarkIcon}
+              disabled={saving}
+            >
               Annuler
             </Button>
           </div>
@@ -63,7 +70,9 @@ const SummaryBlock = ({ title, summary, onSaved }) => {
       ) : (
         <div className="overflow-x-auto">
           <div className="prose prose-sm max-w-none text-sm text-content">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{summary.summary_text || '_(vide)_'}</ReactMarkdown>
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {summary.summary_text || '_(vide)_'}
+            </ReactMarkdown>
           </div>
         </div>
       )}

@@ -13,7 +13,7 @@ const CreateVectorStoreModal = ({ isOpen, onClose, onCreate }) => {
     onClose();
   };
 
-  const submit = async (event) => {
+  const submit = async event => {
     event.preventDefault();
     setSaving(true);
     const created = await onCreate(form);
@@ -28,7 +28,7 @@ const CreateVectorStoreModal = ({ isOpen, onClose, onCreate }) => {
           label="Name"
           required
           value={form.name}
-          onChange={(event) => setForm({ ...form, name: event.target.value })}
+          onChange={event => setForm({ ...form, name: event.target.value })}
         />
         <div>
           <label htmlFor="vector-store-description" className={field.label}>
@@ -37,7 +37,7 @@ const CreateVectorStoreModal = ({ isOpen, onClose, onCreate }) => {
           <textarea
             id="vector-store-description"
             value={form.description}
-            onChange={(event) => setForm({ ...form, description: event.target.value })}
+            onChange={event => setForm({ ...form, description: event.target.value })}
             className="form-input w-full px-3 py-2 text-sm"
             rows={3}
           />
@@ -49,7 +49,7 @@ const CreateVectorStoreModal = ({ isOpen, onClose, onCreate }) => {
           max="365"
           required
           value={form.expires_after_days}
-          onChange={(event) => setForm({ ...form, expires_after_days: Number(event.target.value) })}
+          onChange={event => setForm({ ...form, expires_after_days: Number(event.target.value) })}
         />
         <div className={`${modalStyles.footer} -mx-5 -mb-4 mt-4`}>
           <Button type="button" onClick={close} variant="secondary">

@@ -23,11 +23,13 @@ export const Button = ({
 }) => {
   const iconOnly = !children;
 
-  const baseStyles = 'inline-flex items-center justify-center font-normal rounded-md transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50 disabled:cursor-not-allowed';
+  const baseStyles =
+    'inline-flex items-center justify-center font-normal rounded-md transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50 disabled:cursor-not-allowed';
 
   const variants = {
     primary: 'bg-primary-dark text-white hover:bg-primary-dark/85',
-    secondary: 'border border-primary/30 bg-surface text-content hover:border-bleu-atlantis/80 hover:text-bleu-atlantis',
+    secondary:
+      'border border-primary/30 bg-surface text-content hover:border-bleu-atlantis/80 hover:text-bleu-atlantis',
     danger: 'bg-theme-error text-content-inverse hover:bg-theme-error/85',
     success: 'bg-theme-success text-content-inverse hover:bg-theme-success/85',
     ghost: 'text-content hover:bg-primary/5',
@@ -78,7 +80,14 @@ export const Button = ({
           fill="none"
           viewBox="0 0 24 24"
         >
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+          <circle
+            className="opacity-25"
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="currentColor"
+            strokeWidth="4"
+          ></circle>
           <path
             className="opacity-75"
             fill="currentColor"

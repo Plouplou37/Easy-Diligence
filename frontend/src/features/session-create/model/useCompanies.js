@@ -22,11 +22,11 @@ export const useCompanies = () => {
   }, [load]);
 
   /** Resolves to the new company, or null. */
-  const create = async (values) => {
+  const create = async values => {
     setSaving(true);
     try {
       const response = await companyAPI.create(values);
-      setCompanies((previous) => [...previous, response.data]);
+      setCompanies(previous => [...previous, response.data]);
       toast.success('Company created successfully');
       return response.data;
     } catch (error) {
@@ -50,7 +50,9 @@ export const useCompanies = () => {
         management_company_name: manager.management_company_name || null,
         management_company_website: manager.management_company_website || null,
       });
-      setCompanies((previous) => previous.map((item) => (item.id === company.id ? response.data : item)));
+      setCompanies(previous =>
+        previous.map(item => (item.id === company.id ? response.data : item))
+      );
       toast.success('Management company saved');
       return true;
     } catch (error) {

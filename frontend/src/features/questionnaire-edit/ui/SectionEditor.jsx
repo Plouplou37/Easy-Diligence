@@ -4,7 +4,7 @@ import { Button, Input, Modal, field, modalStyles } from '@/shared/ui';
 const SectionEditor = ({ show, section, onChange, onSave, onCancel }) => {
   if (!show || !section) return null;
 
-  const submit = (event) => {
+  const submit = event => {
     event.preventDefault();
     onSave();
   };
@@ -16,7 +16,7 @@ const SectionEditor = ({ show, section, onChange, onSave, onCancel }) => {
           label="Title"
           required
           value={section.title || ''}
-          onChange={(event) => onChange({ ...section, title: event.target.value })}
+          onChange={event => onChange({ ...section, title: event.target.value })}
           placeholder="e.g., Company Overview"
         />
 
@@ -27,12 +27,14 @@ const SectionEditor = ({ show, section, onChange, onSave, onCancel }) => {
           <textarea
             id="section-description"
             value={section.description || ''}
-            onChange={(event) => onChange({ ...section, description: event.target.value })}
+            onChange={event => onChange({ ...section, description: event.target.value })}
             placeholder="Ce que couvre ce thème, à préciser au modèle..."
             rows={3}
             className="form-input w-full px-3 py-2 text-sm"
           />
-          <p className={field.help}>Facultatif. Transmis au modèle avec chaque question de la section.</p>
+          <p className={field.help}>
+            Facultatif. Transmis au modèle avec chaque question de la section.
+          </p>
         </div>
 
         <div className={`${modalStyles.footer} -mx-5 -mb-4 mt-4`}>

@@ -24,7 +24,11 @@ export const useUsers = () => {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await adminAPI.getUsers({ page, per_page: PER_PAGE, search: term || undefined });
+      const response = await adminAPI.getUsers({
+        page,
+        per_page: PER_PAGE,
+        search: term || undefined,
+      });
       setResult(response.data);
     } catch (error) {
       toast.error(errorMessage(error, 'Failed to load users'));
@@ -37,7 +41,7 @@ export const useUsers = () => {
     load();
   }, [load]);
 
-  const setSearch = (value) => {
+  const setSearch = value => {
     setSearchTerm(value);
     setPage(1);
   };
@@ -45,23 +49,29 @@ export const useUsers = () => {
   // Runs `action` with the account flagged busy for `what`, then patches it.
   const run = async (user, what, action, patch, failure) => {
     const key = `${what}_${user.id}`;
-    setBusy((previous) => ({ ...previous, [key]: true }));
+    setBusy(previous => ({ ...previous, [key]: true }));
     try {
       const response = await action();
       if (response?.data?.message) toast.success(response.data.message);
-      setResult((previous) => ({
+      setResult(previous => ({
         ...previous,
-        users: previous.users.map((item) => (item.id === user.id ? { ...item, ...patch } : item)),
+        users: previous.users.map(item => (item.id === user.id ? { ...item, ...patch } : item)),
       }));
     } catch (error) {
       toast.error(errorMessage(error, failure));
     } finally {
-      setBusy((previous) => ({ ...previous, [key]: false }));
+      setBusy(previous => ({ ...previous, [key]: false }));
     }
   };
 
   const setRole = (user, role) =>
-    run(user, 'role', () => adminAPI.updateUserRole(user.id, role), { role }, 'Failed to update role');
+    run(
+      user,
+      'role',
+      () => adminAPI.updateUserRole(user.id, role),
+      { role },
+      'Failed to update role'
+    );
 
   const setActive = (user, isActive) =>
     run(
@@ -72,7 +82,7 @@ export const useUsers = () => {
       'Failed to update status'
     );
 
-  const remove = async (user) => {
+  const remove = async user => {
     const confirmed = await confirm({
       title: 'Delete user',
       message:
@@ -84,7 +94,7 @@ export const useUsers = () => {
     });
     if (!confirmed) return;
     const key = `delete_${user.id}`;
-    setBusy((previous) => ({ ...previous, [key]: true }));
+    setBusy(previous => ({ ...previous, [key]: true }));
     try {
       await adminAPI.deleteUser(user.id);
       toast.success('User deleted successfully');
@@ -92,7 +102,7 @@ export const useUsers = () => {
     } catch (error) {
       toast.error(errorMessage(error, 'Failed to delete user'));
     } finally {
-      setBusy((previous) => ({ ...previous, [key]: false }));
+      setBusy(previous => ({ ...previous, [key]: false }));
     }
   };
 

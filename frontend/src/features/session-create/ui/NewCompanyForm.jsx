@@ -14,9 +14,9 @@ const EMPTY = {
 /** A new fund and its management company. `onCreate(values)` resolves to the company or null. */
 export const NewCompanyForm = ({ onCreate, saving }) => {
   const [form, setForm] = useState(EMPTY);
-  const set = (name) => (event) => setForm((previous) => ({ ...previous, [name]: event.target.value }));
+  const set = name => event => setForm(previous => ({ ...previous, [name]: event.target.value }));
 
-  const submit = async (event) => {
+  const submit = async event => {
     event.preventDefault();
     if (await onCreate(form)) setForm(EMPTY);
   };
@@ -65,7 +65,13 @@ export const NewCompanyForm = ({ onCreate, saving }) => {
             placeholder="Brief description of the asset manager or fund"
           />
         </div>
-        <Button type="submit" variant="primary" disabled={!form.name} loading={saving} className="w-full">
+        <Button
+          type="submit"
+          variant="primary"
+          disabled={!form.name}
+          loading={saving}
+          className="w-full"
+        >
           Create Asset Manager / Fund
         </Button>
       </div>

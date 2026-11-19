@@ -2,14 +2,14 @@ import { api, multipart } from '@/shared/api';
 
 export const vectorStoresAPI = {
   list: () => api.get('/vector-stores/'),
-  get: (vectorStoreId) => api.get(`/vector-stores/${vectorStoreId}`),
-  create: (data) => api.post('/vector-stores/', data),
-  delete: (vectorStoreId) => api.delete(`/vector-stores/${vectorStoreId}`),
+  get: vectorStoreId => api.get(`/vector-stores/${vectorStoreId}`),
+  create: data => api.post('/vector-stores/', data),
+  delete: vectorStoreId => api.delete(`/vector-stores/${vectorStoreId}`),
   // Removes the stores gone at OpenAI, and clears the cached lists.
   refresh: () => api.post('/vector-stores/refresh'),
-  refreshStore: (vectorStoreId) => api.post(`/vector-stores/${vectorStoreId}/refresh`),
+  refreshStore: vectorStoreId => api.post(`/vector-stores/${vectorStoreId}/refresh`),
 
-  getFiles: (vectorStoreId) => api.get(`/vector-stores/${vectorStoreId}/files`),
+  getFiles: vectorStoreId => api.get(`/vector-stores/${vectorStoreId}/files`),
   uploadFile: (vectorStoreId, file) => {
     const form = new FormData();
     form.append('file', file);
@@ -25,5 +25,5 @@ export const vectorStoresAPI = {
     api.delete(`/vector-stores/${vectorStoreId}/assign-session/${sessionId}`, {
       params: ddTypeCode ? { dd_type_code: ddTypeCode } : {},
     }),
-  getSessionAssignments: (sessionId) => api.get(`/vector-stores/session/${sessionId}/assignments`),
+  getSessionAssignments: sessionId => api.get(`/vector-stores/session/${sessionId}/assignments`),
 };

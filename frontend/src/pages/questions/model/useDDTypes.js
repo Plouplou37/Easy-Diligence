@@ -8,13 +8,13 @@ import { useConfirm } from '@/shared/lib/confirm';
  * The DD types with their questionnaires, the one being edited (`initialCode`
  * first: the ?dd_type= of the URL), and its validation and deletion.
  */
-export const useDDTypes = (initialCode) => {
+export const useDDTypes = initialCode => {
   const confirm = useConfirm();
   const [ddTypes, setDdTypes] = useState([]);
   const [selectedDdTypeCode, setSelectedDdTypeCode] = useState(initialCode || null);
   const [loading, setLoading] = useState(true);
   // Derived, so that a reload shows the selected type's new questions.
-  const selectedDdType = ddTypes.find((ddType) => ddType.code === selectedDdTypeCode) || null;
+  const selectedDdType = ddTypes.find(ddType => ddType.code === selectedDdTypeCode) || null;
 
   const loadDdTypes = useCallback(async () => {
     setLoading(true);
@@ -41,7 +41,7 @@ export const useDDTypes = (initialCode) => {
     }
   }, []);
 
-  const changeDdType = (code) => setSelectedDdTypeCode(code || null);
+  const changeDdType = code => setSelectedDdTypeCode(code || null);
 
   const validateDdType = async () => {
     if (!selectedDdType || selectedDdType.is_validated) return false;

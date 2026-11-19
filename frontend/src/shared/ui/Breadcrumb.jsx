@@ -18,16 +18,11 @@ const Breadcrumb = ({ items }) => {
           <li key={index} className="inline-flex items-center gap-1.5">
             <ChevronRightIcon className="w-3 h-3 text-content-muted" />
             {item.href ? (
-              <Link
-                to={item.href}
-                className="eyebrow hover:text-accent-blue transition-colors"
-              >
+              <Link to={item.href} className="eyebrow hover:text-accent-blue transition-colors">
                 {item.label}
               </Link>
             ) : (
-              <span className="eyebrow text-content">
-                {item.label}
-              </span>
+              <span className="eyebrow text-content">{item.label}</span>
             )}
           </li>
         ))}

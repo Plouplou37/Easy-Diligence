@@ -10,11 +10,7 @@ const DarkModeToggle = () => {
       className="p-1.5 rounded-md text-content-secondary hover:text-content hover:bg-surface-hover transition-colors duration-150"
       aria-label="Toggle dark mode"
     >
-      {darkMode ? (
-        <SunIcon className="h-5 w-5" />
-      ) : (
-        <MoonIcon className="h-5 w-5" />
-      )}
+      {darkMode ? <SunIcon className="h-5 w-5" /> : <MoonIcon className="h-5 w-5" />}
     </button>
   );
 };

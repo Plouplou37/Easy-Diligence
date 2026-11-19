@@ -23,7 +23,7 @@ export const DdTypeFormModal = ({ ddType, onSave, onClose }) => {
   const [saving, setSaving] = useState(false);
   const importing = isNew && mode === 'import';
 
-  const chooseFile = (event) => {
+  const chooseFile = event => {
     const chosen = event.target.files[0];
     if (!chosen) return;
     const extension = `.${chosen.name.split('.').pop().toLowerCase()}`;
@@ -36,7 +36,7 @@ export const DdTypeFormModal = ({ ddType, onSave, onClose }) => {
     if (!name) setName(nameFromFile(chosen.name));
   };
 
-  const submit = async (event) => {
+  const submit = async event => {
     event.preventDefault();
     setSaving(true);
     const saved = await onSave({ name, description, file: importing ? file : null });
@@ -76,7 +76,7 @@ export const DdTypeFormModal = ({ ddType, onSave, onClose }) => {
           label="Name"
           required
           value={name}
-          onChange={(event) => setName(event.target.value)}
+          onChange={event => setName(event.target.value)}
           placeholder="Technical Due Diligence"
         />
 
@@ -87,7 +87,7 @@ export const DdTypeFormModal = ({ ddType, onSave, onClose }) => {
           <textarea
             id="dd-type-description"
             value={description}
-            onChange={(event) => setDescription(event.target.value)}
+            onChange={event => setDescription(event.target.value)}
             rows={3}
             className="form-input w-full px-3 py-2 text-sm"
             placeholder="What this due diligence covers"
@@ -106,7 +106,9 @@ export const DdTypeFormModal = ({ ddType, onSave, onClose }) => {
               onChange={chooseFile}
               className="block w-full text-sm text-content-secondary file:mr-3 file:rounded-md file:border-0 file:bg-accent-blue/10 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-accent-blue file:cursor-pointer hover:file:bg-accent-blue/20"
             />
-            <p className={field.help}>Supported formats: Excel (.xlsx, .xls), CSV (.csv), JSON (.json)</p>
+            <p className={field.help}>
+              Supported formats: Excel (.xlsx, .xls), CSV (.csv), JSON (.json)
+            </p>
             {file && (
               <div className="mt-3 p-3 form-surface flex items-center">
                 <DocumentTextIcon className="w-5 h-5 text-content-muted mr-2" />
@@ -123,7 +125,12 @@ export const DdTypeFormModal = ({ ddType, onSave, onClose }) => {
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancel
           </Button>
-          <Button type="submit" variant="primary" loading={saving} disabled={!name.trim() || (importing && !file)}>
+          <Button
+            type="submit"
+            variant="primary"
+            loading={saving}
+            disabled={!name.trim() || (importing && !file)}
+          >
             {submitLabel}
           </Button>
         </div>

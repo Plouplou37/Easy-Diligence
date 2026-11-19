@@ -20,9 +20,9 @@ const FileUploader = ({ upload }) => {
   const inputId = useId();
   const [dragging, setDragging] = useState(false);
   const { stagedFiles, uploadLoading } = upload;
-  const pending = stagedFiles.filter((file) => file.status === 'pending').length;
+  const pending = stagedFiles.filter(file => file.status === 'pending').length;
 
-  const drop = (event) => {
+  const drop = event => {
     event.preventDefault();
     setDragging(false);
     upload.addFiles(event.dataTransfer.files);
@@ -30,7 +30,7 @@ const FileUploader = ({ upload }) => {
 
   return (
     <div
-      onDragOver={(event) => {
+      onDragOver={event => {
         event.preventDefault();
         setDragging(true);
       }}
@@ -43,7 +43,7 @@ const FileUploader = ({ upload }) => {
       <input
         type="file"
         multiple
-        onChange={(event) => {
+        onChange={event => {
           upload.addFiles(event.target.files);
           event.target.value = ''; // the same file can be chosen again
         }}
@@ -52,16 +52,21 @@ const FileUploader = ({ upload }) => {
       />
       <label htmlFor={inputId} className="cursor-pointer flex flex-col items-center justify-center">
         <CloudArrowUpIcon className="h-12 w-12 text-content-muted mb-2" />
-        <span className="text-sm text-content-secondary">Click to select files, or drop them here</span>
+        <span className="text-sm text-content-secondary">
+          Click to select files, or drop them here
+        </span>
         <span className="text-xs text-content-muted mt-1">
-          PDF, Word, PowerPoint, Excel, CSV, text, Markdown, HTML or JSON. The server checks type and size.
+          PDF, Word, PowerPoint, Excel, CSV, text, Markdown, HTML or JSON. The server checks type
+          and size.
         </span>
       </label>
 
       {stagedFiles.length > 0 && (
         <div className="mt-4 space-y-2">
           <div className="flex items-center justify-between mb-2">
-            <h4 className="text-sm font-medium text-content-secondary">Files ({stagedFiles.length})</h4>
+            <h4 className="text-sm font-medium text-content-secondary">
+              Files ({stagedFiles.length})
+            </h4>
             <Button
               onClick={upload.confirmUpload}
               disabled={pending === 0}
@@ -73,7 +78,7 @@ const FileUploader = ({ upload }) => {
             </Button>
           </div>
 
-          {stagedFiles.map((file) => (
+          {stagedFiles.map(file => (
             <div key={file.id} className="flex items-center justify-between p-2 form-surface">
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium text-content truncate">{file.name}</div>

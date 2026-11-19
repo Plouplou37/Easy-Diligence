@@ -7,7 +7,7 @@ import { parseSourcesFromString, getSourceContent } from './sources';
  * - Replacing double quotes with two double quotes
  * - Wrapping in double quotes
  */
-export const escapeCSVValue = (value) => {
+export const escapeCSVValue = value => {
   if (value === null || value === undefined) {
     return '';
   }
@@ -20,7 +20,7 @@ export const escapeCSVValue = (value) => {
  * Handles sources that can be string, object, or array
  * Returns a human-readable string of all sources
  */
-export const formatSourcesForCSV = (sources) => {
+export const formatSourcesForCSV = sources => {
   if (!sources) {
     return '';
   }
@@ -58,20 +58,17 @@ export const exportAnswersToCSV = (answers, sessionId) => {
     escapeCSVValue('Section'),
     escapeCSVValue('Question Text'),
     escapeCSVValue('Answer'),
-    escapeCSVValue('Sources')
+    escapeCSVValue('Sources'),
   ];
 
   const rows = answers.map(answer => [
     escapeCSVValue(answer.section_name || ''),
     escapeCSVValue(answer.question_text || ''),
     escapeCSVValue(answer.text || ''),
-    escapeCSVValue(formatSourcesForCSV(answer.sources))
+    escapeCSVValue(formatSourcesForCSV(answer.sources)),
   ]);
 
-  const csvContent = [
-    headers.join(','),
-    ...rows.map(row => row.join(','))
-  ].join('\n');
+  const csvContent = [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
 
   // The byte order mark tells Excel the file is UTF-8: without it, Excel reads
   // it in the system code page and garbles every accented letter.

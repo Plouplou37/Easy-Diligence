@@ -1,4 +1,9 @@
-import { ClockIcon, DocumentTextIcon, PencilSquareIcon, SparklesIcon } from '@heroicons/react/24/outline';
+import {
+  ClockIcon,
+  DocumentTextIcon,
+  PencilSquareIcon,
+  SparklesIcon,
+} from '@heroicons/react/24/outline';
 import { StatTile } from '@/shared/ui';
 
 /** What calls for an action; the first two tiles also filter the table. */
@@ -31,7 +36,7 @@ export const DashboardTiles = ({ totals, sessions, isLive, filters }) => (
     <StatTile
       label="Sessions"
       value={totals.sessions || 0}
-      hint={`${sessions.filter((session) => session.status === 'completed').length} completed`}
+      hint={`${sessions.filter(session => session.status === 'completed').length} completed`}
       icon={DocumentTextIcon}
     />
   </div>

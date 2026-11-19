@@ -24,7 +24,12 @@ const Select = ({ id, label, value, onChange, children }) => (
     <label htmlFor={id} className={field.label}>
       {label}
     </label>
-    <select id={id} className={`${field.input} py-2 text-sm`} value={value} onChange={(e) => onChange(e.target.value)}>
+    <select
+      id={id}
+      className={`${field.input} py-2 text-sm`}
+      value={value}
+      onChange={e => onChange(e.target.value)}
+    >
       {children}
     </select>
   </div>
@@ -43,23 +48,40 @@ export const SessionFilters = ({ filters }) => {
           onChange={filters.setSearch}
           placeholder="Search sessions by name, fund, management company or DD type..."
         />
-        <Button variant="secondary" onClick={() => setOpen(!open)} icon={FunnelIcon} aria-expanded={open}>
+        <Button
+          variant="secondary"
+          onClick={() => setOpen(!open)}
+          icon={FunnelIcon}
+          aria-expanded={open}
+        >
           Filters
-          <ChevronDownIcon className={`w-4 h-4 transform transition-transform ${open ? 'rotate-180' : ''}`} />
+          <ChevronDownIcon
+            className={`w-4 h-4 transform transition-transform ${open ? 'rotate-180' : ''}`}
+          />
         </Button>
       </div>
 
       {open && (
         <div className="mt-4 pt-4 border-t border-border grid grid-cols-1 gap-4 sm:grid-cols-4">
-          <Select id="status-filter" label="Status" value={filters.status} onChange={filters.setStatus}>
+          <Select
+            id="status-filter"
+            label="Status"
+            value={filters.status}
+            onChange={filters.setStatus}
+          >
             <option value="all">All Statuses</option>
-            {SESSION_STATUS_OPTIONS.map((option) => (
+            {SESSION_STATUS_OPTIONS.map(option => (
               <option key={option.value} value={option.value}>
                 {option.label}
               </option>
             ))}
           </Select>
-          <Select id="date-filter" label="Created" value={filters.period} onChange={filters.setPeriod}>
+          <Select
+            id="date-filter"
+            label="Created"
+            value={filters.period}
+            onChange={filters.setPeriod}
+          >
             {PERIODS.map(([value, label]) => (
               <option key={value} value={value}>
                 {label}
@@ -78,7 +100,7 @@ export const SessionFilters = ({ filters }) => {
               type="checkbox"
               className="w-4 h-4 rounded"
               checked={filters.reviewOnly}
-              onChange={(event) => filters.setReviewOnly(event.target.checked)}
+              onChange={event => filters.setReviewOnly(event.target.checked)}
             />
             With answers to review
           </label>

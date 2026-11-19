@@ -13,7 +13,7 @@ import { Button, menu } from '@/shared/ui';
 const UNDELETABLE = ['in_progress', 'completed'];
 
 /** The session's report as a PDF (the syntheses, then every answer). */
-const usePdfExport = (sessionId) => {
+const usePdfExport = sessionId => {
   const [exporting, setExporting] = useState(false);
 
   const exportPdf = async () => {
@@ -34,7 +34,13 @@ const usePdfExport = (sessionId) => {
 export const ExportPdfButton = ({ sessionId }) => {
   const { exporting, exportPdf } = usePdfExport(sessionId);
   return (
-    <Button variant="primary" size="sm" icon={DocumentArrowDownIcon} onClick={exportPdf} loading={exporting}>
+    <Button
+      variant="primary"
+      size="sm"
+      icon={DocumentArrowDownIcon}
+      onClick={exportPdf}
+      loading={exporting}
+    >
       Export PDF
     </Button>
   );
@@ -45,7 +51,7 @@ export const ExportMenu = ({ sessionId, answers }) => {
   const [open, setOpen] = useState(false);
   const { exporting, exportPdf } = usePdfExport(sessionId);
 
-  const choose = (action) => () => {
+  const choose = action => () => {
     setOpen(false);
     action();
   };
@@ -55,7 +61,7 @@ export const ExportMenu = ({ sessionId, answers }) => {
       <Button
         variant="primary"
         icon={DocumentArrowDownIcon}
-        onClick={() => setOpen((shown) => !shown)}
+        onClick={() => setOpen(shown => !shown)}
         loading={exporting}
         aria-haspopup="menu"
         aria-expanded={open}

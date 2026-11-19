@@ -5,7 +5,7 @@ export const AssignAllSelect = ({ vectorStores, onAssign }) => {
   const [value, setValue] = useState('');
   if (vectorStores.length === 0) return null;
 
-  const choose = async (storeId) => {
+  const choose = async storeId => {
     setValue(storeId);
     if (storeId) {
       await onAssign(storeId);
@@ -18,11 +18,11 @@ export const AssignAllSelect = ({ vectorStores, onAssign }) => {
       <span className="text-xs text-content-muted">Assign to all:</span>
       <select
         value={value}
-        onChange={(event) => choose(event.target.value)}
+        onChange={event => choose(event.target.value)}
         className="form-input px-3 py-1 text-xs"
       >
         <option value="">Select vector store...</option>
-        {vectorStores.map((store) => (
+        {vectorStores.map(store => (
           <option key={store.id} value={store.id}>
             {store.name} ({store.file_count} files)
           </option>

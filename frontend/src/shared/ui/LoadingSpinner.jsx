@@ -4,7 +4,7 @@ const LOGO_WIDTHS = {
 };
 
 // App logo used as a mask, filled by the blue-to-green sweep (loading overlay).
-const renderLogoShimmer = (width) => (
+const renderLogoShimmer = width => (
   <div
     className="logo-shimmer-animate"
     style={{
@@ -49,9 +49,7 @@ export const LoadingSpinner = ({
         />
       )}
       {text && (
-        <p className="mt-3 text-sm font-medium tracking-wide text-content-secondary">
-          {text}
-        </p>
+        <p className="mt-3 text-sm font-medium tracking-wide text-content-secondary">{text}</p>
       )}
     </>
   );
@@ -59,24 +57,16 @@ export const LoadingSpinner = ({
   if (fullPage) {
     return (
       <div className="fixed inset-x-0 bottom-0 top-[var(--navbar-height)] z-40 flex items-center justify-center backdrop-blur-md">
-        <div className="flex flex-col items-center">
-          {spinner}
-        </div>
+        <div className="flex flex-col items-center">{spinner}</div>
       </div>
     );
   }
 
   if (inline) {
-    return (
-      <div className={`inline-flex items-center gap-2 ${className}`}>
-        {spinner}
-      </div>
-    );
+    return <div className={`inline-flex items-center gap-2 ${className}`}>{spinner}</div>;
   }
 
   return (
-    <div className={`flex flex-col items-center justify-center p-6 ${className}`}>
-      {spinner}
-    </div>
+    <div className={`flex flex-col items-center justify-center p-6 ${className}`}>{spinner}</div>
   );
 };

@@ -13,13 +13,13 @@ export const getOverallStatus = (shownDdTypes, progressByCode) => {
   if (!progressByCode || Object.keys(progressByCode).length === 0 || total === 0) {
     return { status: 'not_started', completed: 0, total, percentage: 0 };
   }
-  const shown = new Set(shownDdTypes.map((ddType) => ddType.code));
-  const runs = Object.values(progressByCode).filter((run) => !run.dd_type || shown.has(run.dd_type));
+  const shown = new Set(shownDdTypes.map(ddType => ddType.code));
+  const runs = Object.values(progressByCode).filter(run => !run.dd_type || shown.has(run.dd_type));
   const totalProgress = runs.reduce((sum, run) => sum + (run.percentage || 0), 0);
   return {
     status: getSessionStatus(runs, total),
     // Finished runs, not a percentage the progress endpoint rounds.
-    completed: runs.filter((run) => FINISHED_STATUSES.includes(run.status)).length,
+    completed: runs.filter(run => FINISHED_STATUSES.includes(run.status)).length,
     total,
     percentage: Math.min(Math.round(totalProgress / total), 100),
   };

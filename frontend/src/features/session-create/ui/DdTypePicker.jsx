@@ -28,7 +28,9 @@ const DdTypeTile = ({ ddType, selected, onToggle }) => {
         <Icon className={`w-6 h-6 ${selected ? 'text-accent-blue' : 'text-content-secondary'}`} />
       </span>
       <span className="flex-1">
-        <span className="block text-sm font-semibold mb-1 leading-tight text-content">{ddType.name}</span>
+        <span className="block text-sm font-semibold mb-1 leading-tight text-content">
+          {ddType.name}
+        </span>
         {ddType.description && (
           <span
             className="block text-xs leading-relaxed line-clamp-2 overflow-hidden text-content-secondary"
@@ -50,7 +52,7 @@ export const DdTypePicker = ({ ddTypes, selected, onChange }) => {
   const term = search.toLowerCase();
 
   const shown = ddTypes.filter(
-    (ddType) =>
+    ddType =>
       (!term ||
         ddType.name.toLowerCase().includes(term) ||
         ddType.description?.toLowerCase().includes(term)) &&
@@ -58,19 +60,25 @@ export const DdTypePicker = ({ ddTypes, selected, onChange }) => {
   );
   const filtering = Boolean(term) || category !== 'all';
 
-  const toggle = (code) =>
-    onChange(selected.includes(code) ? selected.filter((item) => item !== code) : [...selected, code]);
+  const toggle = code =>
+    onChange(
+      selected.includes(code) ? selected.filter(item => item !== code) : [...selected, code]
+    );
 
   return (
     <>
       {ddTypes.length >= FILTER_FROM && (
         <div className="mb-6 space-y-4">
-          <SearchInput placeholder="Search due diligence types..." value={search} onChange={setSearch} />
+          <SearchInput
+            placeholder="Search due diligence types..."
+            value={search}
+            onChange={setSearch}
+          />
           {categories.length > 1 && (
             <div className="flex flex-wrap items-center gap-2">
               <FunnelIcon className="h-4 w-4 text-content-muted" />
               <span className="eyebrow mr-2">Filter by category:</span>
-              {[{ key: 'all', label: 'All', count: ddTypes.length }, ...categories].map((item) => (
+              {[{ key: 'all', label: 'All', count: ddTypes.length }, ...categories].map(item => (
                 <button
                   key={item.key}
                   type="button"
@@ -89,18 +97,26 @@ export const DdTypePicker = ({ ddTypes, selected, onChange }) => {
 
       <div className="mb-4 flex items-center justify-between">
         <div className="text-sm text-content-secondary">
-          {selected.length > 0 ? `${selected.length} of ${ddTypes.length} types selected` : 'No types selected'}
+          {selected.length > 0
+            ? `${selected.length} of ${ddTypes.length} types selected`
+            : 'No types selected'}
         </div>
         <div className="flex gap-2">
           <button
             type="button"
-            onClick={() => onChange([...new Set([...selected, ...shown.map((ddType) => ddType.code)])])}
+            onClick={() =>
+              onChange([...new Set([...selected, ...shown.map(ddType => ddType.code)])])
+            }
             className="text-xs text-link"
           >
             Select All {filtering ? 'Filtered' : ''}
           </button>
           <span className="text-border">|</span>
-          <button type="button" onClick={() => onChange([])} className="text-xs text-content-secondary hover:text-content">
+          <button
+            type="button"
+            onClick={() => onChange([])}
+            className="text-xs text-content-secondary hover:text-content"
+          >
             Clear All
           </button>
         </div>
@@ -125,7 +141,7 @@ export const DdTypePicker = ({ ddTypes, selected, onChange }) => {
         />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {shown.map((ddType) => (
+          {shown.map(ddType => (
             <DdTypeTile
               key={ddType.code}
               ddType={ddType}

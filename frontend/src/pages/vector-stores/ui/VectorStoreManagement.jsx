@@ -1,6 +1,10 @@
 import { useState } from 'react';
 import { ArrowPathIcon, FolderOpenIcon, PlusIcon } from '@heroicons/react/24/outline';
-import { CreateVectorStoreModal, useStoreSelection, useVectorStores } from '@/features/vector-store-manage';
+import {
+  CreateVectorStoreModal,
+  useStoreSelection,
+  useVectorStores,
+} from '@/features/vector-store-manage';
 import { Button, EmptyState, LoadingSpinner, PageHeader, pageLayout, panel } from '@/shared/ui';
 import { VectorStoreDetails, VectorStoreList } from '@/widgets/vector-store-browser';
 
@@ -36,7 +40,12 @@ const VectorStoreManagement = () => {
           subtitle="Manage the document collections the engine searches during a due diligence"
           actions={
             <>
-              <Button onClick={refreshAll} loading={stores.loading} variant="secondary" icon={ArrowPathIcon}>
+              <Button
+                onClick={refreshAll}
+                loading={stores.loading}
+                variant="secondary"
+                icon={ArrowPathIcon}
+              >
                 Refresh
               </Button>
               <Button onClick={() => setCreating(true)} variant="primary" icon={PlusIcon}>
@@ -62,7 +71,11 @@ const VectorStoreManagement = () => {
           />
         ) : (
           <div className="flex gap-6 h-full overflow-hidden">
-            <VectorStoreList stores={stores.vectorStores} selectedStore={selected} onSelectStore={selection.select} />
+            <VectorStoreList
+              stores={stores.vectorStores}
+              selectedStore={selected}
+              onSelectStore={selection.select}
+            />
             <div className={`${panel.base} flex-1 flex flex-col overflow-hidden`}>
               {selected ? (
                 <VectorStoreDetails
@@ -83,7 +96,11 @@ const VectorStoreManagement = () => {
         )}
       </div>
 
-      <CreateVectorStoreModal isOpen={creating} onClose={() => setCreating(false)} onCreate={stores.createStore} />
+      <CreateVectorStoreModal
+        isOpen={creating}
+        onClose={() => setCreating(false)}
+        onCreate={stores.createStore}
+      />
     </div>
   );
 };

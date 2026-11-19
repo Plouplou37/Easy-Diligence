@@ -4,9 +4,9 @@ import { IN_PROGRESS_STATUSES } from '@/entities/execution';
 import { Badge, Card, tableStyles } from '@/shared/ui';
 
 // Per-user counts, from the dashboard's own data.
-const byUser = (sessions) => {
+const byUser = sessions => {
   const users = new Map();
-  sessions.forEach((session) => {
+  sessions.forEach(session => {
     const userId = session.created_by || session.assigned_to;
     if (!userId) return;
     if (!users.has(userId)) {

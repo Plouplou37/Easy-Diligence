@@ -3,30 +3,19 @@ import { Badge } from '@/shared/ui';
 
 const VersionHistory = ({ answerId, versions, onRevert }) => {
   if (!versions || versions.length === 0) {
-    return (
-      <div className="text-sm text-content-muted italic">
-        No version history available
-      </div>
-    );
+    return <div className="text-sm text-content-muted italic">No version history available</div>;
   }
 
   return (
     <div className="space-y-2">
-      {versions.map((version) => (
-        <div
-          key={version.version}
-          className="form-surface p-3"
-        >
+      {versions.map(version => (
+        <div key={version.version} className="form-surface p-3">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center space-x-2">
               <span className="text-xs font-medium text-content-secondary">
                 Version {version.version}
               </span>
-              {version.is_current && (
-                <Badge variant="success">
-                  Current
-                </Badge>
-              )}
+              {version.is_current && <Badge variant="success">Current</Badge>}
             </div>
             {!version.is_current && (
               <button
@@ -53,9 +42,7 @@ const VersionHistory = ({ answerId, versions, onRevert }) => {
               </div>
             )}
             {version.edit_reason && (
-              <div className="mt-1 text-content-secondary">
-                Reason: {version.edit_reason}
-              </div>
+              <div className="mt-1 text-content-secondary">Reason: {version.edit_reason}</div>
             )}
           </div>
 

@@ -58,7 +58,10 @@ const VectorStoreDetails = ({ store, refreshStore, onRefreshed, deleting, onDele
               {store.name}
             </h2>
             {store.description && (
-              <p className="text-sm text-content-secondary mt-1 line-clamp-2" title={store.description}>
+              <p
+                className="text-sm text-content-secondary mt-1 line-clamp-2"
+                title={store.description}
+              >
                 {store.description}
               </p>
             )}
@@ -108,7 +111,11 @@ const VectorStoreDetails = ({ store, refreshStore, onRefreshed, deleting, onDele
           </Button>
         </div>
         <div className="flex-1 min-h-0">
-          <FileList files={files.files} loading={files.filesLoading} onRemoveFile={files.removeFile} />
+          <FileList
+            files={files.files}
+            loading={files.filesLoading}
+            onRemoveFile={files.removeFile}
+          />
         </div>
       </div>
 

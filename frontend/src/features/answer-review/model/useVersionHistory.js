@@ -9,17 +9,17 @@ export const useVersionHistory = () => {
   const [showVersionHistory, setShowVersionHistory] = useState({});
   const [versionHistory, setVersionHistory] = useState({});
 
-  const fetchVersionHistory = async (answerId) => {
+  const fetchVersionHistory = async answerId => {
     try {
       const response = await answersAPI.getHistory(answerId);
-      setVersionHistory((previous) => ({ ...previous, [answerId]: response.data.versions || [] }));
+      setVersionHistory(previous => ({ ...previous, [answerId]: response.data.versions || [] }));
     } catch {
       toast.error('Failed to load version history');
     }
   };
 
-  const toggleVersionHistory = async (answerId) => {
-    setShowVersionHistory((previous) => ({ ...previous, [answerId]: !previous[answerId] }));
+  const toggleVersionHistory = async answerId => {
+    setShowVersionHistory(previous => ({ ...previous, [answerId]: !previous[answerId] }));
     if (!versionHistory[answerId]) {
       await fetchVersionHistory(answerId);
     }
@@ -44,5 +44,11 @@ export const useVersionHistory = () => {
     }
   };
 
-  return { showVersionHistory, versionHistory, toggleVersionHistory, fetchVersionHistory, revertToVersion };
+  return {
+    showVersionHistory,
+    versionHistory,
+    toggleVersionHistory,
+    fetchVersionHistory,
+    revertToVersion,
+  };
 };

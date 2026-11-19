@@ -1,7 +1,16 @@
 import { useState } from 'react';
 import { DocumentTextIcon, PlusIcon } from '@heroicons/react/24/outline';
 import { DdTypeFormModal, DdTypesTable, useDdTypeAdmin } from '@/features/dd-type-admin';
-import { Button, EmptyState, LoadingSpinner, PageHeader, pageLayout, panel, sectionHeader, tableStyles } from '@/shared/ui';
+import {
+  Button,
+  EmptyState,
+  LoadingSpinner,
+  PageHeader,
+  pageLayout,
+  panel,
+  sectionHeader,
+  tableStyles,
+} from '@/shared/ui';
 
 // The form's state: closed, a new DD type, or the one being edited.
 const CLOSED = { open: false, ddType: null };
@@ -19,7 +28,7 @@ const DDTypeManagement = () => {
   }
 
   const openNew = () => setForm({ open: true, ddType: null });
-  const save = (values) => (form.ddType ? admin.update(form.ddType, values) : admin.create(values));
+  const save = values => (form.ddType ? admin.update(form.ddType, values) : admin.create(values));
 
   return (
     <div className={pageLayout.container}>
@@ -45,7 +54,7 @@ const DDTypeManagement = () => {
           {admin.ddTypes.length > 0 ? (
             <DdTypesTable
               ddTypes={admin.ddTypes}
-              onEdit={(ddType) => setForm({ open: true, ddType })}
+              onEdit={ddType => setForm({ open: true, ddType })}
               onToggleActive={admin.toggleActive}
               onDelete={admin.remove}
             />
@@ -63,7 +72,9 @@ const DDTypeManagement = () => {
         </div>
       </div>
 
-      {form.open && <DdTypeFormModal ddType={form.ddType} onSave={save} onClose={() => setForm(CLOSED)} />}
+      {form.open && (
+        <DdTypeFormModal ddType={form.ddType} onSave={save} onClose={() => setForm(CLOSED)} />
+      )}
     </div>
   );
 };

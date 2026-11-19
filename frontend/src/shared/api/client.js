@@ -11,7 +11,7 @@ export const api = axios.create({
 export const SESSION_EXPIRED = 'session-expired';
 
 // Every request carries the access token, when there is one.
-api.interceptors.request.use((config) => {
+api.interceptors.request.use(config => {
   const token = localStorage.getItem('authToken');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -24,11 +24,11 @@ api.interceptors.request.use((config) => {
 const AUTH_FORMS = ['/auth/login', '/auth/register', '/auth/reset-password'];
 
 api.interceptors.response.use(
-  (response) => response,
-  (error) => {
+  response => response,
+  error => {
     const status = error.response?.status;
     const url = error.config?.url || '';
-    if (status === 401 && !AUTH_FORMS.some((path) => url.startsWith(path))) {
+    if (status === 401 && !AUTH_FORMS.some(path => url.startsWith(path))) {
       window.dispatchEvent(new Event(SESSION_EXPIRED));
     } else if (status === 403) {
       // The resource exists but is not the user's.
@@ -43,7 +43,7 @@ api.interceptors.response.use(
 export const errorMessage = (error, fallback) => {
   const detail = error?.response?.data?.detail;
   if (typeof detail === 'string') return detail;
-  if (Array.isArray(detail)) return detail.map((item) => item.msg).join(', ');
+  if (Array.isArray(detail)) return detail.map(item => item.msg).join(', ');
   return fallback || error?.message || 'Something went wrong';
 };
 

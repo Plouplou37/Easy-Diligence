@@ -84,6 +84,6 @@ export const useDragDrop = (onSectionReorder, onQuestionReorder) => {
     handleQuestionDragStart,
     handleQuestionDragOver,
     handleQuestionDragLeave,
-    handleQuestionDrop
+    handleQuestionDrop,
   };
 };

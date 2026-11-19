@@ -1,6 +1,14 @@
 import { useSearchParams } from 'react-router-dom';
 import { PlusIcon, FolderIcon } from '@heroicons/react/24/outline';
-import { Button, EmptyState, LoadingSpinner, PageHeader, pageLayout, panel, sectionHeader } from '@/shared/ui';
+import {
+  Button,
+  EmptyState,
+  LoadingSpinner,
+  PageHeader,
+  pageLayout,
+  panel,
+  sectionHeader,
+} from '@/shared/ui';
 import DDTypeSelector from './DDTypeSelector';
 import { SectionCard } from '@/widgets/questionnaire-tree';
 import { QuestionEditor } from '@/features/questionnaire-edit';
@@ -17,10 +25,7 @@ const QuestionManagement = () => {
   const sectionHook = useSections(ddTypeHook.selectedDdType, ddTypeHook.refreshSelectedDdType);
   const questionHook = useQuestions(ddTypeHook.selectedDdType, ddTypeHook.refreshSelectedDdType);
 
-  const dragDropHook = useDragDrop(
-    sectionHook.reorderSection,
-    questionHook.reorderQuestion
-  );
+  const dragDropHook = useDragDrop(sectionHook.reorderSection, questionHook.reorderQuestion);
 
   const isValidated = ddTypeHook.selectedDdType?.is_validated || false;
 
@@ -56,17 +61,11 @@ const QuestionManagement = () => {
           <>
             <div className="flex items-center justify-between gap-4">
               <div className={`${sectionHeader.wrapper} flex-1`}>
-                <h2 className={sectionHeader.title}>
-                  Sections & Questions
-                </h2>
+                <h2 className={sectionHeader.title}>Sections & Questions</h2>
                 <div className={sectionHeader.hairline} />
               </div>
               {!isValidated && (
-                <Button
-                  onClick={sectionHook.createSection}
-                  variant="primary"
-                  icon={PlusIcon}
-                >
+                <Button onClick={sectionHook.createSection} variant="primary" icon={PlusIcon}>
                   Add Section
                 </Button>
               )}
@@ -76,32 +75,32 @@ const QuestionManagement = () => {
               <div className="space-y-4">
                 {[...ddTypeHook.selectedDdType.sections]
                   .sort((a, b) => a.order_index - b.order_index)
-                  .map((section) => (
-                  <SectionCard
-                    key={section.id}
-                    section={section}
-                    isValidated={isValidated}
-                    onEditSection={sectionHook.editSection}
-                    onDeleteSection={sectionHook.deleteSection}
-                    onCreateQuestion={questionHook.createQuestion}
-                    onEditQuestion={questionHook.editQuestion}
-                    onDeleteQuestion={questionHook.deleteQuestion}
-                    dragHandlers={{
-                      onDragStart: dragDropHook.handleSectionDragStart,
-                      onDragOver: dragDropHook.handleSectionDragOver,
-                      onDragLeave: dragDropHook.handleSectionDragLeave,
-                      onDrop: dragDropHook.handleSectionDrop
-                    }}
-                    questionDragHandlers={{
-                      onDragStart: dragDropHook.handleQuestionDragStart,
-                      onDragOver: dragDropHook.handleQuestionDragOver,
-                      onDragLeave: dragDropHook.handleQuestionDragLeave,
-                      onDrop: dragDropHook.handleQuestionDrop
-                    }}
-                    dragOverSection={dragDropHook.dragOverSection}
-                    dragOverQuestion={dragDropHook.dragOverQuestion}
-                  />
-                ))}
+                  .map(section => (
+                    <SectionCard
+                      key={section.id}
+                      section={section}
+                      isValidated={isValidated}
+                      onEditSection={sectionHook.editSection}
+                      onDeleteSection={sectionHook.deleteSection}
+                      onCreateQuestion={questionHook.createQuestion}
+                      onEditQuestion={questionHook.editQuestion}
+                      onDeleteQuestion={questionHook.deleteQuestion}
+                      dragHandlers={{
+                        onDragStart: dragDropHook.handleSectionDragStart,
+                        onDragOver: dragDropHook.handleSectionDragOver,
+                        onDragLeave: dragDropHook.handleSectionDragLeave,
+                        onDrop: dragDropHook.handleSectionDrop,
+                      }}
+                      questionDragHandlers={{
+                        onDragStart: dragDropHook.handleQuestionDragStart,
+                        onDragOver: dragDropHook.handleQuestionDragOver,
+                        onDragLeave: dragDropHook.handleQuestionDragLeave,
+                        onDrop: dragDropHook.handleQuestionDrop,
+                      }}
+                      dragOverSection={dragDropHook.dragOverSection}
+                      dragOverQuestion={dragDropHook.dragOverQuestion}
+                    />
+                  ))}
               </div>
             ) : (
               <div className={panel.base}>
@@ -109,11 +108,13 @@ const QuestionManagement = () => {
                   icon={FolderIcon}
                   title="No sections"
                   text="Get started by creating a section for this DD type."
-                  action={!isValidated && (
-                    <Button onClick={sectionHook.createSection} variant="primary" icon={PlusIcon}>
-                      Create Section
-                    </Button>
-                  )}
+                  action={
+                    !isValidated && (
+                      <Button onClick={sectionHook.createSection} variant="primary" icon={PlusIcon}>
+                        Create Section
+                      </Button>
+                    )
+                  }
                 />
               </div>
             )}

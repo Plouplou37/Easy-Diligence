@@ -33,19 +33,21 @@ const AppLayout = () => {
         // DD types & questions are now per-user owned, so every user manages their own
         { name: 'Questions', href: '/questions', icon: QuestionMarkCircleIcon },
         { name: 'DD Types', href: '/dd-types', icon: TagIcon },
-      ]
+      ],
     },
-    ...(isAdmin ? [{
-      name: 'Administration',
-      items: [
-        { name: 'User Management', href: '/admin/users', icon: UsersIcon },
-      ]
-    }] : []),
+    ...(isAdmin
+      ? [
+          {
+            name: 'Administration',
+            items: [{ name: 'User Management', href: '/admin/users', icon: UsersIcon }],
+          },
+        ]
+      : []),
   ];
 
   // Nested pages light up their section: a session and its answers belong to
   // the Dashboard, which had nothing highlighted on them.
-  const isActive = (href) => {
+  const isActive = href => {
     const path = location.pathname;
     if (path === href) return true;
     if (href === '/') return path.startsWith('/session/') && path !== '/session/create';
@@ -63,7 +65,7 @@ const AppLayout = () => {
 
   // Close user menu when clicking outside
   useEffect(() => {
-    const handleClickOutside = (event) => {
+    const handleClickOutside = event => {
       if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
         setUserMenuOpen(false);
       }
@@ -93,10 +95,8 @@ const AppLayout = () => {
         <div className="hidden xl:flex flex-1 min-w-0 items-center justify-center gap-1">
           {navigation.map((section, sectionIdx) => (
             <React.Fragment key={section.name}>
-              {sectionIdx > 0 && (
-                <span className="mx-2 h-4 w-px bg-border" aria-hidden="true" />
-              )}
-              {section.items.map((item) => (
+              {sectionIdx > 0 && <span className="mx-2 h-4 w-px bg-border" aria-hidden="true" />}
+              {section.items.map(item => (
                 <Link
                   key={item.name}
                   to={item.href}
@@ -127,15 +127,13 @@ const AppLayout = () => {
             {userMenuOpen && (
               <div className={`absolute right-0 top-full mt-2 min-w-[13rem] z-50 ${menu.panel}`}>
                 <div className={menu.header}>
-                  <p className="eyebrow">{user?.first_name} {user?.last_name}</p>
+                  <p className="eyebrow">
+                    {user?.first_name} {user?.last_name}
+                  </p>
                   <p className="mt-0.5 text-xs text-content-muted truncate">{user?.email}</p>
                 </div>
                 <div className="py-1">
-                  <Link
-                    to="/profile"
-                    className={menu.item}
-                    onClick={closeMenus}
-                  >
+                  <Link to="/profile" className={menu.item} onClick={closeMenus}>
                     <UserCircleIcon className="h-3.5 w-3.5 shrink-0" />
                     Profile Settings
                   </Link>
@@ -160,11 +158,7 @@ const AppLayout = () => {
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="xl:hidden p-1.5 rounded-md text-content-secondary hover:text-content hover:bg-surface-hover transition-colors"
           >
-            {mobileMenuOpen ? (
-              <XMarkIcon className="h-6 w-6" />
-            ) : (
-              <Bars3Icon className="h-6 w-6" />
-            )}
+            {mobileMenuOpen ? <XMarkIcon className="h-6 w-6" /> : <Bars3Icon className="h-6 w-6" />}
           </button>
         </div>
       </nav>
@@ -176,13 +170,13 @@ const AppLayout = () => {
             className="fixed inset-0 z-30 modal-backdrop animate-fade-in xl:hidden"
             onClick={() => setMobileMenuOpen(false)}
           />
-          <div className={`fixed z-40 top-[calc(var(--navbar-height)+0.5rem)] inset-x-2 sm:inset-x-4 py-2 xl:hidden animate-fade-in ${menu.panel}`}>
-            {navigation.map((section) => (
+          <div
+            className={`fixed z-40 top-[calc(var(--navbar-height)+0.5rem)] inset-x-2 sm:inset-x-4 py-2 xl:hidden animate-fade-in ${menu.panel}`}
+          >
+            {navigation.map(section => (
               <div key={section.name} className="py-1">
-                <h3 className="eyebrow px-4 pt-2 pb-1">
-                  {section.name}
-                </h3>
-                {section.items.map((item) => {
+                <h3 className="eyebrow px-4 pt-2 pb-1">{section.name}</h3>
+                {section.items.map(item => {
                   const Icon = item.icon;
                   const active = isActive(item.href);
 

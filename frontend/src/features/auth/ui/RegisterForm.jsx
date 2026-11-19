@@ -14,14 +14,14 @@ export const RegisterForm = () => {
   const [problems, setProblems] = useState({});
   const [loading, setLoading] = useState(false);
 
-  const change = (event) => {
+  const change = event => {
     const { name, value } = event.target;
-    setForm((previous) => ({ ...previous, [name]: value }));
+    setForm(previous => ({ ...previous, [name]: value }));
     // The field's problem goes as soon as it is being corrected.
-    if (problems[name]) setProblems((previous) => ({ ...previous, [name]: undefined }));
+    if (problems[name]) setProblems(previous => ({ ...previous, [name]: undefined }));
   };
 
-  const submit = async (event) => {
+  const submit = async event => {
     event.preventDefault();
     const found = registrationProblems(form);
     setProblems(found);
@@ -31,7 +31,7 @@ export const RegisterForm = () => {
     setLoading(false);
   };
 
-  const fieldProps = (name) => ({
+  const fieldProps = name => ({
     id: name,
     name,
     value: form[name],
@@ -43,7 +43,13 @@ export const RegisterForm = () => {
   return (
     <form className="space-y-6" onSubmit={submit} noValidate>
       <div className="space-y-5">
-        <Input {...fieldProps('name')} label="Full Name" leftIcon={UserIcon} autoComplete="name" placeholder="Jane Doe" />
+        <Input
+          {...fieldProps('name')}
+          label="Full Name"
+          leftIcon={UserIcon}
+          autoComplete="name"
+          placeholder="Jane Doe"
+        />
         <Input
           {...fieldProps('username')}
           label="Username"

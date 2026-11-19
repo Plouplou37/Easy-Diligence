@@ -10,15 +10,15 @@ import { getStatusTone } from '@/shared/lib/status';
 import { getStatusLabel } from '@/shared/lib/status';
 
 const ICONS = {
-  in_progress: (cls) => <ClockIcon className={`${cls} animate-pulse`} />,
-  paused: (cls) => <PauseIcon className={cls} />,
-  failed: (cls) => <XCircleIcon className={cls} />,
-  completed: (cls) => <CheckCircleIcon className={cls} />,
-  generated: (cls) => <CheckCircleIcon className={cls} />,
-  validated: (cls) => <CheckCircleIcon className={cls} />,
-  finalized: (cls) => <CheckCircleIcon className={cls} />,
-  approved: (cls) => <CheckCircleIcon className={cls} />,
-  under_review: (cls) => <EyeIcon className={cls} />,
+  in_progress: cls => <ClockIcon className={`${cls} animate-pulse`} />,
+  paused: cls => <PauseIcon className={cls} />,
+  failed: cls => <XCircleIcon className={cls} />,
+  completed: cls => <CheckCircleIcon className={cls} />,
+  generated: cls => <CheckCircleIcon className={cls} />,
+  validated: cls => <CheckCircleIcon className={cls} />,
+  finalized: cls => <CheckCircleIcon className={cls} />,
+  approved: cls => <CheckCircleIcon className={cls} />,
+  under_review: cls => <EyeIcon className={cls} />,
 };
 
 /**

@@ -30,7 +30,9 @@ export const UserDetailsModal = ({ user, onClose }) => (
               <span className={`${pill} ${roleBadge(user.role)}`}>{user.role}</span>
             </Item>
             <Item label="Status">
-              <span className={`${pill} ${getToneStyles(user.is_active ? 'success' : 'error').badge}`}>
+              <span
+                className={`${pill} ${getToneStyles(user.is_active ? 'success' : 'error').badge}`}
+              >
                 {user.is_active ? 'Active' : 'Inactive'}
               </span>
             </Item>

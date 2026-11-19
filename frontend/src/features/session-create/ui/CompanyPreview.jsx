@@ -15,7 +15,7 @@ const ExternalLink = ({ href }) => (
 export const CompanyPreview = ({ company, onSaveManager, saving }) => {
   const [manager, setManager] = useState(null);
 
-  const save = async (event) => {
+  const save = async event => {
     event.preventDefault();
     if (await onSaveManager(manager)) setManager(null);
   };
@@ -41,14 +41,18 @@ export const CompanyPreview = ({ company, onSaveManager, saving }) => {
             <Input
               label="Management company"
               value={manager.management_company_name}
-              onChange={(event) => setManager({ ...manager, management_company_name: event.target.value })}
+              onChange={event =>
+                setManager({ ...manager, management_company_name: event.target.value })
+              }
               placeholder="Company running the fund"
             />
             <Input
               label="Management company website"
               type="url"
               value={manager.management_company_website}
-              onChange={(event) => setManager({ ...manager, management_company_website: event.target.value })}
+              onChange={event =>
+                setManager({ ...manager, management_company_website: event.target.value })
+              }
               placeholder="https://example.com"
             />
             <div className="flex space-x-2">
@@ -67,11 +71,14 @@ export const CompanyPreview = ({ company, onSaveManager, saving }) => {
               {company.management_company_name ? (
                 <>
                   <p>{company.management_company_name}</p>
-                  {company.management_company_website && <ExternalLink href={company.management_company_website} />}
+                  {company.management_company_website && (
+                    <ExternalLink href={company.management_company_website} />
+                  )}
                 </>
               ) : (
                 <p className="text-content-secondary italic">
-                  Not set — the engine will not be able to tell fund-level questions from management-company ones.
+                  Not set — the engine will not be able to tell fund-level questions from
+                  management-company ones.
                 </p>
               )}
             </div>

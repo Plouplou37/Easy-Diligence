@@ -18,9 +18,10 @@ export const ChangePasswordModal = ({ isOpen, onClose }) => {
     onClose();
   };
 
-  const change = (name) => (event) => setForm((previous) => ({ ...previous, [name]: event.target.value }));
+  const change = name => event =>
+    setForm(previous => ({ ...previous, [name]: event.target.value }));
 
-  const submit = async (event) => {
+  const submit = async event => {
     event.preventDefault();
     const found = {};
     if (!form.current) found.current = 'Enter your current password';

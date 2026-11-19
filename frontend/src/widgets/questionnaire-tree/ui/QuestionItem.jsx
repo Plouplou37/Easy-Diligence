@@ -9,19 +9,19 @@ const QuestionItem = ({
   onEdit,
   onDelete,
   dragHandlers,
-  dragOverQuestion
+  dragOverQuestion,
 }) => {
   return (
     <div
-      onDragOver={(e) => {
+      onDragOver={e => {
         e.stopPropagation();
         !isValidated && dragHandlers.onDragOver(e, question, sectionId);
       }}
-      onDragLeave={(e) => {
+      onDragLeave={e => {
         e.stopPropagation();
         dragHandlers.onDragLeave();
       }}
-      onDrop={(e) => {
+      onDrop={e => {
         e.stopPropagation();
         !isValidated && dragHandlers.onDrop(e, question, sectionId);
       }}
@@ -36,7 +36,7 @@ const QuestionItem = ({
           {!isValidated && (
             <div
               draggable
-              onDragStart={(e) => dragHandlers.onDragStart(e, question, sectionId)}
+              onDragStart={e => dragHandlers.onDragStart(e, question, sectionId)}
               className="cursor-move p-1 hover:bg-surface-hover rounded mt-0.5"
             >
               <Bars3Icon className="h-4 w-4 text-content-muted" />

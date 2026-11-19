@@ -1,10 +1,16 @@
 import { useState } from 'react';
-import { AtSymbolIcon, BriefcaseIcon, CheckIcon, EnvelopeIcon, UserCircleIcon } from '@heroicons/react/24/outline';
+import {
+  AtSymbolIcon,
+  BriefcaseIcon,
+  CheckIcon,
+  EnvelopeIcon,
+  UserCircleIcon,
+} from '@heroicons/react/24/outline';
 import { useAuth } from '@/entities/viewer';
 import { Button, Input, panel, sectionHeader } from '@/shared/ui';
 
 // What the user may change about themselves (UserUpdate in models/user.py).
-const editable = (user) => ({
+const editable = user => ({
   full_name: user?.full_name || '',
   email: user?.email || '',
   company: user?.company || '',
@@ -28,9 +34,9 @@ export const ProfileDetails = () => {
   const [form, setForm] = useState(() => editable(user));
   const [saving, setSaving] = useState(false);
 
-  const change = (event) => {
+  const change = event => {
     const { name, value } = event.target;
-    setForm((previous) => ({ ...previous, [name]: value }));
+    setForm(previous => ({ ...previous, [name]: value }));
   };
 
   const cancel = () => {
@@ -38,7 +44,7 @@ export const ProfileDetails = () => {
     setEditing(false);
   };
 
-  const save = async (event) => {
+  const save = async event => {
     event.preventDefault();
     setSaving(true);
     const result = await updateProfile(form);
@@ -92,10 +98,36 @@ export const ProfileDetails = () => {
 
         {editing ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Input label="Full Name" name="full_name" value={form.full_name} onChange={change} autoComplete="name" />
-            <Input label="Email Address" name="email" type="email" value={form.email} onChange={change} required />
-            <Input label="Company" name="company" value={form.company} onChange={change} placeholder="Your company name" />
-            <Input label="Phone Number" name="phone" type="tel" value={form.phone} onChange={change} placeholder="Your phone number" />
+            <Input
+              label="Full Name"
+              name="full_name"
+              value={form.full_name}
+              onChange={change}
+              autoComplete="name"
+            />
+            <Input
+              label="Email Address"
+              name="email"
+              type="email"
+              value={form.email}
+              onChange={change}
+              required
+            />
+            <Input
+              label="Company"
+              name="company"
+              value={form.company}
+              onChange={change}
+              placeholder="Your company name"
+            />
+            <Input
+              label="Phone Number"
+              name="phone"
+              type="tel"
+              value={form.phone}
+              onChange={change}
+              placeholder="Your phone number"
+            />
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -113,12 +145,16 @@ export const ProfileDetails = () => {
         <div className="mt-6 pt-6 border-t border-border grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
           <div>
             <span className="eyebrow">Account Type:</span>
-            <span className="ml-2 text-content">{user?.role === 'admin' ? 'Administrator' : 'Analyst'}</span>
+            <span className="ml-2 text-content">
+              {user?.role === 'admin' ? 'Administrator' : 'Analyst'}
+            </span>
           </div>
           {user?.created_at && (
             <div>
               <span className="eyebrow">Member Since:</span>
-              <span className="ml-2 text-content">{new Date(user.created_at).toLocaleDateString()}</span>
+              <span className="ml-2 text-content">
+                {new Date(user.created_at).toLocaleDateString()}
+              </span>
             </div>
           )}
         </div>

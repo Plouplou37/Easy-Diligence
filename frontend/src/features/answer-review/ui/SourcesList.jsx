@@ -2,7 +2,7 @@ import {
   DocumentIcon,
   LinkIcon,
   ArrowDownTrayIcon,
-  MagnifyingGlassIcon
+  MagnifyingGlassIcon,
 } from '@heroicons/react/24/outline';
 import { parseSourcesFromString, getSourceContent } from '@/entities/answer';
 import SourceContent from './SourceContent';
@@ -11,7 +11,7 @@ const SourcesList = ({ sources: rawSources, compact = false }) => {
   // Check if sources are already parsed (array) or need parsing (string/object)
   const sources = Array.isArray(rawSources) ? rawSources : parseSourcesFromString(rawSources);
 
-  const getIcon = (type) => {
+  const getIcon = type => {
     const sizeClass = compact ? 'w-3 h-3' : 'w-4 h-4';
     switch (type) {
       case 'file':
@@ -27,7 +27,7 @@ const SourcesList = ({ sources: rawSources, compact = false }) => {
     }
   };
 
-  const getTypeLabel = (type) => {
+  const getTypeLabel = type => {
     switch (type) {
       case 'file':
         return 'Files';
@@ -45,9 +45,7 @@ const SourcesList = ({ sources: rawSources, compact = false }) => {
   if (!sources || sources.length === 0) {
     return (
       <div className={`${compact ? 'p-2' : 'p-3'} bg-surface-bg rounded-md`}>
-        <p className="text-xs text-content-secondary">
-          No source information available
-        </p>
+        <p className="text-xs text-content-secondary">No source information available</p>
       </div>
     );
   }
@@ -70,7 +68,9 @@ const SourcesList = ({ sources: rawSources, compact = false }) => {
           <div key={type}>
             <div className="flex items-center mb-2">
               {getIcon(type)}
-              <span className={`${compact ? 'text-xs' : 'text-sm'} font-medium text-content-secondary`}>
+              <span
+                className={`${compact ? 'text-xs' : 'text-sm'} font-medium text-content-secondary`}
+              >
                 {getTypeLabel(type)} ({validSources.length})
               </span>
             </div>

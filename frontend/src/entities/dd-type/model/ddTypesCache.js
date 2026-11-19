@@ -14,8 +14,8 @@ export const fetchDdTypes = ({ withQuestions = false, activeOnly = true } = {}) 
     const url = withQuestions ? '/questions/dd-types' : '/dd-types/';
     const request = api
       .get(url, { params: { active_only: activeOnly } })
-      .then((response) => response.data)
-      .catch((error) => {
+      .then(response => response.data)
+      .catch(error => {
         cache.delete(key); // a failure is not kept
         throw error;
       });
@@ -31,10 +31,10 @@ export const useDdTypes = ({ withQuestions = false, activeOnly = true } = {}) =>
   const [state, setState] = useState({ ddTypes: [], loading: true, error: null });
 
   const load = useCallback(() => {
-    setState((previous) => ({ ...previous, loading: true }));
+    setState(previous => ({ ...previous, loading: true }));
     return fetchDdTypes({ withQuestions, activeOnly })
-      .then((ddTypes) => setState({ ddTypes, loading: false, error: null }))
-      .catch((error) => setState({ ddTypes: [], loading: false, error }));
+      .then(ddTypes => setState({ ddTypes, loading: false, error: null }))
+      .catch(error => setState({ ddTypes: [], loading: false, error }));
   }, [withQuestions, activeOnly]);
 
   useEffect(() => {

@@ -21,9 +21,7 @@ export const PageHeader = ({ breadcrumb, title, subtitle, meta, actions }) => (
         {subtitle && <p className={pageHeader.subtitle}>{subtitle}</p>}
         {meta && <div className="mt-2 text-xs text-content-muted">{meta}</div>}
       </div>
-      {actions && (
-        <div className="flex flex-shrink-0 flex-wrap items-center gap-2">{actions}</div>
-      )}
+      {actions && <div className="flex flex-shrink-0 flex-wrap items-center gap-2">{actions}</div>}
     </div>
     <div className={pageHeader.hairline} />
   </div>

@@ -23,7 +23,9 @@ export const useAnswers = (sessionId, ddTypeCode) => {
     const params = { limit: ALL_ANSWERS };
     if (ddTypeCode) params.dd_type = ddTypeCode;
     const response = await answersAPI.getBySession(sessionId, params);
-    setAnswers((response.data.answers || []).map((answer) => ({ ...answer, text: answer.answer_text })));
+    setAnswers(
+      (response.data.answers || []).map(answer => ({ ...answer, text: answer.answer_text }))
+    );
   }, [sessionId, ddTypeCode]);
 
   useEffect(() => {
@@ -62,8 +64,8 @@ export const useAnswers = (sessionId, ddTypeCode) => {
       const response = await answersAPI.updateStatus(answerId, updates.status);
       changes = { status: response.data.status };
     }
-    setAnswers((previous) =>
-      previous.map((answer) => (answer.id === answerId ? { ...answer, ...changes } : answer))
+    setAnswers(previous =>
+      previous.map(answer => (answer.id === answerId ? { ...answer, ...changes } : answer))
     );
   };
 

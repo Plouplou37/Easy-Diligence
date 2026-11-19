@@ -2,12 +2,17 @@ import { useState } from 'react';
 import toast from 'react-hot-toast';
 import { FolderIcon } from '@heroicons/react/24/outline';
 import { answersAPI } from '@/entities/answer';
-import { AnswerCard, RegenerateModal, useAnswerEditor, useVersionHistory } from '@/features/answer-review';
+import {
+  AnswerCard,
+  RegenerateModal,
+  useAnswerEditor,
+  useVersionHistory,
+} from '@/features/answer-review';
 import { StatTile, emptyState, panel } from '@/shared/ui';
 import AnswerFilters from './AnswerFilters';
 import SectionGroup from './SectionGroup';
 
-const toggled = (key) => (previous) => ({ ...previous, [key]: !previous[key] });
+const toggled = key => previous => ({ ...previous, [key]: !previous[key] });
 
 /**
  * A DD type's answers to review, by section: the figures, the filters, and
@@ -24,9 +29,11 @@ const AnswersBoard = ({ filters, updateAnswer, reload }) => {
   const editor = useAnswerEditor(updateAnswer, history.fetchVersionHistory);
   const { filtered, grouped } = filters;
 
-  const toggleStatus = async (answer) => {
+  const toggleStatus = async answer => {
     try {
-      await updateAnswer(answer.id, { status: answer.status === 'approved' ? 'needs_review' : 'approved' });
+      await updateAnswer(answer.id, {
+        status: answer.status === 'approved' ? 'needs_review' : 'approved',
+      });
     } catch {
       toast.error('Failed to update the answer status');
     }
@@ -49,7 +56,7 @@ const AnswersBoard = ({ filters, updateAnswer, reload }) => {
     }
   };
 
-  const renderAnswer = (answer) => (
+  const renderAnswer = answer => (
     <AnswerCard
       key={answer.id}
       answer={answer}
@@ -72,12 +79,18 @@ const AnswersBoard = ({ filters, updateAnswer, reload }) => {
         <StatTile label="Answers" value={filtered.length} />
         <StatTile
           label="To review"
-          value={filtered.filter((answer) => answer.status !== 'approved' && answer.status !== 'failed').length}
+          value={
+            filtered.filter(answer => answer.status !== 'approved' && answer.status !== 'failed')
+              .length
+          }
         />
-        <StatTile label="Approved" value={filtered.filter((answer) => answer.status === 'approved').length} />
+        <StatTile
+          label="Approved"
+          value={filtered.filter(answer => answer.status === 'approved').length}
+        />
         <StatTile
           label="Edited"
-          value={filtered.filter((answer) => answer.version > 1).length}
+          value={filtered.filter(answer => answer.version > 1).length}
           hint={`${grouped.size} sections`}
         />
       </div>

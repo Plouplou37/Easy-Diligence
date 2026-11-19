@@ -19,16 +19,16 @@ const ICONS = [
 
 export const guessIcon = (name = '') => {
   const lower = ` ${name.toLowerCase()} `;
-  const found = ICONS.find(([keywords]) => keywords.some((keyword) => lower.includes(keyword)));
+  const found = ICONS.find(([keywords]) => keywords.some(keyword => lower.includes(keyword)));
   return found ? found[1] : '📋';
 };
 
 /** A code for a new DD type: its name's first words, and a suffix to keep it unique. */
-export const generateCode = (name) => {
+export const generateCode = name => {
   const base = name
     .split(' ')
     .slice(0, 3)
-    .map((word) => word.toUpperCase())
+    .map(word => word.toUpperCase())
     .join('_')
     .replace(/[^A-Z0-9_]/g, '')
     .substring(0, 20);
@@ -37,10 +37,10 @@ export const generateCode = (name) => {
 };
 
 /** A readable name from a questionnaire's file name ("fund_review.xlsx" -> "Fund Review"). */
-export const nameFromFile = (filename) =>
+export const nameFromFile = filename =>
   filename
     .replace(/\.[^/.]+$/, '')
     .replace(/[_-]/g, ' ')
-    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+    .replace(/\b\w/g, letter => letter.toUpperCase());
 
 export const IMPORT_EXTENSIONS = ['.xlsx', '.xls', '.csv', '.json'];

@@ -8,7 +8,14 @@ import { getSessionDdTypes, sessionAPI } from '@/entities/session';
 import { useDdRunControl } from '@/features/dd-run-control';
 import { DeleteSessionButton, ExportPdfButton } from '@/features/session-actions';
 import { AssignAllSelect, useVectorStoreAssignments } from '@/features/vector-store-assign';
-import { Button, EmptyState, LoadingSpinner, PageHeader, pageLayout, sectionHeader } from '@/shared/ui';
+import {
+  Button,
+  EmptyState,
+  LoadingSpinner,
+  PageHeader,
+  pageLayout,
+  sectionHeader,
+} from '@/shared/ui';
 import { DDCard } from '@/widgets/dd-run-card';
 import { SessionProgressPanel } from '@/widgets/session-progress';
 
@@ -29,7 +36,7 @@ const SessionDetail = () => {
   const loadProgress = useCallback(async () => {
     try {
       const response = await sessionAPI.getStatus(sessionId);
-      setProgressByCode(Object.fromEntries(response.data.progress.map((run) => [run.dd_type, run])));
+      setProgressByCode(Object.fromEntries(response.data.progress.map(run => [run.dd_type, run])));
       setProgressStale(false);
     } catch {
       setProgressStale(true);
@@ -102,7 +109,9 @@ const SessionDetail = () => {
   }
 
   const answersUrl = (code, extra = '') => `/session/${sessionId}/answers?dd_type=${code}${extra}`;
-  const anyFinished = Object.values(progressByCode).some((run) => FINISHED_STATUSES.includes(run.status));
+  const anyFinished = Object.values(progressByCode).some(run =>
+    FINISHED_STATUSES.includes(run.status)
+  );
 
   return (
     <div className={pageLayout.container}>
@@ -111,7 +120,10 @@ const SessionDetail = () => {
         title={session.name}
         subtitle={session.description}
         meta={
-          <span className="tabular-nums" title={`Session code: ${session.session_code || `SES-${session.id}`}`}>
+          <span
+            className="tabular-nums"
+            title={`Session code: ${session.session_code || `SES-${session.id}`}`}
+          >
             Created {new Date(session.created_at).toLocaleDateString()}
             {session.company_name && ` · ${session.company_name}`}
             {session.management_company_name && ` · ${session.management_company_name}`}
@@ -155,11 +167,16 @@ const SessionDetail = () => {
           </div>
           <AssignAllSelect
             vectorStores={stores.vectorStores}
-            onAssign={(storeId) => stores.assignAll(storeId, shownDdTypes.map((ddType) => ddType.code))}
+            onAssign={storeId =>
+              stores.assignAll(
+                storeId,
+                shownDdTypes.map(ddType => ddType.code)
+              )
+            }
           />
         </div>
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          {shownDdTypes.map((ddType) => {
+          {shownDdTypes.map(ddType => {
             const progress = progressByCode[ddType.code];
             const canStart = runs.canStart(ddType);
             return (
@@ -170,8 +187,8 @@ const SessionDetail = () => {
                   onStart={canStart ? runs.start : null}
                   onResume={runs.resume}
                   onPause={runs.pause}
-                  onView={(code) => navigate(answersUrl(code))}
-                  onSynthesis={(code) => navigate(answersUrl(code, '&tab=synthesis'))}
+                  onView={code => navigate(answersUrl(code))}
+                  onSynthesis={code => navigate(answersUrl(code, '&tab=synthesis'))}
                   disabled={!canStart && progress?.status !== 'in_progress'}
                   vectorStores={stores.vectorStores}
                   assignedVectorStore={stores.assignedTo(ddType.code)}
@@ -182,7 +199,9 @@ const SessionDetail = () => {
                   <div className="absolute inset-0 bg-surface-bg/75 rounded-lg flex items-center justify-center">
                     <div className="text-center p-4">
                       <ClockIcon className="w-8 h-8 text-content-muted mx-auto mb-2" />
-                      <p className="text-sm text-content-secondary">Wait for other DD to complete</p>
+                      <p className="text-sm text-content-secondary">
+                        Wait for other DD to complete
+                      </p>
                     </div>
                   </div>
                 )}

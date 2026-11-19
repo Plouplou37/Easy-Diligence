@@ -7,7 +7,11 @@ const Profile = () => {
 
   return (
     <div className={pageLayout.container}>
-      <PageHeader breadcrumb={[{ label: 'Profile' }]} title="Profile" subtitle="Your account details and password" />
+      <PageHeader
+        breadcrumb={[{ label: 'Profile' }]}
+        title="Profile"
+        subtitle="Your account details and password"
+      />
 
       <ProfileDetails />
 

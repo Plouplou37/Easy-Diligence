@@ -13,12 +13,12 @@ export const useSections = (selectedDdType, onRefresh) => {
     setEditingSection({
       title: '',
       order_index: selectedDdType?.sections?.length || 0,
-      description: ''
+      description: '',
     });
     setShowSectionModal(true);
   };
 
-  const editSection = (section) => {
+  const editSection = section => {
     setEditingSection({ ...section });
     setShowSectionModal(true);
   };
@@ -48,8 +48,8 @@ export const useSections = (selectedDdType, onRefresh) => {
     }
   };
 
-  const deleteSection = async (sectionId) => {
-    const section = selectedDdType?.sections?.find((item) => item.id === sectionId);
+  const deleteSection = async sectionId => {
+    const section = selectedDdType?.sections?.find(item => item.id === sectionId);
     const confirmed = await confirm({
       title: 'Delete section',
       message: `Delete the section "${section?.title || ''}" and all its questions? This cannot be undone.`,
@@ -94,6 +94,6 @@ export const useSections = (selectedDdType, onRefresh) => {
     saveSection,
     deleteSection,
     reorderSection,
-    cancelEdit
+    cancelEdit,
   };
 };

@@ -54,11 +54,11 @@ export const AssignedDocuments = ({ code, vectorStores, assigned, locked, onAssi
       </div>
       {!locked && onAssign ? (
         <select
-          onChange={(event) => event.target.value && onAssign(code, event.target.value)}
+          onChange={event => event.target.value && onAssign(code, event.target.value)}
           className="form-input w-full px-2 py-1 text-xs"
         >
           <option value="">Select vector store...</option>
-          {vectorStores.map((store) => (
+          {vectorStores.map(store => (
             <option key={store.id} value={store.id}>
               {store.name} ({store.file_count} files)
             </option>

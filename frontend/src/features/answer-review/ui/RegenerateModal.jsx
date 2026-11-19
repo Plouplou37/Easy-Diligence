@@ -26,7 +26,7 @@ const RegenerateModal = ({ isOpen, onClose, onSubmit, loading }) => {
     onClose();
   };
 
-  const handleFileChange = (e) => {
+  const handleFileChange = e => {
     const selected = e.target.files?.[0] || null;
     if (selected && selected.size > MAX_SIZE) {
       setError('Le fichier dépasse 50 Mo.');
@@ -56,17 +56,15 @@ const RegenerateModal = ({ isOpen, onClose, onSubmit, loading }) => {
     <Modal isOpen={isOpen} onClose={handleClose} title="Régénérer la réponse" size="md">
       <div className="space-y-4">
         <p className="text-sm text-content-muted">
-          Tous les champs sont optionnels. Sans rien remplir, la réponse est simplement
-          régénérée comme avant.
+          Tous les champs sont optionnels. Sans rien remplir, la réponse est simplement régénérée
+          comme avant.
         </p>
 
         <div>
-          <label className={field.label}>
-            Consigne (optionnel)
-          </label>
+          <label className={field.label}>Consigne (optionnel)</label>
           <textarea
             value={instruction}
-            onChange={(e) => setInstruction(e.target.value)}
+            onChange={e => setInstruction(e.target.value)}
             rows={4}
             disabled={loading}
             placeholder="Ex. : concentre-toi sur les frais de gestion et cite les chiffres exacts."
@@ -75,13 +73,11 @@ const RegenerateModal = ({ isOpen, onClose, onSubmit, loading }) => {
         </div>
 
         <div>
-          <label className={field.label}>
-            Lien de référence (optionnel)
-          </label>
+          <label className={field.label}>Lien de référence (optionnel)</label>
           <input
             type="url"
             value={referenceUrl}
-            onChange={(e) => setReferenceUrl(e.target.value)}
+            onChange={e => setReferenceUrl(e.target.value)}
             disabled={loading}
             placeholder="https://exemple.com/page"
             className="form-input w-full px-3 py-2 text-sm"
@@ -90,9 +86,7 @@ const RegenerateModal = ({ isOpen, onClose, onSubmit, loading }) => {
         </div>
 
         <div>
-          <label className={field.label}>
-            Fichier joint (optionnel)
-          </label>
+          <label className={field.label}>Fichier joint (optionnel)</label>
           {file ? (
             <div className="flex items-center justify-between form-surface px-3 py-2 text-sm">
               <span className="flex items-center text-content-secondary truncate">
@@ -118,7 +112,8 @@ const RegenerateModal = ({ isOpen, onClose, onSubmit, loading }) => {
             />
           )}
           <p className={field.help}>
-            Ajouté aux documents de la session et aux sources de la réponse (PDF, Word, Excel, CSV, TXT — max 50 Mo).
+            Ajouté aux documents de la session et aux sources de la réponse (PDF, Word, Excel, CSV,
+            TXT — max 50 Mo).
           </p>
         </div>
 

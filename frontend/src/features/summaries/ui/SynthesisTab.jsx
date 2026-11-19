@@ -1,4 +1,8 @@
-import { ArrowPathRoundedSquareIcon, ClockIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
+import {
+  ArrowPathRoundedSquareIcon,
+  ClockIcon,
+  DocumentTextIcon,
+} from '@heroicons/react/24/outline';
 import { Button, LoadingSpinner, emptyState, panel } from '@/shared/ui';
 import { useSynthesis } from '../model/useSynthesis';
 import SummaryBlock from './SummaryBlock';
@@ -10,7 +14,7 @@ const BATCH_STATUS_LABELS = {
   finalizing: 'en finalisation',
 };
 
-const isGlobal = (summary) => summary.section_id === null || summary.section_id === undefined;
+const isGlobal = summary => summary.section_id === null || summary.section_id === undefined;
 
 /** Where the OpenAI batch stands, and its cancellation while it runs. */
 const BatchBanner = ({ batch, pending, cancelling, onCancel }) => {
@@ -23,7 +27,8 @@ const BatchBanner = ({ batch, pending, cancelling, onCancel }) => {
     text = 'Annulation en cours… Les boutons se réactiveront dès qu’OpenAI l’aura confirmée.';
   } else if (pending) {
     // No count before OpenAI has one: validation used to show "0/0".
-    const count = batch.total > 0 ? ` — ${batch.completed ?? 0}/${batch.total} résumés de section` : '';
+    const count =
+      batch.total > 0 ? ` — ${batch.completed ?? 0}/${batch.total} résumés de section` : '';
     text =
       `Batch ${BATCH_STATUS_LABELS[batch.status] || batch.status}${count}. Le résultat peut prendre ` +
       'jusqu’à 24 h ; cette page se met à jour toute seule, et rien n’est perdu si tu la quittes.';
@@ -61,23 +66,26 @@ const SynthesisTab = ({ sessionId, ddTypeCode, ddTypeName }) => {
         <DocumentTextIcon className={emptyState.icon} />
         <h3 className={emptyState.title}>Sélectionne un type de DD</h3>
         <p className={emptyState.text}>
-          La synthèse se génère par type de DD. Ouvre la revue pour un type de DD précis pour générer ou
-          consulter sa synthèse.
+          La synthèse se génère par type de DD. Ouvre la revue pour un type de DD précis pour
+          générer ou consulter sa synthèse.
         </p>
       </div>
     );
   }
 
   const global = summaries.find(isGlobal);
-  const sectionSummaries = summaries.filter((summary) => !isGlobal(summary));
+  const sectionSummaries = summaries.filter(summary => !isGlobal(summary));
 
   return (
     <div className="space-y-6 pb-12">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-medium text-content">Synthèse — {ddTypeName || ddTypeCode}</h2>
+          <h2 className="text-lg font-medium text-content">
+            Synthèse — {ddTypeName || ddTypeCode}
+          </h2>
           <p className="text-sm text-content-muted">
-            Résumé par section + synthèse globale (repris dans le PDF). Basé sur les réponses actuelles.
+            Résumé par section + synthèse globale (repris dans le PDF). Basé sur les réponses
+            actuelles.
           </p>
         </div>
         {/* While OpenAI still holds the job, neither path may be relaunched: the
@@ -90,7 +98,11 @@ const SynthesisTab = ({ sessionId, ddTypeCode, ddTypeName }) => {
             icon={ArrowPathRoundedSquareIcon}
             disabled={generating || batchPending}
           >
-            {generating ? 'Génération…' : summaries.length > 0 ? 'Régénérer la synthèse' : 'Générer la synthèse'}
+            {generating
+              ? 'Génération…'
+              : summaries.length > 0
+                ? 'Régénérer la synthèse'
+                : 'Générer la synthèse'}
           </Button>
           {/* Same result at half price, but OpenAI has up to 24h to deliver it.
               Secondary on purpose: the immediate path stays the obvious one. */}
@@ -129,11 +141,13 @@ const SynthesisTab = ({ sessionId, ddTypeCode, ddTypeName }) => {
         </div>
       ) : (
         <>
-          {global && <SummaryBlock title="Synthèse globale" summary={global} onSaved={synthesis.load} />}
+          {global && (
+            <SummaryBlock title="Synthèse globale" summary={global} onSaved={synthesis.load} />
+          )}
           {sectionSummaries.length > 0 && (
             <div className="space-y-4">
               <h3 className="eyebrow">Résumés par section</h3>
-              {sectionSummaries.map((summary) => (
+              {sectionSummaries.map(summary => (
                 <SummaryBlock
                   key={summary.id}
                   title={summary.section_title || 'Section'}

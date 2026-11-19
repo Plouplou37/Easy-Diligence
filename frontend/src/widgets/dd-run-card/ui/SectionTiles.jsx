@@ -56,14 +56,14 @@ export const StructureTiles = ({ ddTypeCode, parentStatus }) => {
     if (!ddTypeCode) return;
     const finished = FINISHED_STATUSES.includes(parentStatus);
     fetchDdTypes({ withQuestions: true })
-      .then((ddTypes) => {
-        const matched = ddTypes.find((ddType) => ddType.code === ddTypeCode);
+      .then(ddTypes => {
+        const matched = ddTypes.find(ddType => ddType.code === ddTypeCode);
         if (!matched) {
           setFailed(true);
           return;
         }
         setSections(
-          (matched.sections || []).map((section) => {
+          (matched.sections || []).map(section => {
             const total = section.questions?.length || 0;
             return {
               name: section.title,

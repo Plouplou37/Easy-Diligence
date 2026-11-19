@@ -34,7 +34,7 @@ export const useDashboard = () => {
 
   const sessions = useMemo(
     () =>
-      (data.sessions || []).map((session) => ({
+      (data.sessions || []).map(session => ({
         ...session,
         status: getSessionStatus(session.dd_types, session.dd_types.length),
         progress: getSessionProgress(session.dd_types, session.dd_types.length),
@@ -44,7 +44,8 @@ export const useDashboard = () => {
   );
 
   const isLive = sessions.some(
-    (session) => session.batch_pending || session.dd_types.some((ddType) => ddType.status === 'in_progress')
+    session =>
+      session.batch_pending || session.dd_types.some(ddType => ddType.status === 'in_progress')
   );
 
   useEffect(() => {

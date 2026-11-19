@@ -8,7 +8,13 @@ import { MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline';
  * @param {string} props.placeholder - Placeholder text
  * @param {string} props.className - Extra classes on the wrapper
  */
-export const SearchInput = ({ value, onChange, placeholder = 'Search...', className = '', ...props }) => (
+export const SearchInput = ({
+  value,
+  onChange,
+  placeholder = 'Search...',
+  className = '',
+  ...props
+}) => (
   <div className={`relative ${className}`}>
     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
       <MagnifyingGlassIcon className="h-4 w-4 text-content-muted" />
@@ -18,7 +24,7 @@ export const SearchInput = ({ value, onChange, placeholder = 'Search...', classN
       className="block w-full rounded-lg input-gradient-border pl-10 pr-9 py-2 text-sm text-content"
       placeholder={placeholder}
       value={value}
-      onChange={(e) => onChange(e.target.value)}
+      onChange={e => onChange(e.target.value)}
       {...props}
     />
     {value && (

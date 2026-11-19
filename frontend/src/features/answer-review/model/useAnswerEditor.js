@@ -25,21 +25,21 @@ export const useAnswerEditor = (onAnswerUpdate, onAfterSave) => {
     setNewSource({ type: 'web', content: '' });
   };
 
-  const saveEdit = async (answerId) => {
+  const saveEdit = async answerId => {
     try {
       const updatedSources = JSON.stringify(editingSources);
 
       const response = await answersAPI.update(answerId, {
         answer_text: editText,
         edit_reason: revisionNotes,
-        sources: updatedSources
+        sources: updatedSources,
       });
 
       const updatedAnswer = response.data;
       onAnswerUpdate(answerId, {
         text: editText,
         sources: updatedSources,
-        version: updatedAnswer.version || updatedAnswer.current_version
+        version: updatedAnswer.version || updatedAnswer.current_version,
       });
 
       cancelEdit();
@@ -58,14 +58,14 @@ export const useAnswerEditor = (onAnswerUpdate, onAfterSave) => {
       const sourceToAdd = {
         ...newSource,
         id: Date.now(),
-        user_added: true
+        user_added: true,
       };
       setEditingSources([...editingSources, sourceToAdd]);
       setNewSource({ type: 'web', content: '' });
     }
   };
 
-  const removeSource = (sourceIndex) => {
+  const removeSource = sourceIndex => {
     setEditingSources(editingSources.filter((_, index) => index !== sourceIndex));
   };
 
@@ -82,6 +82,6 @@ export const useAnswerEditor = (onAnswerUpdate, onAfterSave) => {
     cancelEdit,
     saveEdit,
     addSource,
-    removeSource
+    removeSource,
   };
 };

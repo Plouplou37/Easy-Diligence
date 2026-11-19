@@ -36,11 +36,13 @@ const DDCard = ({
   const total = progress?.total_questions || 0;
   const sections = progress?.sections_progress || [];
   // Which section is being worked on: the tiles carry only counters.
-  const activeSection = sections.find((section) => section.status === 'in_progress');
-  const completedSections = sections.filter((section) => section.status === 'completed').length;
+  const activeSection = sections.find(section => section.status === 'in_progress');
+  const completedSections = sections.filter(section => section.status === 'completed').length;
 
   return (
-    <div className={`${panel.base} overflow-hidden hover:shadow-md transition-shadow duration-200 h-[28rem]`}>
+    <div
+      className={`${panel.base} overflow-hidden hover:shadow-md transition-shadow duration-200 h-[28rem]`}
+    >
       <div className={panel.rail} />
       {/* The card height is fixed (28rem): paddings, header height and the
           compact buttons are sized so a running DD -- stats, current question
@@ -52,7 +54,10 @@ const DDCard = ({
               <DdTypeIcon className="w-5 h-5 text-content-secondary" />
             </div>
             <div className="min-w-0 flex-1">
-              <h3 className="text-fluid-md font-medium text-content line-clamp-1" title={ddType.name}>
+              <h3
+                className="text-fluid-md font-medium text-content line-clamp-1"
+                title={ddType.name}
+              >
                 {ddType.name}
               </h3>
               <p
@@ -86,7 +91,10 @@ const DDCard = ({
                 <MiniProgressBar current={done} total={total} status={status} />
               ) : (
                 <div className="w-full bg-surface-hover rounded-full h-1.5">
-                  <div className="bg-content-muted/40 h-1.5 rounded-full" style={{ width: '0%' }}></div>
+                  <div
+                    className="bg-content-muted/40 h-1.5 rounded-full"
+                    style={{ width: '0%' }}
+                  ></div>
                 </div>
               )}
             </div>

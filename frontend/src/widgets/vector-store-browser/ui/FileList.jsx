@@ -25,18 +25,10 @@ const FileList = ({ files, loading, onRemoveFile }) => {
       <table className={`${tableStyles.table} ${tableStyles.inPanel}`}>
         <thead className={tableStyles.theadSticky}>
           <tr>
-            <th className={tableStyles.th}>
-              File
-            </th>
-            <th className={tableStyles.th}>
-              Size
-            </th>
-            <th className={tableStyles.th}>
-              Created
-            </th>
-            <th className={tableStyles.thRight}>
-              Actions
-            </th>
+            <th className={tableStyles.th}>File</th>
+            <th className={tableStyles.th}>Size</th>
+            <th className={tableStyles.th}>Created</th>
+            <th className={tableStyles.thRight}>Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -45,7 +37,10 @@ const FileList = ({ files, loading, onRemoveFile }) => {
               <td className={tableStyles.td}>
                 <div className="flex items-center">
                   <DocumentIcon className="h-5 w-5 text-accent-blue mr-2 flex-shrink-0" />
-                  <div className="max-w-xs truncate text-sm font-medium text-content" title={`${file.filename} · ID: ${file.id}`}>
+                  <div
+                    className="max-w-xs truncate text-sm font-medium text-content"
+                    title={`${file.filename} · ID: ${file.id}`}
+                  >
                     {file.filename}
                   </div>
                 </div>

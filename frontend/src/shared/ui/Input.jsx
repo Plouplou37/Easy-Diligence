@@ -97,7 +97,7 @@ export const Input = ({
 };
 
 /** A password field whose content can be shown. */
-export const PasswordInput = (props) => {
+export const PasswordInput = props => {
   const [shown, setShown] = useState(false);
   return (
     <Input

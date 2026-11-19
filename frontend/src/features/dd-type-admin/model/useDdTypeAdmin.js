@@ -41,7 +41,7 @@ export const useDdTypeAdmin = () => {
         'Failed to import DD type'
       );
     }
-    const lastOrder = Math.max(0, ...ddTypes.map((ddType) => ddType.order_index || 0));
+    const lastOrder = Math.max(0, ...ddTypes.map(ddType => ddType.order_index || 0));
     return attempt(
       () => ddTypesAPI.create({ code, name, description, icon, order_index: lastOrder + 1 }),
       'DD type created successfully',
@@ -63,12 +63,20 @@ export const useDdTypeAdmin = () => {
       'Failed to update DD type'
     );
 
-  const toggleActive = (ddType) =>
+  const toggleActive = ddType =>
     ddType.is_active
-      ? attempt(() => ddTypesAPI.deactivate(ddType.code), 'DD type deactivated', 'Failed to deactivate DD type')
-      : attempt(() => ddTypesAPI.activate(ddType.code), 'DD type activated', 'Failed to activate DD type');
+      ? attempt(
+          () => ddTypesAPI.deactivate(ddType.code),
+          'DD type deactivated',
+          'Failed to deactivate DD type'
+        )
+      : attempt(
+          () => ddTypesAPI.activate(ddType.code),
+          'DD type activated',
+          'Failed to activate DD type'
+        );
 
-  const remove = async (ddType) => {
+  const remove = async ddType => {
     const confirmed = await confirm({
       title: 'Delete DD type',
       message: `Delete "${ddType.name}" with its questionnaire? This cannot be undone.`,
@@ -76,7 +84,11 @@ export const useDdTypeAdmin = () => {
       danger: true,
     });
     if (!confirmed) return false;
-    return attempt(() => ddTypesAPI.delete(ddType.code), 'DD type deleted successfully', 'Failed to delete DD type');
+    return attempt(
+      () => ddTypesAPI.delete(ddType.code),
+      'DD type deleted successfully',
+      'Failed to delete DD type'
+    );
   };
 
   return { ddTypes, loading, create, update, toggleActive, remove };

@@ -10,7 +10,7 @@ import { NewCompanyForm } from './NewCompanyForm';
 export const CompanyPicker = ({ companies, companyId, onSelect }) => {
   const [creating, setCreating] = useState(false);
 
-  const create = async (values) => {
+  const create = async values => {
     const company = await companies.create(values);
     if (company) {
       onSelect(company.id);
@@ -29,14 +29,14 @@ export const CompanyPicker = ({ companies, companyId, onSelect }) => {
           <select
             id="company"
             value={companyId}
-            onChange={(event) => {
+            onChange={event => {
               onSelect(event.target.value ? Number(event.target.value) : '');
               setCreating(false);
             }}
             className="form-input mt-1 block w-full pl-3 pr-10 py-2 text-base"
           >
             <option value="">Select an asset manager or fund...</option>
-            {companies.companies.map((company) => (
+            {companies.companies.map(company => (
               <option key={company.id} value={company.id}>
                 {company.name}
               </option>

@@ -1,5 +1,5 @@
 // Helper function to deduplicate sources by unique identifier
-const deduplicateSources = (sources) => {
+const deduplicateSources = sources => {
   const seen = new Map();
 
   sources.forEach(source => {
@@ -23,7 +23,7 @@ const deduplicateSources = (sources) => {
   return Array.from(seen.values());
 };
 
-export const parseSourcesFromString = (sourcesData) => {
+export const parseSourcesFromString = sourcesData => {
   if (!sourcesData) return [];
 
   let parsed;
@@ -44,31 +44,39 @@ export const parseSourcesFromString = (sourcesData) => {
     const allSources = [];
 
     if (Array.isArray(parsed.files)) {
-      allSources.push(...parsed.files.map(source => ({
-        ...source,
-        type: source.type || 'file'
-      })));
+      allSources.push(
+        ...parsed.files.map(source => ({
+          ...source,
+          type: source.type || 'file',
+        }))
+      );
     }
 
     if (Array.isArray(parsed.web)) {
-      allSources.push(...parsed.web.map(source => ({
-        ...source,
-        type: source.type || 'web'
-      })));
+      allSources.push(
+        ...parsed.web.map(source => ({
+          ...source,
+          type: source.type || 'web',
+        }))
+      );
     }
 
     if (Array.isArray(parsed.webUrls)) {
-      allSources.push(...parsed.webUrls.map(source => ({
-        ...source,
-        type: source.type || 'web'
-      })));
+      allSources.push(
+        ...parsed.webUrls.map(source => ({
+          ...source,
+          type: source.type || 'web',
+        }))
+      );
     }
 
     if (Array.isArray(parsed.webSearchQueries)) {
-      allSources.push(...parsed.webSearchQueries.map(source => ({
-        ...source,
-        type: source.type || 'web_search'
-      })));
+      allSources.push(
+        ...parsed.webSearchQueries.map(source => ({
+          ...source,
+          type: source.type || 'web_search',
+        }))
+      );
     }
 
     if (allSources.length === 0 && Object.keys(parsed).length === 0) {
@@ -85,7 +93,11 @@ export const parseSourcesFromString = (sourcesData) => {
         if (source.startsWith('http')) {
           return { type: 'web', content: source, url: source };
         } else if (source.includes('web_search:')) {
-          return { type: 'web_search', content: source.replace('web_search:', ''), query: source.replace('web_search:', '') };
+          return {
+            type: 'web_search',
+            content: source.replace('web_search:', ''),
+            query: source.replace('web_search:', ''),
+          };
         } else {
           return { type: 'file', content: source, filename: source };
         }
@@ -95,7 +107,7 @@ export const parseSourcesFromString = (sourcesData) => {
             ...source,
             type: 'file_search',
             content: source.queries ? source.queries.join(', ') : 'File search performed',
-            filenames: source.filenames || []
+            filenames: source.filenames || [],
           };
         }
         return { ...source, type: source.type || (source.url ? 'web' : 'file') };
@@ -113,12 +125,12 @@ export const parseSourcesFromString = (sourcesData) => {
         ...parsed,
         type: 'file_search',
         content: parsed.queries ? parsed.queries.join(', ') : 'File search performed',
-        filenames: parsed.filenames || []
+        filenames: parsed.filenames || [],
       };
     } else {
       singleSource = {
         ...parsed,
-        type: parsed.type || (parsed.url ? 'web' : 'file')
+        type: parsed.type || (parsed.url ? 'web' : 'file'),
       };
     }
     return [singleSource];
@@ -127,7 +139,7 @@ export const parseSourcesFromString = (sourcesData) => {
   return [];
 };
 
-export const getSourceContent = (source) => {
+export const getSourceContent = source => {
   if (source.type === 'file_search') {
     // Each file citation is a separate source with single filename
     if (source.filename) {

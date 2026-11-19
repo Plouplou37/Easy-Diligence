@@ -31,7 +31,9 @@ const SectionGroup = ({ sectionName, answers, isExpanded, onToggle, renderAnswer
         isExpanded ? 'max-h-[10000px] opacity-100' : 'max-h-0 opacity-0'
       }`}
     >
-      <div className={`transition-transform duration-300 ${isExpanded ? 'translate-y-0' : '-translate-y-2'}`}>
+      <div
+        className={`transition-transform duration-300 ${isExpanded ? 'translate-y-0' : '-translate-y-2'}`}
+      >
         {answers.map(renderAnswer)}
       </div>
     </div>

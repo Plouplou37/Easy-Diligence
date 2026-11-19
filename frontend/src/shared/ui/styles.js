@@ -45,17 +45,20 @@ export const tableStyles = {
   table: 'w-full border-collapse bg-surface text-xs',
   // Add to `table` when it sits inside a bordered panel: drops the outer cell
   // borders that would double the panel's own border.
-  inPanel: '[&_th:first-child]:border-l-0 [&_td:first-child]:border-l-0 [&_th:last-child]:border-r-0 [&_td:last-child]:border-r-0 [&_thead_th]:border-t-0 [&_tbody_tr:last-child_td]:border-b-0',
+  inPanel:
+    '[&_th:first-child]:border-l-0 [&_td:first-child]:border-l-0 [&_th:last-child]:border-r-0 [&_td:last-child]:border-r-0 [&_thead_th]:border-t-0 [&_tbody_tr:last-child_td]:border-b-0',
   thead: 'bg-primary-dark text-white',
   theadSticky: 'bg-primary-dark text-white sticky top-0 z-10',
   th: 'border border-border px-3 h-8 text-left align-middle font-light text-fluid-2xs text-white whitespace-nowrap',
-  thCenter: 'border border-border px-3 h-8 text-center align-middle font-light text-fluid-2xs text-white whitespace-nowrap',
-  thRight: 'border border-border px-3 h-8 text-right align-middle font-light text-fluid-2xs text-white whitespace-nowrap',
+  thCenter:
+    'border border-border px-3 h-8 text-center align-middle font-light text-fluid-2xs text-white whitespace-nowrap',
+  thRight:
+    'border border-border px-3 h-8 text-right align-middle font-light text-fluid-2xs text-white whitespace-nowrap',
   td: 'border border-border px-3 py-2 align-middle text-content',
   tdCenter: 'border border-border px-3 py-2 align-middle text-center text-content',
   tdRight: 'border border-border px-3 py-2 align-middle text-right text-content',
   row: 'transition-colors duration-150 hover:bg-surface-hover',
-  rowAlt: (index) => (index % 2 === 1 ? 'bg-surface-bg' : ''),
+  rowAlt: index => (index % 2 === 1 ? 'bg-surface-bg' : ''),
   rowSelected: 'bg-accent-blue/10',
   empty: 'border border-border px-3 py-10 text-center text-sm text-content-muted',
 };
@@ -65,8 +68,10 @@ export const modalStyles = {
   panel: 'relative w-full bg-surface border border-border rounded-xl shadow-xl animate-scale-in',
   header: 'flex items-center justify-between px-5 py-3.5 border-b border-border',
   title: 'text-base font-semibold text-content',
-  close: 'p-1 rounded-md text-content-secondary hover:text-content hover:bg-surface-hover transition-colors',
-  footer: 'flex items-center justify-end gap-2 px-5 py-3 border-t border-border bg-surface-bg rounded-b-xl',
+  close:
+    'p-1 rounded-md text-content-secondary hover:text-content hover:bg-surface-hover transition-colors',
+  footer:
+    'flex items-center justify-end gap-2 px-5 py-3 border-t border-border bg-surface-bg rounded-b-xl',
 };
 
 // Form fields.
@@ -92,7 +97,8 @@ export const menu = {
   panel: 'bg-surface border border-border rounded-2xl shadow-lg overflow-hidden',
   header: 'px-4 py-3 border-b border-border',
   item: 'flex w-full items-center gap-2 px-4 py-2.5 text-xs font-medium text-content border-l-2 border-transparent hover:border-bleu-atlantis hover:text-bleu-atlantis transition-colors duration-150',
-  itemDanger: 'flex w-full items-center gap-2 px-4 py-2.5 text-xs font-medium text-content border-l-2 border-transparent hover:border-theme-error hover:text-theme-error transition-colors duration-150',
+  itemDanger:
+    'flex w-full items-center gap-2 px-4 py-2.5 text-xs font-medium text-content border-l-2 border-transparent hover:border-theme-error hover:text-theme-error transition-colors duration-150',
 };
 
 // Empty states.

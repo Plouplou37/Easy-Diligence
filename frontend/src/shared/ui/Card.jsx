@@ -29,20 +29,12 @@ export const Card = ({
               <div className="flex-1 h-px hairline-gradient opacity-40" />
             </div>
           )}
-          {description && (
-            <p className="text-sm text-content-secondary mt-1">
-              {description}
-            </p>
-          )}
+          {description && <p className="text-sm text-content-secondary mt-1">{description}</p>}
         </div>
       )}
-      <div className={noPadding ? '' : 'p-5'}>
-        {children}
-      </div>
+      <div className={noPadding ? '' : 'p-5'}>{children}</div>
       {actions && (
-        <div className="px-5 py-3 bg-surface-bg border-t border-border rounded-b-lg">
-          {actions}
-        </div>
+        <div className="px-5 py-3 bg-surface-bg border-t border-border rounded-b-lg">{actions}</div>
       )}
     </div>
   );

@@ -1,4 +1,11 @@
-import { CheckIcon, EyeIcon, ShieldCheckIcon, TrashIcon, UserIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import {
+  CheckIcon,
+  EyeIcon,
+  ShieldCheckIcon,
+  TrashIcon,
+  UserIcon,
+  XMarkIcon,
+} from '@heroicons/react/24/outline';
 import { getToneStyles } from '@/shared/lib/status';
 import { Button, tableStyles } from '@/shared/ui';
 import { formatUserDate, roleBadge } from '../lib/display';
@@ -14,7 +21,7 @@ export const UsersTable = ({ users, search, onView }) => (
     <table className={`${tableStyles.table} ${tableStyles.inPanel}`}>
       <thead className={tableStyles.thead}>
         <tr>
-          {COLUMNS.map((column) => (
+          {COLUMNS.map(column => (
             <th key={column} className={tableStyles.th}>
               {column}
             </th>
@@ -37,17 +44,21 @@ export const UsersTable = ({ users, search, onView }) => (
                     <UserIcon className="h-6 w-6 text-content-secondary" />
                   </div>
                   <div className="ml-3">
-                    <div className="text-sm font-medium text-content">{user.full_name || 'Unknown'}</div>
+                    <div className="text-sm font-medium text-content">
+                      {user.full_name || 'Unknown'}
+                    </div>
                     <div className="text-xs text-content-muted">@{user.username}</div>
                     <div className="text-xs text-content-muted">{user.email}</div>
                   </div>
                 </div>
               </td>
-              <td className={`${tableStyles.td} whitespace-nowrap text-content`}>{user.company || '-'}</td>
+              <td className={`${tableStyles.td} whitespace-nowrap text-content`}>
+                {user.company || '-'}
+              </td>
               <td className={`${tableStyles.td} whitespace-nowrap`}>
                 <select
                   value={user.role}
-                  onChange={(event) => users.setRole(user, event.target.value)}
+                  onChange={event => users.setRole(user, event.target.value)}
                   disabled={users.isBusy('role', user)}
                   aria-label={`Role of ${user.username}`}
                   className={`form-input text-xs font-medium px-2 py-1 rounded-full ${roleBadge(user.role)}`}
@@ -65,7 +76,11 @@ export const UsersTable = ({ users, search, onView }) => (
                     getToneStyles(user.is_active ? 'success' : 'error').badge
                   }`}
                 >
-                  {user.is_active ? <CheckIcon className="w-3 h-3 mr-1" /> : <XMarkIcon className="w-3 h-3 mr-1" />}
+                  {user.is_active ? (
+                    <CheckIcon className="w-3 h-3 mr-1" />
+                  ) : (
+                    <XMarkIcon className="w-3 h-3 mr-1" />
+                  )}
                   {user.is_active ? 'Active' : 'Inactive'}
                 </button>
               </td>

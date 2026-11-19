@@ -1,4 +1,4 @@
-export const formatBytes = (bytes) => {
+export const formatBytes = bytes => {
   if (bytes === 0) return '0 Bytes';
   const k = 1024;
   const sizes = ['Bytes', 'KB', 'MB', 'GB'];
@@ -6,7 +6,7 @@ export const formatBytes = (bytes) => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
 
-export const getExpirationStatus = (expiresAt) => {
+export const getExpirationStatus = expiresAt => {
   if (!expiresAt) return 'never';
   const now = new Date();
   const expiry = new Date(expiresAt);
@@ -20,7 +20,7 @@ export const getExpirationStatus = (expiresAt) => {
 };
 
 /** A duration in seconds, short: "45s", "3m 20s", "1h 5m". */
-export const formatDuration = (seconds) => {
+export const formatDuration = seconds => {
   if (seconds < 60) return `${seconds}s`;
   if (seconds < 3600) return `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
   return `${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}m`;
@@ -39,7 +39,7 @@ export const downloadBlob = (blob, filename) => {
 };
 
 /** How long ago `iso` was, briefly ("5 min ago"), then the date after a week. */
-export const formatRelative = (iso) => {
+export const formatRelative = iso => {
   if (!iso) return '—';
   const date = new Date(iso);
   const minutes = Math.round((Date.now() - date.getTime()) / 60000);

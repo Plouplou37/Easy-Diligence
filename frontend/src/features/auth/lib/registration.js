@@ -8,7 +8,8 @@ export const registrationProblems = ({ name, username, email, password, confirmP
   const problems = {};
   if (!name || name.trim().length < 2) problems.name = 'Name must be at least 2 characters';
 
-  if (!username || username.length < 3) problems.username = 'Username must be at least 3 characters';
+  if (!username || username.length < 3)
+    problems.username = 'Username must be at least 3 characters';
   else if (username.length > 30) problems.username = 'Username must be at most 30 characters';
   else if (!USERNAME.test(username)) {
     problems.username = 'Username can only contain letters, numbers, dots, hyphens and underscores';

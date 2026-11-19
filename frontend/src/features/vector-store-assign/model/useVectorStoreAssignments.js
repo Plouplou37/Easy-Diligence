@@ -5,7 +5,7 @@ import { vectorStoresAPI } from '@/entities/vector-store';
 // The assignment as the cards show it: the name comes with it, so a
 // colleague's store -- usable by the engine, absent from the user's own list --
 // still shows.
-const describe = (assignment) => ({
+const describe = assignment => ({
   id: assignment.vector_store_id,
   name: assignment.vector_store_name,
 });
@@ -28,31 +28,34 @@ export const useVectorStoreAssignments = ({ sessionId, ddTypes }) => {
     setVectorStores(
       stores.status === 'fulfilled' && Array.isArray(stores.value.data) ? stores.value.data : []
     );
-    const list = assignments.status === 'fulfilled' ? assignments.value.data?.assignments || [] : [];
+    const list =
+      assignments.status === 'fulfilled' ? assignments.value.data?.assignments || [] : [];
     const map = {};
-    list.filter((item) => item.dd_type_code).forEach((item) => {
-      map[item.dd_type_code] = describe(item);
-    });
-    const whole = list.find((item) => !item.dd_type_code);
+    list
+      .filter(item => item.dd_type_code)
+      .forEach(item => {
+        map[item.dd_type_code] = describe(item);
+      });
+    const whole = list.find(item => !item.dd_type_code);
     setByDdType(map);
     setSessionWide(whole ? describe(whole) : null);
   }, [sessionId]);
 
-  const ddTypeOf = (code) => ddTypes.find((ddType) => ddType.code === code);
-  const storeName = (storeId) => vectorStores.find((store) => store.id === storeId)?.name;
+  const ddTypeOf = code => ddTypes.find(ddType => ddType.code === code);
+  const storeName = storeId => vectorStores.find(store => store.id === storeId)?.name;
 
   /** The store a DD type's run searches: its own, or the session's. */
-  const assignedTo = (code) => {
+  const assignedTo = code => {
     const assigned = byDdType[code] || sessionWide;
     if (!assigned) return undefined;
-    return vectorStores.find((store) => store.id === assigned.id) || assigned;
+    return vectorStores.find(store => store.id === assigned.id) || assigned;
   };
 
   const assign = async (code, storeId) => {
     const ddType = ddTypeOf(code);
     try {
       await vectorStoresAPI.assignToSession(storeId, sessionId, { dd_type_id: ddType?.id });
-      setByDdType((previous) => ({ ...previous, [code]: { id: storeId, name: storeName(storeId) } }));
+      setByDdType(previous => ({ ...previous, [code]: { id: storeId, name: storeName(storeId) } }));
       toast.success(`Vector store assigned to ${ddType?.name || code}`);
     } catch {
       toast.error('Failed to assign vector store');
@@ -63,13 +66,13 @@ export const useVectorStoreAssignments = ({ sessionId, ddTypes }) => {
     const name = storeName(storeId) || 'vector store';
     try {
       await Promise.all(
-        codes.map((code) =>
+        codes.map(code =>
           vectorStoresAPI.assignToSession(storeId, sessionId, { dd_type_id: ddTypeOf(code)?.id })
         )
       );
-      setByDdType((previous) => ({
+      setByDdType(previous => ({
         ...previous,
-        ...Object.fromEntries(codes.map((code) => [code, { id: storeId, name }])),
+        ...Object.fromEntries(codes.map(code => [code, { id: storeId, name }])),
       }));
       toast.success(`${name} assigned to all DD types`);
     } catch {
@@ -77,12 +80,16 @@ export const useVectorStoreAssignments = ({ sessionId, ddTypes }) => {
     }
   };
 
-  const remove = async (code) => {
+  const remove = async code => {
     const own = byDdType[code];
     try {
       // The card may be showing the session-wide store: that assignment has no
       // DD type, and removing it takes the documents from every type.
-      await vectorStoresAPI.removeFromSession((own || sessionWide)?.id, sessionId, own ? code : null);
+      await vectorStoresAPI.removeFromSession(
+        (own || sessionWide)?.id,
+        sessionId,
+        own ? code : null
+      );
       if (own) {
         setByDdType(({ [code]: _removed, ...rest }) => rest);
         toast.success(`Vector store removed from ${ddTypeOf(code)?.name || code}`);

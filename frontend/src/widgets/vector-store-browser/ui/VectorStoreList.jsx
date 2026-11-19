@@ -52,9 +52,7 @@ const VectorStoreList = ({ stores, selectedStore, onSelectStore }) => {
                       </div>
                     </div>
                   </td>
-                  <td className={`${tableStyles.tdRight} tabular-nums`}>
-                    {store.file_count}
-                  </td>
+                  <td className={`${tableStyles.tdRight} tabular-nums`}>{store.file_count}</td>
                   <td className={`${tableStyles.tdRight} whitespace-nowrap tabular-nums`}>
                     {formatBytes(store.total_bytes)}
                   </td>

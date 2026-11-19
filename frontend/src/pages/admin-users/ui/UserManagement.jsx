@@ -39,7 +39,12 @@ const UserManagement = () => {
               Page {page} of {totalPages}
             </div>
             <div className="flex space-x-2">
-              <Button variant="secondary" size="sm" onClick={() => users.setPage(page - 1)} disabled={page <= 1}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => users.setPage(page - 1)}
+                disabled={page <= 1}
+              >
                 Previous
               </Button>
               <Button

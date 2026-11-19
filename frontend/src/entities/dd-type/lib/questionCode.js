@@ -4,7 +4,7 @@
 // Any other code is returned untouched.
 const CODE_REFERENCE = /^([A-Za-z]{1,3}\.?\d{1,3})-_/;
 
-export const displayQuestionCode = (code) => {
+export const displayQuestionCode = code => {
   if (!code) return code;
   const match = CODE_REFERENCE.exec(code);
   return match ? match[1] : code;

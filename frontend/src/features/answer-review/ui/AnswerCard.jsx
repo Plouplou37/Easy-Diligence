@@ -50,7 +50,7 @@ const AnswerCard = ({
 }) => {
   const [showSources, setShowSources] = useState(false);
   const sources = useMemo(() => parseSourcesFromString(answer.sources), [answer.sources]);
-  const shownSources = sources.filter((source) => getSourceContent(source) !== null).length;
+  const shownSources = sources.filter(source => getSourceContent(source) !== null).length;
   const isEditing = editor.editingAnswer === answer.id;
   const showHistory = history.showVersionHistory[answer.id];
   const approved = answer.status === 'approved';
@@ -64,11 +64,19 @@ const AnswerCard = ({
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
             {/* The full code stays reachable on hover: it is the unique id. */}
-            <h3 className="text-sm font-medium text-content" title={answer.question_code || undefined}>
+            <h3
+              className="text-sm font-medium text-content"
+              title={answer.question_code || undefined}
+            >
               {displayQuestionCode(answer.question_code) || 'Question'}
             </h3>
-            <Badge variant={approved ? 'success' : 'warning'}>{approved ? 'Approved' : 'Needs Review'}</Badge>
-            <label className="flex items-center space-x-2 cursor-pointer" onClick={(event) => event.stopPropagation()}>
+            <Badge variant={approved ? 'success' : 'warning'}>
+              {approved ? 'Approved' : 'Needs Review'}
+            </Badge>
+            <label
+              className="flex items-center space-x-2 cursor-pointer"
+              onClick={event => event.stopPropagation()}
+            >
               <input
                 type="checkbox"
                 checked={approved}
@@ -88,7 +96,9 @@ const AnswerCard = ({
         {/* whitespace-pre-line: imported questions carry their instructions
             on their own lines (Level, Topic, Applies to...). HTML collapses those
             newlines, turning six readable lines into one wall of text. */}
-        <p className="form-surface p-3 mt-2 text-sm text-content whitespace-pre-line">{answer.question_text}</p>
+        <p className="form-surface p-3 mt-2 text-sm text-content whitespace-pre-line">
+          {answer.question_text}
+        </p>
       </div>
 
       {/* Animating grid rows rather than a max-height: the cap was 5000px, and
@@ -114,7 +124,7 @@ const AnswerCard = ({
                     source, and pipe tables are unreadable in a proportional font. */}
                 <textarea
                   value={editor.editText}
-                  onChange={(event) => editor.setEditText(event.target.value)}
+                  onChange={event => editor.setEditText(event.target.value)}
                   rows={12}
                   className="form-input w-full px-3 py-2 text-sm font-mono"
                   placeholder="Edit the answer..."
@@ -123,7 +133,7 @@ const AnswerCard = ({
                 <input
                   type="text"
                   value={editor.revisionNotes}
-                  onChange={(event) => editor.setRevisionNotes(event.target.value)}
+                  onChange={event => editor.setRevisionNotes(event.target.value)}
                   placeholder="Edit reason (optional)"
                   className="form-input w-full px-3 py-2 text-sm"
                   aria-label="Edit reason"
@@ -136,7 +146,11 @@ const AnswerCard = ({
                   onRemoveSource={editor.removeSource}
                 />
                 <div className="flex space-x-2">
-                  <Button onClick={() => editor.saveEdit(answer.id)} variant="success" icon={CheckIcon}>
+                  <Button
+                    onClick={() => editor.saveEdit(answer.id)}
+                    variant="success"
+                    icon={CheckIcon}
+                  >
                     Save
                   </Button>
                   <Button onClick={editor.cancelEdit} variant="secondary" icon={XMarkIcon}>
@@ -153,7 +167,11 @@ const AnswerCard = ({
                 </div>
 
                 <div className="flex items-center space-x-2 mt-3">
-                  <Button onClick={() => editor.startEdit(answer, sources)} variant="secondary" icon={PencilIcon}>
+                  <Button
+                    onClick={() => editor.startEdit(answer, sources)}
+                    variant="secondary"
+                    icon={PencilIcon}
+                  >
                     Edit Answer
                   </Button>
                   <Button
@@ -196,7 +214,7 @@ const AnswerCard = ({
           {!isEditing && shownSources > 0 && (
             <div className="mb-4">
               <Button
-                onClick={() => setShowSources((shown) => !shown)}
+                onClick={() => setShowSources(shown => !shown)}
                 variant="ghost"
                 size="sm"
                 icon={showSources ? EyeSlashIcon : EyeIcon}
@@ -217,7 +235,9 @@ const AnswerCard = ({
             title={
               [
                 answer.tokens_used ? `Tokens: ${answer.tokens_used}` : null,
-                answer.processing_time ? `Processing time: ${Math.round(answer.processing_time)} ms` : null,
+                answer.processing_time
+                  ? `Processing time: ${Math.round(answer.processing_time)} ms`
+                  : null,
               ]
                 .filter(Boolean)
                 .join(' · ') || undefined

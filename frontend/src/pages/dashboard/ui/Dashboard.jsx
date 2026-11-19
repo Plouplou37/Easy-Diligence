@@ -40,7 +40,12 @@ const Dashboard = () => {
         subtitle="What is running, what awaits review, and which syntheses are ready"
         actions={
           <>
-            <Button variant="secondary" onClick={dashboard.refresh} loading={dashboard.refreshing} icon={ArrowPathIcon}>
+            <Button
+              variant="secondary"
+              onClick={dashboard.refresh}
+              loading={dashboard.refreshing}
+              icon={ArrowPathIcon}
+            >
               Refresh
             </Button>
             {newSession}
@@ -48,7 +53,12 @@ const Dashboard = () => {
         }
       />
 
-      <DashboardTiles totals={dashboard.totals} sessions={sessions} isLive={dashboard.isLive} filters={filters} />
+      <DashboardTiles
+        totals={dashboard.totals}
+        sessions={sessions}
+        isLive={dashboard.isLive}
+        filters={filters}
+      />
       <SessionFilters filters={filters} />
 
       {shown.length === 0 ? (
@@ -56,7 +66,11 @@ const Dashboard = () => {
           <EmptyState
             icon={DocumentTextIcon}
             title="No sessions found"
-            text={filters.active ? 'Try adjusting your filters' : 'Get started by creating a new due diligence session.'}
+            text={
+              filters.active
+                ? 'Try adjusting your filters'
+                : 'Get started by creating a new due diligence session.'
+            }
             action={!filters.active && newSession}
           />
         </div>

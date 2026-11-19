@@ -1,6 +1,10 @@
 import { Fragment } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircleIcon, ExclamationTriangleIcon, PencilSquareIcon } from '@heroicons/react/24/outline';
+import {
+  CheckCircleIcon,
+  ExclamationTriangleIcon,
+  PencilSquareIcon,
+} from '@heroicons/react/24/outline';
 import { getDdTypeIcon } from '@/entities/dd-type';
 import { formatRelative } from '@/shared/lib/format';
 import { getToneStyles } from '@/shared/lib/status';
@@ -111,7 +115,7 @@ const DdTypeRow = ({ ddType, onOpenSession, onOpenAnswers }) => {
 /** The sessions, one sub-row per DD type. `showOwner`: an admin sees whose session it is. */
 export const SessionsTable = ({ sessions, showOwner }) => {
   const navigate = useNavigate();
-  const sessionUrl = (session) => `/session/${session.session_code || session.id}`;
+  const sessionUrl = session => `/session/${session.session_code || session.id}`;
 
   return (
     <div className={tableStyles.wrapper}>
@@ -126,10 +130,12 @@ export const SessionsTable = ({ sessions, showOwner }) => {
           </tr>
         </thead>
         <tbody>
-          {sessions.map((session) => {
+          {sessions.map(session => {
             const openSession = () => navigate(sessionUrl(session));
             const openAnswers = (ddType, tab) =>
-              navigate(`${sessionUrl(session)}/answers?dd_type=${ddType.code}${tab ? `&tab=${tab}` : ''}`);
+              navigate(
+                `${sessionUrl(session)}/answers?dd_type=${ddType.code}${tab ? `&tab=${tab}` : ''}`
+              );
             return (
               <Fragment key={session.id}>
                 <tr onClick={openSession} className={`${tableStyles.row} cursor-pointer`}>
@@ -141,13 +147,17 @@ export const SessionsTable = ({ sessions, showOwner }) => {
                       {session.name}
                     </span>
                     {showOwner && session.created_by_username && (
-                      <span className="text-xs text-content-muted">{session.created_by_username}</span>
+                      <span className="text-xs text-content-muted">
+                        {session.created_by_username}
+                      </span>
                     )}
                   </td>
                   <td className={`${tableStyles.td} text-sm`}>
                     <span className="block">{session.company_name}</span>
                     {session.management_company_name && (
-                      <span className="block text-xs text-content-secondary">{session.management_company_name}</span>
+                      <span className="block text-xs text-content-secondary">
+                        {session.management_company_name}
+                      </span>
                     )}
                   </td>
                   <td className={tableStyles.td}>
@@ -168,7 +178,7 @@ export const SessionsTable = ({ sessions, showOwner }) => {
                     </div>
                   </td>
                 </tr>
-                {session.dd_types.map((ddType) => (
+                {session.dd_types.map(ddType => (
                   <DdTypeRow
                     key={`${session.id}-${ddType.dd_type_id}`}
                     ddType={ddType}

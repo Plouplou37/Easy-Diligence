@@ -24,9 +24,9 @@ const readStoredMode = () => {
   return 'system';
 };
 
-const resolveTheme = (mode) => (mode === 'system' ? getSystemTheme() : mode);
+const resolveTheme = mode => (mode === 'system' ? getSystemTheme() : mode);
 
-const applyTheme = (theme) => {
+const applyTheme = theme => {
   document.documentElement.setAttribute('data-theme', theme);
   document.documentElement.style.colorScheme = theme;
 };
@@ -45,7 +45,7 @@ export const ThemeProvider = ({ children }) => {
   useEffect(() => {
     if (mode !== 'system') return undefined;
     const mql = window.matchMedia('(prefers-color-scheme: dark)');
-    const handleChange = (event) => {
+    const handleChange = event => {
       const theme = event.matches ? 'dark' : 'light';
       setResolvedTheme(theme);
       applyTheme(theme);
@@ -54,7 +54,7 @@ export const ThemeProvider = ({ children }) => {
     return () => mql.removeEventListener('change', handleChange);
   }, [mode]);
 
-  const setMode = useCallback((newMode) => {
+  const setMode = useCallback(newMode => {
     setModeState(newMode);
     try {
       localStorage.setItem(STORAGE_KEY, newMode);
@@ -80,4 +80,3 @@ export const ThemeProvider = ({ children }) => {
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 };
-

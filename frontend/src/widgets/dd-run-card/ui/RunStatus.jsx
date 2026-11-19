@@ -1,4 +1,9 @@
-import { CheckCircleIcon, ClockIcon, DocumentTextIcon, XCircleIcon } from '@heroicons/react/24/outline';
+import {
+  CheckCircleIcon,
+  ClockIcon,
+  DocumentTextIcon,
+  XCircleIcon,
+} from '@heroicons/react/24/outline';
 import { FINISHED_STATUSES } from '@/entities/execution';
 import { formatDuration } from '@/shared/lib/format';
 
@@ -80,7 +85,9 @@ export const RunStatus = ({ progress, isInactive }) => {
             <XCircleIcon className="w-4 h-4 mt-0.5 flex-shrink-0" />
             <div className="ml-2 flex-1">
               <span className="text-sm font-medium">Error:</span>
-              <p className="text-sm text-content-secondary mt-1 break-words">{progress.last_error}</p>
+              <p className="text-sm text-content-secondary mt-1 break-words">
+                {progress.last_error}
+              </p>
             </div>
           </div>
         </div>
@@ -93,7 +100,9 @@ export const RunStatus = ({ progress, isInactive }) => {
               <CheckCircleIcon className="w-4 h-4" />
               <span className="text-sm font-medium">Analysis completed</span>
             </div>
-            {elapsed > 0 && <span className="text-xs tabular-nums">in {formatDuration(elapsed)}</span>}
+            {elapsed > 0 && (
+              <span className="text-xs tabular-nums">in {formatDuration(elapsed)}</span>
+            )}
           </div>
         </div>
       )}

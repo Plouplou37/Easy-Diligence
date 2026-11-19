@@ -14,7 +14,7 @@ export const ForgotPasswordModal = ({ isOpen, onClose, initialEmail = '' }) => {
     onClose();
   };
 
-  const send = async (event) => {
+  const send = async event => {
     event.preventDefault();
     setSending(true);
     const result = await resetPassword(email);
@@ -35,7 +35,7 @@ export const ForgotPasswordModal = ({ isOpen, onClose, initialEmail = '' }) => {
           autoComplete="email"
           leftIcon={EnvelopeIcon}
           value={email}
-          onChange={(event) => setEmail(event.target.value)}
+          onChange={event => setEmail(event.target.value)}
           placeholder="you@example.com"
         />
         <div className={`${modalStyles.footer} -mx-5 -mb-4 mt-4`}>

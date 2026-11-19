@@ -85,6 +85,7 @@ uv run mypy app
 # frontend/
 npm run build
 npm run lint
+npm run format:check   # npm run format pour corriger
 ```
 
 - Ruff et mypy passent sur tout le backend. **Ne pas ajouter de `# noqa`**, ni

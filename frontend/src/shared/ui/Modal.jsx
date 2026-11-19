@@ -6,7 +6,7 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
   // Escape closes the modal, like a click on the backdrop.
   useEffect(() => {
     if (!isOpen || !onClose) return undefined;
-    const handleKeyDown = (event) => {
+    const handleKeyDown = event => {
       if (event.key === 'Escape') onClose();
     };
     document.addEventListener('keydown', handleKeyDown);
@@ -19,17 +19,14 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
     sm: 'max-w-md',
     md: 'max-w-lg',
     lg: 'max-w-4xl',
-    xl: 'max-w-6xl'
+    xl: 'max-w-6xl',
   };
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex min-h-screen items-center justify-center p-4">
         {/* Backdrop */}
-        <div
-          className="fixed inset-0 modal-backdrop animate-fade-in"
-          onClick={onClose}
-        ></div>
+        <div className="fixed inset-0 modal-backdrop animate-fade-in" onClick={onClose}></div>
 
         {/* Modal */}
         <div
@@ -54,9 +51,7 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
           </div>
 
           {/* Content */}
-          <div className="px-5 py-4 overflow-y-auto max-h-[calc(90vh-120px)]">
-            {children}
-          </div>
+          <div className="px-5 py-4 overflow-y-auto max-h-[calc(90vh-120px)]">{children}</div>
         </div>
       </div>
     </div>

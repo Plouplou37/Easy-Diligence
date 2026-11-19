@@ -26,14 +26,19 @@ const LABELS = {
   pending: 'Pending',
 };
 
-export const getStatusLabel = (status) => {
+export const getStatusLabel = status => {
   const key = String(status || '').toLowerCase();
   if (LABELS[key]) return LABELS[key];
   // Unknown value: show it readably rather than "Unknown".
-  return key ? key.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase()) : LABELS.not_started;
+  return key ? key.replace(/_/g, ' ').replace(/^\w/, c => c.toUpperCase()) : LABELS.not_started;
 };
 
 // Options for a session status filter, in the order a user scans them.
 export const SESSION_STATUS_OPTIONS = [
-  'not_started', 'in_progress', 'paused', 'partial', 'completed', 'failed',
-].map((value) => ({ value, label: getStatusLabel(value) }));
+  'not_started',
+  'in_progress',
+  'paused',
+  'partial',
+  'completed',
+  'failed',
+].map(value => ({ value, label: getStatusLabel(value) }));

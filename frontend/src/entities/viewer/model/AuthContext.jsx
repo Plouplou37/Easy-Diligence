@@ -95,7 +95,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const updateProfile = async (updates) => {
+  const updateProfile = async updates => {
     try {
       const { data } = await authAPI.updateProfile(updates);
       storeSession(data);
@@ -123,7 +123,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const resetPassword = async (email) => {
+  const resetPassword = async email => {
     try {
       await authAPI.requestPasswordReset(email);
       toast.success('If the email exists, a password reset link has been sent.');
@@ -154,4 +154,3 @@ export const AuthProvider = ({ children }) => {
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
-

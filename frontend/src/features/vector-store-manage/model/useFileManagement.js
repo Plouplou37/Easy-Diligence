@@ -29,8 +29,8 @@ export const useFileManagement = (selectedStore, onFileChange) => {
     loadFiles();
   }, [loadFiles]);
 
-  const removeFile = async (fileId) => {
-    const file = files.find((item) => item.id === fileId);
+  const removeFile = async fileId => {
+    const file = files.find(item => item.id === fileId);
     const confirmed = await confirm({
       title: 'Remove file',
       message:

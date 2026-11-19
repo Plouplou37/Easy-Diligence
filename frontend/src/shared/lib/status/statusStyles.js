@@ -69,9 +69,9 @@ const STATUS_TONES = {
 
 export const TONE_NAMES = Object.keys(TONES);
 
-export const getStatusTone = (status) =>
+export const getStatusTone = status =>
   STATUS_TONES[String(status || '').toLowerCase()] || 'neutral';
 
-export const getToneStyles = (tone) => TONES[tone] || TONES.neutral;
+export const getToneStyles = tone => TONES[tone] || TONES.neutral;
 
-export const getStatusStyles = (status) => getToneStyles(getStatusTone(status));
+export const getStatusStyles = status => getToneStyles(getStatusTone(status));

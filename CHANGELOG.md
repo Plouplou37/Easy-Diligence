@@ -107,6 +107,9 @@
 
 ### Outillage
 
+- Le code du frontend est formaté par Prettier (`npm run format`), et la CI le
+  vérifie (`npm run format:check`). Le formatage n'a rien changé au code livré
+  au navigateur : le build est identique, octet pour octet.
 - Le projet backend s'appelle `easy-diligence`, en version 0.1.0, et passe à
   Python 3.12.
 - Les outils de développement sont dans le groupe `dev` de `pyproject.toml` :

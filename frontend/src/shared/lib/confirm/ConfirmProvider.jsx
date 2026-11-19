@@ -14,8 +14,14 @@ export const ConfirmProvider = ({ children }) => {
   const resolver = useRef(null);
 
   const confirm = useCallback(
-    ({ title = 'Please confirm', message, confirmLabel = 'Confirm', cancelLabel = 'Cancel', danger = false }) =>
-      new Promise((resolve) => {
+    ({
+      title = 'Please confirm',
+      message,
+      confirmLabel = 'Confirm',
+      cancelLabel = 'Cancel',
+      danger = false,
+    }) =>
+      new Promise(resolve => {
         resolver.current?.(false); // a request still open is dismissed
         resolver.current = resolve;
         setRequest({ title, message, confirmLabel, cancelLabel, danger });
@@ -23,7 +29,7 @@ export const ConfirmProvider = ({ children }) => {
     []
   );
 
-  const answer = (value) => {
+  const answer = value => {
     resolver.current?.(value);
     resolver.current = null;
     setRequest(null);
@@ -32,7 +38,12 @@ export const ConfirmProvider = ({ children }) => {
   return (
     <ConfirmContext.Provider value={confirm}>
       {children}
-      <Modal isOpen={Boolean(request)} onClose={() => answer(false)} title={request?.title} size="sm">
+      <Modal
+        isOpen={Boolean(request)}
+        onClose={() => answer(false)}
+        title={request?.title}
+        size="sm"
+      >
         <p className="text-sm text-content-secondary whitespace-pre-line">{request?.message}</p>
         <div className={`${modalStyles.footer} -mx-5 -mb-4 mt-4`}>
           <Button variant="secondary" onClick={() => answer(false)}>

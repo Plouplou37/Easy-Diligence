@@ -36,7 +36,7 @@ export const useVectorStores = () => {
     loadVectorStores();
   }, [loadVectorStores]);
 
-  const createStore = async (formData) => {
+  const createStore = async formData => {
     try {
       await vectorStoresAPI.create(formData);
       toast.success('Vector store created successfully');
@@ -48,8 +48,8 @@ export const useVectorStores = () => {
     }
   };
 
-  const deleteStore = async (storeId) => {
-    const store = vectorStores.find((item) => item.id === storeId);
+  const deleteStore = async storeId => {
+    const store = vectorStores.find(item => item.id === storeId);
     const confirmed = await confirm({
       title: 'Delete vector store',
       message:
@@ -60,7 +60,7 @@ export const useVectorStores = () => {
     });
     if (!confirmed) return false;
 
-    setDeletingStores((previous) => new Set([...previous, storeId]));
+    setDeletingStores(previous => new Set([...previous, storeId]));
     try {
       await vectorStoresAPI.delete(storeId);
       toast.success('Vector store deleted successfully');
@@ -70,7 +70,7 @@ export const useVectorStores = () => {
       toast.error(errorMessage(error, 'Failed to delete vector store'));
       return false;
     } finally {
-      setDeletingStores((previous) => {
+      setDeletingStores(previous => {
         const next = new Set(previous);
         next.delete(storeId);
         return next;
@@ -79,12 +79,14 @@ export const useVectorStores = () => {
   };
 
   // The store's details (file count, size, status), fresh from OpenAI.
-  const refreshSingleStore = async (storeId) => {
+  const refreshSingleStore = async storeId => {
     if (!storeId) return null;
     try {
       await vectorStoresAPI.refreshStore(storeId);
       const response = await vectorStoresAPI.get(storeId);
-      setVectorStores((previous) => previous.map((store) => (store.id === storeId ? response.data : store)));
+      setVectorStores(previous =>
+        previous.map(store => (store.id === storeId ? response.data : store))
+      );
       return response.data;
     } catch (error) {
       console.warn('Failed to refresh store:', error);
@@ -92,5 +94,13 @@ export const useVectorStores = () => {
     }
   };
 
-  return { vectorStores, loading, deletingStores, loadVectorStores, createStore, deleteStore, refreshSingleStore };
+  return {
+    vectorStores,
+    loading,
+    deletingStores,
+    loadVectorStores,
+    createStore,
+    deleteStore,
+    refreshSingleStore,
+  };
 };

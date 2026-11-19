@@ -12,7 +12,7 @@ export const LoginForm = () => {
   const [loading, setLoading] = useState(false);
   const [forgotOpen, setForgotOpen] = useState(false);
 
-  const submit = async (event) => {
+  const submit = async event => {
     event.preventDefault();
     setLoading(true);
     await login(email, password);
@@ -32,7 +32,7 @@ export const LoginForm = () => {
             required
             leftIcon={EnvelopeIcon}
             value={email}
-            onChange={(event) => setEmail(event.target.value)}
+            onChange={event => setEmail(event.target.value)}
             placeholder="you@example.com"
           />
           <PasswordInput
@@ -43,7 +43,7 @@ export const LoginForm = () => {
             required
             leftIcon={LockClosedIcon}
             value={password}
-            onChange={(event) => setPassword(event.target.value)}
+            onChange={event => setPassword(event.target.value)}
             placeholder="••••••••"
           />
           <div className="text-sm text-right">
@@ -59,7 +59,9 @@ export const LoginForm = () => {
       </form>
 
       {/* Mounted when open, so it starts from the address typed above. */}
-      {forgotOpen && <ForgotPasswordModal isOpen onClose={() => setForgotOpen(false)} initialEmail={email} />}
+      {forgotOpen && (
+        <ForgotPasswordModal isOpen onClose={() => setForgotOpen(false)} initialEmail={email} />
+      )}
     </>
   );
 };

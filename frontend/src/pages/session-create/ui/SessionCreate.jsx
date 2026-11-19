@@ -3,7 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useDdTypes } from '@/entities/dd-type';
 import { sessionAPI } from '@/entities/session';
-import { CompanyPicker, CompanyPreview, DdTypePicker, useCompanies } from '@/features/session-create';
+import {
+  CompanyPicker,
+  CompanyPreview,
+  DdTypePicker,
+  useCompanies,
+} from '@/features/session-create';
 import { errorMessage } from '@/shared/api';
 import { Button, Input, PageHeader, field, pageLayout, panel, sectionHeader } from '@/shared/ui';
 
@@ -28,8 +33,8 @@ const SessionCreate = () => {
   const [chosenCodes, setChosenCodes] = useState(null);
   const [creating, setCreating] = useState(false);
 
-  const codes = chosenCodes ?? ddTypes.map((ddType) => ddType.code);
-  const company = companies.companies.find((item) => item.id === companyId);
+  const codes = chosenCodes ?? ddTypes.map(ddType => ddType.code);
+  const company = companies.companies.find(item => item.id === companyId);
   const ready = Boolean(companyId) && Boolean(name.trim()) && codes.length > 0;
 
   const create = async () => {
@@ -39,10 +44,12 @@ const SessionCreate = () => {
         company_id: companyId,
         name,
         description,
-        dd_type_ids: ddTypes.filter((ddType) => codes.includes(ddType.code)).map((ddType) => ddType.id),
+        dd_type_ids: ddTypes.filter(ddType => codes.includes(ddType.code)).map(ddType => ddType.id),
       });
       toast.success('Session created successfully');
-      navigate(`/session/${response.data.session_code || response.data.id}`, { state: { newSession: true } });
+      navigate(`/session/${response.data.session_code || response.data.id}`, {
+        state: { newSession: true },
+      });
     } catch (error) {
       toast.error(errorMessage(error, 'Failed to create session'));
       setCreating(false);
@@ -71,7 +78,7 @@ const SessionCreate = () => {
                 label="Session Name"
                 required
                 value={name}
-                onChange={(event) => setName(event.target.value)}
+                onChange={event => setName(event.target.value)}
                 placeholder="e.g., Q4 Due Diligence"
               />
               <div>
@@ -81,7 +88,7 @@ const SessionCreate = () => {
                 <textarea
                   id="session-description"
                   value={description}
-                  onChange={(event) => setDescription(event.target.value)}
+                  onChange={event => setDescription(event.target.value)}
                   rows={3}
                   className="form-input mt-1 block w-full px-3 py-2 text-sm"
                   placeholder="Describe the purpose and scope of this DD session"
@@ -103,7 +110,7 @@ const SessionCreate = () => {
               key={company.id}
               company={company}
               saving={companies.saving}
-              onSaveManager={(manager) => companies.saveManager(company, manager)}
+              onSaveManager={manager => companies.saveManager(company, manager)}
             />
           )}
 

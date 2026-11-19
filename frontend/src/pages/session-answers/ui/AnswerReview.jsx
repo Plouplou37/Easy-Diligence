@@ -18,19 +18,24 @@ const AnswerReview = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const ddTypeCode = searchParams.get('dd_type') || '';
   // ?tab=synthesis opens the synthesis directly (link from the session page).
-  const [activeTab, setActiveTab] = useState(searchParams.get('tab') === 'synthesis' ? 'synthesis' : 'answers');
+  const [activeTab, setActiveTab] = useState(
+    searchParams.get('tab') === 'synthesis' ? 'synthesis' : 'answers'
+  );
 
-  const { session, answers, ddTypes, loading, reload, updateAnswer } = useAnswers(sessionId, ddTypeCode);
+  const { session, answers, ddTypes, loading, reload, updateAnswer } = useAnswers(
+    sessionId,
+    ddTypeCode
+  );
   const filters = useAnswerFilters(answers);
 
   // The DD types of this session, for the switcher.
   const sessionDdTypes = useMemo(() => {
     const listed = getSessionDdTypes(session, ddTypes, {});
-    return listed.length > 0 ? listed : ddTypes.filter((ddType) => ddType.code === ddTypeCode);
+    return listed.length > 0 ? listed : ddTypes.filter(ddType => ddType.code === ddTypeCode);
   }, [session, ddTypes, ddTypeCode]);
-  const ddTypeName = ddTypes.find((ddType) => ddType.code === ddTypeCode)?.name || ddTypeCode;
+  const ddTypeName = ddTypes.find(ddType => ddType.code === ddTypeCode)?.name || ddTypeCode;
 
-  const changeDdType = (code) => {
+  const changeDdType = code => {
     filters.setSection('');
     const next = new URLSearchParams(searchParams);
     next.set('dd_type', code);
@@ -60,7 +65,7 @@ const AnswerReview = () => {
       {/* Answers vs synthesis: both are per DD type. */}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <nav className={tabs.group}>
-          {TABS.map((tab) => (
+          {TABS.map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
@@ -77,10 +82,10 @@ const AnswerReview = () => {
             DD type
             <select
               value={ddTypeCode}
-              onChange={(event) => changeDdType(event.target.value)}
+              onChange={event => changeDdType(event.target.value)}
               className="form-input py-1.5 text-sm"
             >
-              {sessionDdTypes.map((ddType) => (
+              {sessionDdTypes.map(ddType => (
                 <option key={ddType.code} value={ddType.code}>
                   {ddType.name}
                 </option>

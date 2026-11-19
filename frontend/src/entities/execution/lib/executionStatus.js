@@ -25,8 +25,8 @@ export const IN_PROGRESS_STATUSES = ['in_progress', 'partial', 'paused'];
 export const getSessionStatus = (progressList, totalConfigured) => {
   if (!totalConfigured || !progressList || progressList.length === 0) return 'not_started';
 
-  const statuses = progressList.map((p) => p.status);
-  const finished = statuses.filter((s) => FINISHED_STATUSES.includes(s)).length;
+  const statuses = progressList.map(p => p.status);
+  const finished = statuses.filter(s => FINISHED_STATUSES.includes(s)).length;
 
   if (finished >= totalConfigured) return 'completed';
   if (statuses.includes('in_progress')) return 'in_progress';

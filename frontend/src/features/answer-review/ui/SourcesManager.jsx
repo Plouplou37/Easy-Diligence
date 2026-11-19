@@ -6,7 +6,13 @@ import SourceContent from './SourceContent';
 const TYPE_LABELS = { file_search: 'Vector Store', web: 'Web URL', web_search: 'Web Search' };
 
 /** The sources of an answer being edited: the user may add or remove their own. */
-const SourcesManager = ({ editingSources, newSource, setNewSource, onAddSource, onRemoveSource }) => (
+const SourcesManager = ({
+  editingSources,
+  newSource,
+  setNewSource,
+  onAddSource,
+  onRemoveSource,
+}) => (
   <div className="border-t border-border pt-3">
     <h5 className="text-sm font-medium text-content mb-2">Sources</h5>
 
@@ -42,7 +48,7 @@ const SourcesManager = ({ editingSources, newSource, setNewSource, onAddSource, 
       <div className="flex gap-2">
         <select
           value={newSource.type}
-          onChange={(event) => setNewSource({ ...newSource, type: event.target.value })}
+          onChange={event => setNewSource({ ...newSource, type: event.target.value })}
           className="form-input px-2 py-1 text-xs"
           aria-label="Source type"
         >
@@ -52,7 +58,7 @@ const SourcesManager = ({ editingSources, newSource, setNewSource, onAddSource, 
         <input
           type="text"
           value={newSource.content}
-          onChange={(event) => setNewSource({ ...newSource, content: event.target.value })}
+          onChange={event => setNewSource({ ...newSource, content: event.target.value })}
           placeholder={newSource.type === 'web' ? 'https://example.com' : 'Filename or path'}
           className="form-input flex-1 px-2 py-1 text-xs"
           aria-label="Source"

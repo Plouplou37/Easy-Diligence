@@ -6,5 +6,5 @@ export const adminAPI = {
   updateUserRole: (userId, role) => api.put(`/admin/users/${userId}/role`, { role }),
   updateUserStatus: (userId, isActive) =>
     api.put(`/admin/users/${userId}/status`, { is_active: isActive }),
-  deleteUser: (userId) => api.delete(`/admin/users/${userId}`),
+  deleteUser: userId => api.delete(`/admin/users/${userId}`),
 };

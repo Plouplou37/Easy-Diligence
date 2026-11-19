@@ -14,12 +14,14 @@ import {
  * of every other screen. Only the session creation page drew a real icon, with
  * its own keyword guess: this is that guess, shared.
  */
-export const getDdTypeIcon = (ddType) => {
+export const getDdTypeIcon = ddType => {
   const name = String((typeof ddType === 'object' ? ddType?.name : ddType) || '').toLowerCase();
   if (name.includes('financial')) return ChartBarIcon;
   if (name.includes('operational') || name.includes('operation')) return CogIcon;
-  if (name.includes('legal') || name.includes('compliance') || name.includes('sanity')) return ShieldCheckIcon;
+  if (name.includes('legal') || name.includes('compliance') || name.includes('sanity'))
+    return ShieldCheckIcon;
   if (name.includes('investment')) return BriefcaseIcon;
-  if (name.includes('esg') || name.includes('environmental') || name.includes('sustainab')) return GlobeEuropeAfricaIcon;
+  if (name.includes('esg') || name.includes('environmental') || name.includes('sustainab'))
+    return GlobeEuropeAfricaIcon;
   return DocumentTextIcon;
 };

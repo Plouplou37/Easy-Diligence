@@ -11,20 +11,20 @@ const STARTABLE = ['not_started', 'failed', 'paused'];
  * progressByCode: the session's progress, by DD type code; onChange: reload it.
  */
 export const useDdRunControl = ({ sessionId, progressByCode, ddTypes, onChange }) => {
-  const isRunning = Object.values(progressByCode).some((run) => run.status === 'in_progress');
+  const isRunning = Object.values(progressByCode).some(run => run.status === 'in_progress');
 
   // A deactivated type stays visible so its answers remain readable, but it
   // cannot be run any more: that is what deactivating it means.
-  const canStart = (ddType) => {
+  const canStart = ddType => {
     if (ddType.is_active === false || isRunning) return false;
     const run = progressByCode[ddType.code];
     return !run || STARTABLE.includes(run.status);
   };
 
   // Toasts name the DD type, not its internal code.
-  const nameOf = (code) => ddTypes.find((ddType) => ddType.code === code)?.name || code;
+  const nameOf = code => ddTypes.find(ddType => ddType.code === code)?.name || code;
 
-  const act = (call, done, failure) => async (code) => {
+  const act = (call, done, failure) => async code => {
     try {
       await call(sessionId, code);
       toast.success(`${done} ${nameOf(code)}`);

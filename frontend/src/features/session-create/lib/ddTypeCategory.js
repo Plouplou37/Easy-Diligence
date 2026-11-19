@@ -15,11 +15,15 @@ export const ddTypeCategory = (name = '') => {
 };
 
 /** The categories present among `ddTypes`, with how many each holds. */
-export const categoriesOf = (ddTypes) => {
+export const categoriesOf = ddTypes => {
   const counts = new Map();
-  ddTypes.forEach((ddType) => {
+  ddTypes.forEach(ddType => {
     const category = ddTypeCategory(ddType.name);
     counts.set(category, (counts.get(category) || 0) + 1);
   });
-  return [...counts].map(([key, count]) => ({ key, count, label: key.charAt(0).toUpperCase() + key.slice(1) }));
+  return [...counts].map(([key, count]) => ({
+    key,
+    count,
+    label: key.charAt(0).toUpperCase() + key.slice(1),
+  }));
 };
