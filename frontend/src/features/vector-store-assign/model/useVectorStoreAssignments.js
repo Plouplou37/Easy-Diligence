@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import toast from 'react-hot-toast';
-import { vectorStoresAPI } from '@/entities/vector-store';
+import { isStale, vectorStoresAPI } from '@/entities/vector-store';
 
 // The assignment as the cards show it: the name comes with it, so a
 // colleague's store -- usable by the engine, absent from the user's own list --
@@ -13,10 +13,11 @@ const describe = assignment => ({
 /**
  * The vector stores of a session: the user's stores to pick from, the store
  * assigned to each DD type, and the one assigned to the whole session (which
- * every DD type without its own uses).
+ * every DD type without its own uses). A store gone at OpenAI is not offered,
+ * but an assigned one still shows, with its state.
  */
 export const useVectorStoreAssignments = ({ sessionId, ddTypes }) => {
-  const [vectorStores, setVectorStores] = useState([]);
+  const [allStores, setAllStores] = useState([]);
   const [byDdType, setByDdType] = useState({});
   const [sessionWide, setSessionWide] = useState(null);
 
@@ -25,7 +26,7 @@ export const useVectorStoreAssignments = ({ sessionId, ddTypes }) => {
       vectorStoresAPI.list(),
       vectorStoresAPI.getSessionAssignments(sessionId),
     ]);
-    setVectorStores(
+    setAllStores(
       stores.status === 'fulfilled' && Array.isArray(stores.value.data) ? stores.value.data : []
     );
     const list =
@@ -42,13 +43,13 @@ export const useVectorStoreAssignments = ({ sessionId, ddTypes }) => {
   }, [sessionId]);
 
   const ddTypeOf = code => ddTypes.find(ddType => ddType.code === code);
-  const storeName = storeId => vectorStores.find(store => store.id === storeId)?.name;
+  const storeName = storeId => allStores.find(store => store.id === storeId)?.name;
 
   /** The store a DD type's run searches: its own, or the session's. */
   const assignedTo = code => {
     const assigned = byDdType[code] || sessionWide;
     if (!assigned) return undefined;
-    return vectorStores.find(store => store.id === assigned.id) || assigned;
+    return allStores.find(store => store.id === assigned.id) || assigned;
   };
 
   const assign = async (code, storeId) => {
@@ -101,6 +102,8 @@ export const useVectorStoreAssignments = ({ sessionId, ddTypes }) => {
       toast.error('Failed to remove vector store assignment');
     }
   };
+
+  const vectorStores = allStores.filter(store => !isStale(store));
 
   return { vectorStores, load, assignedTo, assign, assignAll, remove };
 };

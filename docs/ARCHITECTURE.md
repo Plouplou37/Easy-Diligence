@@ -286,7 +286,11 @@ cassé.
     jamais dans l'URL, et il est remplacé à chaque usage ;
   - le jeton de réinitialisation du mot de passe porte une empreinte du mot de
     passe en cours : il cesse de fonctionner dès que le mot de passe change.
-    Il ne sert donc qu'une fois, sans être stocké.
+    Il ne sert donc qu'une fois, sans être stocké. Le lien de l'e-mail mène à
+    `/reset-password?token=…` (page publique), qui l'envoie à
+    `POST /auth/reset-password-confirm` ;
+  - la demande de lien répond pareil, et aussi vite, que l'adresse existe ou
+    non : l'e-mail part dans une tâche de fond, après la réponse.
 - **Connexion limitée** (`core/login_throttle.py`) : après `LOGIN_MAX_ATTEMPTS`
   échecs en `LOGIN_WINDOW_SECONDS`, le compte reçoit un 429 avec `Retry-After`.
   Une même adresse a droit à quatre fois plus d'échecs. Le compteur vit en
@@ -330,6 +334,10 @@ Les fonctions communes sont dans **`services/authz.py`** : `user_is_admin`,
     expiré ou introuvable apparaît avec le statut `expired` ou `missing`, et
     `POST /vector-stores/refresh` (le bouton Rafraîchir) le retire de la base
     avec ses assignations.
+  - Le frontend (`entities/vector-store/lib/storeState.js`) marque ces stores
+    (« Expired », « Gone ») sans chiffres, ne demande pas leurs fichiers, ne les
+    propose plus à l'assignation, et signale sur la carte d'un type de DD un
+    store assigné qui a disparu.
   - Les **assignations**, elles, se partagent : le store d'un collègue peut servir
     une session. La carte de la session lit donc le nom du store dans
     l'assignation (`vector_store_name`), et non dans la liste filtrée. Toute
@@ -391,6 +399,11 @@ fait à la collecte.
 - **La collecte se fait dans le GET**, que le frontend
   (`features/summaries/model/useSynthesis.js`) appelle toutes les 15 secondes. Une tâche de fond ne survivrait pas à un
   redémarrage, alors qu'un batch peut vivre 24 heures.
+- Les fonctions de synthèse du moteur sont des coroutines qui appellent aussi
+  la base et OpenAI de façon synchrone. Les routes sont donc des `def` : chacune
+  lance sa coroutine dans sa propre boucle (`asyncio.run`), sur son thread du
+  pool. En `async def`, elles bloquaient tout le serveur pendant l'appel à
+  OpenAI, à chaque suivi.
 - L'état est suivi dans `dd_summary_batches`, une ligne par session et par type
   de DD. Relancer remplace la ligne.
 - **L'annulation** relit d'abord l'état chez OpenAI. Le statut stocké ne bouge

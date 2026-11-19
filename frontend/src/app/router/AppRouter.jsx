@@ -7,6 +7,7 @@ import { NotFoundPage } from '@/pages/not-found';
 import { ProfilePage } from '@/pages/profile';
 import { QuestionsPage } from '@/pages/questions';
 import { RegisterPage } from '@/pages/register';
+import { ResetPasswordPage } from '@/pages/reset-password';
 import { SessionAnswersPage } from '@/pages/session-answers';
 import { SessionCreatePage } from '@/pages/session-create';
 import { SessionDetailPage } from '@/pages/session-detail';
@@ -20,6 +21,9 @@ export const AppRouter = () => (
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
     </Route>
+
+    {/* The link of a reset e-mail: open whether or not someone is signed in. */}
+    <Route path="/reset-password" element={<ResetPasswordPage />} />
 
     <Route element={<RequireAuth />}>
       <Route element={<AppLayout />}>

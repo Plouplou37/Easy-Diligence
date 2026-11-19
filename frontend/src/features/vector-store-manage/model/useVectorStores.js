@@ -11,13 +11,19 @@ export const useVectorStores = () => {
   const [loading, setLoading] = useState(true);
   const [deletingStores, setDeletingStores] = useState(new Set());
 
-  // clearCache: the manual refresh, which asks OpenAI again.
+  // clearCache: the manual refresh, which asks OpenAI again and removes the
+  // stores gone there (expired or deleted), with their assignments.
   const loadVectorStores = useCallback(async (clearCache = false) => {
     setLoading(true);
     try {
       if (clearCache) {
         try {
-          await vectorStoresAPI.refresh();
+          const { data } = await vectorStoresAPI.refresh();
+          if (data?.removed > 0) {
+            toast(
+              `${data.removed} vector store${data.removed > 1 ? 's' : ''} gone at OpenAI removed`
+            );
+          }
         } catch (error) {
           console.warn('Cache refresh failed, continuing with data fetch:', error);
         }

@@ -45,6 +45,7 @@ const VectorStoreManagement = () => {
                 loading={stores.loading}
                 variant="secondary"
                 icon={ArrowPathIcon}
+                title="Ask OpenAI again, and remove the vector stores that have expired or disappeared there"
               >
                 Refresh
               </Button>

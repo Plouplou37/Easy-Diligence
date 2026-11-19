@@ -2,8 +2,14 @@
 
 Generated now (the model writes them during the request) or through an OpenAI
 batch (half price, up to 24 h), then reviewed and edited before the export.
+
+The engine's summary functions are coroutines that also call the database and
+OpenAI synchronously. The routes are plain `def`: each runs its coroutine in an
+event loop of its own, on the worker thread, so those calls block that thread
+and not the server (they used to block it, every 15 s while a batch ran).
 """
 
+import asyncio
 from typing import Any
 
 from fastapi import APIRouter, Depends
@@ -50,13 +56,13 @@ def _batch_response(
 
 
 @router.post(RUN + "/generate", response_model=list[DDSummaryResponse])
-async def generate_summaries(
+def generate_summaries(
     session: DDSession = Depends(get_accessible_session),
     dd_type: DDType = Depends(get_visible_dd_type),
     db: Session = Depends(get_db),
 ):
     """Write the section summaries and the DD type synthesis now."""
-    summaries = await generate_summaries_for_dd_type(db, session, dd_type.code)
+    summaries = asyncio.run(generate_summaries_for_dd_type(db, session, dd_type.code))
     return [summaries_service.to_response(s) for s in summaries]
 
 
@@ -80,7 +86,7 @@ def generate_summaries_via_batch(
 
 
 @router.get(RUN + "/batch", response_model=DDSummaryBatchResponse)
-async def get_summary_batch_status(
+def get_summary_batch_status(
     session: DDSession = Depends(get_accessible_session),
     dd_type: DDType = Depends(get_visible_dd_type),
     db: Session = Depends(get_db),
@@ -90,7 +96,7 @@ async def get_summary_batch_status(
     Polled by the page. Collecting here rather than in a background task is on
     purpose: a batch runs for up to 24 h, longer than a process is sure to live.
     """
-    row, info = await collect_section_summaries_batch(db, session, dd_type.code)
+    row, info = asyncio.run(collect_section_summaries_batch(db, session, dd_type.code))
     return _batch_response(row, info)
 
 

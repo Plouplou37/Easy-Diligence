@@ -2,6 +2,26 @@
 
 ## Non publié
 
+### Mot de passe oublié, vector stores disparus, serveur non bloqué
+
+- Le lien de l'e-mail « mot de passe oublié » mène à une page qui existe
+  (`/reset-password`) : on y choisit son nouveau mot de passe, puis on se
+  connecte avec. Un lien expiré ou déjà utilisé le dit, et explique comment en
+  redemander un. Le lien menait auparavant à une page 404.
+- La demande de lien répond aussi vite que l'adresse existe ou non : l'e-mail
+  part après la réponse, et le temps de réponse ne trahit plus les comptes.
+- Un vector store expiré ou supprimé chez OpenAI est marqué « Expired » ou
+  « Gone », sans les « 0 fichier » qui le faisaient passer pour un store vide.
+  Sa page explique que ses documents sont perdus et n'essaie plus d'en lister
+  les fichiers (ce qui finissait en erreur). Il n'est plus proposé à
+  l'affectation, et la carte d'un type de DD qui l'utilise le signale.
+- Le bouton « Refresh » des vector stores dit qu'il retire les stores disparus
+  chez OpenAI, et combien il en a retiré.
+- Le serveur ne se bloque plus pendant le suivi d'un batch de synthèse (appelé
+  toutes les 15 secondes) ni pendant une génération de synthèse : ces routes
+  appelaient OpenAI depuis la boucle de l'application, et toutes les autres
+  requêtes attendaient.
+
 ### Frontend : pages découpées (2/2)
 
 - La gestion des utilisateurs pagine et cherche côté serveur. Elle chargeait

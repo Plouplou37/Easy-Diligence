@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { BookOpenIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import { isStale, storeState } from '@/entities/vector-store';
 import { getToneStyles } from '@/shared/lib/status';
 import { Badge } from '@/shared/ui';
 
@@ -12,19 +13,34 @@ export const AssignedDocuments = ({ code, vectorStores, assigned, locked, onAssi
   if (vectorStores.length === 0 && !assigned) return null;
 
   if (assigned) {
+    // Gone at OpenAI: the run would search nothing, so say it where it is chosen.
+    const stale = isStale(assigned);
     return (
       <div className="space-y-1">
         <div className="flex items-center justify-between">
           <span className="eyebrow leading-4">Documents</span>
           {/* file_count is unknown when the store is only known through the
               assignment, or when OpenAI could not be reached. */}
-          <span className="text-xs text-content-muted">
-            {typeof assigned.file_count === 'number' ? `${assigned.file_count} files` : 'assigned'}
-          </span>
+          {stale ? (
+            <Badge variant="error" icon={ExclamationTriangleIcon}>
+              {storeState(assigned).label}
+            </Badge>
+          ) : (
+            <span className="text-xs text-content-muted">
+              {typeof assigned.file_count === 'number'
+                ? `${assigned.file_count} files`
+                : 'assigned'}
+            </span>
+          )}
         </div>
         <div className="flex items-center justify-between gap-2">
           <span
-            className={`inline-flex items-center gap-1 min-w-0 px-2 py-0.5 rounded-xl border text-xs font-medium ${getToneStyles('success').badge}`}
+            className={`inline-flex items-center gap-1 min-w-0 px-2 py-0.5 rounded-xl border text-xs font-medium ${getToneStyles(stale ? 'error' : 'success').badge}`}
+            title={
+              stale
+                ? 'This vector store is gone at OpenAI: its documents can no longer be searched. Remove it and assign another.'
+                : undefined
+            }
           >
             <BookOpenIcon className="w-3 h-3 flex-shrink-0" />
             <span className="truncate">{assigned.name}</span>

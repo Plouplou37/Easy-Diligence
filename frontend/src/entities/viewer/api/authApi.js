@@ -16,4 +16,7 @@ export const authAPI = {
       new_password: newPassword,
     }),
   requestPasswordReset: email => api.post('/auth/reset-password', { email }),
+  // The token comes from the link of the reset e-mail.
+  confirmPasswordReset: (token, newPassword) =>
+    api.post('/auth/reset-password-confirm', { token, new_password: newPassword }),
 };

@@ -1,5 +1,11 @@
 import { useState } from 'react';
-import { ArrowPathIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
+import {
+  ArrowPathIcon,
+  ExclamationTriangleIcon,
+  PlusIcon,
+  TrashIcon,
+} from '@heroicons/react/24/outline';
+import { isStale, isUnknown, storeProblem, storeState } from '@/entities/vector-store';
 import { FileUploadModal, useFileManagement, useFileUpload } from '@/features/vector-store-manage';
 import { formatBytes } from '@/shared/lib/format';
 import { Button, sectionHeader } from '@/shared/ui';
@@ -29,7 +35,11 @@ const VectorStoreDetails = ({ store, refreshStore, onRefreshed, deleting, onDele
     return fresh;
   };
 
-  const files = useFileManagement(store, refresh);
+  // A store gone at OpenAI has no files to list: asking would only fail.
+  const stale = isStale(store);
+  const known = !stale && !isUnknown(store);
+  const problem = storeProblem(store);
+  const files = useFileManagement(stale ? null : store, refresh);
   const upload = useFileUpload(store, async ({ failed }) => {
     await refresh();
     await files.loadFiles();
@@ -47,6 +57,8 @@ const VectorStoreDetails = ({ store, refreshStore, onRefreshed, deleting, onDele
   };
 
   const expires = store.expires_at ? new Date(store.expires_at) : null;
+  let expiry = expires ? expires.toLocaleDateString() : 'Never';
+  if (!known) expiry = storeState(store)?.label || '—';
 
   return (
     <>
@@ -87,14 +99,27 @@ const VectorStoreDetails = ({ store, refreshStore, onRefreshed, deleting, onDele
         </div>
 
         <div className="grid grid-cols-3 gap-4">
-          <Figure label="Files" value={store.file_count} />
-          <Figure label="Size" value={formatBytes(store.total_bytes)} />
+          <Figure label="Files" value={known ? store.file_count : '—'} />
+          <Figure label="Size" value={known ? formatBytes(store.total_bytes) : '—'} />
           <Figure
             label="Expires"
-            value={expires ? expires.toLocaleDateString() : 'Never'}
-            title={expires ? expires.toLocaleString() : undefined}
+            value={expiry}
+            title={known && expires ? expires.toLocaleString() : undefined}
           />
         </div>
+
+        {problem && (
+          <div className={`alert ${stale ? 'alert-error' : 'alert-warning'} mt-4 text-sm`}>
+            <p className="flex items-start gap-2">
+              <ExclamationTriangleIcon className="w-5 h-5 flex-shrink-0" />
+              <span>
+                {problem}
+                {stale &&
+                  ' Delete it here, or use Refresh at the top of the page to remove every vector store in this state.'}
+              </span>
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="flex-1 min-h-0 flex flex-col p-5">
@@ -102,20 +127,28 @@ const VectorStoreDetails = ({ store, refreshStore, onRefreshed, deleting, onDele
           <div className={`${sectionHeader.wrapper} flex-1`}>
             <h3 className={sectionHeader.title}>
               {/* No count while loading: "Files (0)" read as an empty store. */}
-              {files.filesLoading ? 'Files' : `Files (${files.files.length})`}
+              {files.filesLoading || stale ? 'Files' : `Files (${files.files.length})`}
             </h3>
             <div className={sectionHeader.hairline} />
           </div>
-          <Button onClick={() => setUploadOpen(true)} variant="primary" icon={PlusIcon}>
-            Upload Files
-          </Button>
+          {!stale && (
+            <Button onClick={() => setUploadOpen(true)} variant="primary" icon={PlusIcon}>
+              Upload Files
+            </Button>
+          )}
         </div>
         <div className="flex-1 min-h-0">
-          <FileList
-            files={files.files}
-            loading={files.filesLoading}
-            onRemoveFile={files.removeFile}
-          />
+          {stale ? (
+            <p className="text-sm text-content-muted">
+              No documents: they went with the vector store.
+            </p>
+          ) : (
+            <FileList
+              files={files.files}
+              loading={files.filesLoading}
+              onRemoveFile={files.removeFile}
+            />
+          )}
         </div>
       </div>
 

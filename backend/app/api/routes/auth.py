@@ -1,6 +1,6 @@
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
@@ -158,21 +158,32 @@ def change_user_password(
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
+async def _send_reset_email(user_id: int, to_email: str, reset_token: str, user_name: str) -> None:
+    sent = await email_service.send_password_reset_email(
+        to_email=to_email, reset_token=reset_token, user_name=user_name
+    )
+    if not sent:
+        logger.error("Password reset email could not be sent (user id %s)", user_id)
+
+
 @router.post("/reset-password", status_code=status.HTTP_202_ACCEPTED)
-async def reset_password_request(password_reset: PasswordReset, db: Session = Depends(get_db)):
+def reset_password_request(
+    password_reset: PasswordReset, background: BackgroundTasks, db: Session = Depends(get_db)
+):
     """Request a password reset link. The answer is the same whether or not the
-    address exists, so it cannot be used to find accounts."""
+    address exists, so it cannot be used to find accounts.
+
+    The e-mail leaves after the response: the answer takes as long for an
+    unknown address as for a known one, so its timing reveals nothing either.
+    (The route was an `async def` reading the database, which blocked the
+    server meanwhile.)"""
     user = get_user_by_email(db, password_reset.email)
 
     if user and user.is_active:
         reset_token = create_password_reset_token(user.email, user.password_hash)
-        email_sent = await email_service.send_password_reset_email(
-            to_email=user.email,
-            reset_token=reset_token,
-            user_name=user.full_name or "",
+        background.add_task(
+            _send_reset_email, stored_id(user), user.email, reset_token, user.full_name or ""
         )
-        if not email_sent:
-            logger.error("Password reset email could not be sent (user id %s)", user.id)
 
     return {"detail": "If the email exists, a password reset link has been sent."}
 

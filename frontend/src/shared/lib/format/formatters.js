@@ -6,19 +6,6 @@ export const formatBytes = bytes => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
 
-export const getExpirationStatus = expiresAt => {
-  if (!expiresAt) return 'never';
-  const now = new Date();
-  const expiry = new Date(expiresAt);
-  const diffTime = expiry - now;
-  const diffDays = diffTime / (1000 * 60 * 60 * 24);
-
-  if (diffDays <= 0) return 'expired';
-  if (diffDays <= 3) return 'critical';
-  if (diffDays <= 7) return 'warning';
-  return 'normal';
-};
-
 /** A duration in seconds, short: "45s", "3m 20s", "1h 5m". */
 export const formatDuration = seconds => {
   if (seconds < 60) return `${seconds}s`;
