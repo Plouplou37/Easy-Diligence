@@ -2,6 +2,7 @@
 
 import io
 import json
+from pathlib import Path
 
 import openpyxl
 import pytest
@@ -136,6 +137,17 @@ def test_json_file_keeps_the_references_and_sources():
     assert sections[0]["description"] == "About the fund"
     assert _codes(sections) == [["A.01", "A.02"]]
     assert sections[0]["questions"][0]["context_prompt"] == "Prospectus, page 1"
+
+
+def test_the_example_questionnaire_imports():
+    """The questionnaire the README tells newcomers to import."""
+    example = Path(__file__).resolve().parents[2] / "examples" / "example_questionnaire.json"
+    sections = DDTypeFileParser().parse_file(example.read_bytes(), example.name)
+    assert [section["section_code"] for section in sections] == ["A", "B", "C", "D", "E", "F"]
+    assert sum(len(codes) for codes in _codes(sections)) == 18
+    assert all(section["description"] for section in sections)
+    questions = [question for section in sections for question in section["questions"]]
+    assert all(question["context_prompt"] for question in questions)
 
 
 @pytest.mark.parametrize(

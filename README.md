@@ -113,11 +113,12 @@ le rôle des autres comptes depuis l'interface.
 
 ### 6. Premier questionnaire
 
-Un questionnaire d'exemple est fourni. Pour l'importer sans passer par
-l'interface, lancer depuis `backend/` :
+Un questionnaire d'exemple, fictif, est fourni : 18 questions sur un fonds, en
+6 sections. Pour l'importer sans passer par l'interface, lancer depuis
+`backend/` :
 
 ```bash
-uv run python scripts/import_questionnaire.py ../examples/example_questionnaire.json EXAMPLE "Example"
+uv run python scripts/import_questionnaire.py ../examples/example_questionnaire.json EXAMPLE "Example questionnaire"
 ```
 
 On peut aussi l'importer depuis la page **DD Types**.

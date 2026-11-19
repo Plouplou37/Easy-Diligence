@@ -458,13 +458,15 @@ le nombre de sessions.
 
 ## Format d'import des questionnaires
 
-Le parser est `services/file_parser.py`, et un exemple se trouve dans
+Le parser est `services/file_parser.py`, et un exemple fictif se trouve dans
 [`examples/example_questionnaire.json`](../examples/example_questionnaire.json).
+Les vrais questionnaires restent dans `questionnaires/`, ignoré par git.
 
 ```json
 [
   {
     "section": "Titre de la section",
+    "description": "Facultatif : le thème, transmis au modèle avec le titre",
     "questions": [
       "Une question en texte simple",
       {"ref": "A.01", "text": "Texte de la question", "context_prompt": "Où chercher"}

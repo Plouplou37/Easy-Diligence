@@ -1,7 +1,7 @@
 """Dashboard aggregation (services/dashboard.py).
 
-build_dashboard_rows is fed plain tuples and objects: no database, the local
-.env points at production.
+build_dashboard_rows is a pure function, fed plain tuples and objects: no
+database.
 """
 
 from datetime import datetime
@@ -27,13 +27,13 @@ def _session(id_, codes, created=datetime(2026, 9, 1)):
     )
 
 
-ALPHA = SimpleNamespace(id=38, code="ALPHA", name="Example", is_active=True)
-BETA = SimpleNamespace(id=39, code="BETA", name="Investment DD", is_active=True)
+ALPHA = SimpleNamespace(id=38, code="ALPHA", name="Alpha review", is_active=True)
+BETA = SimpleNamespace(id=39, code="BETA", name="Beta review", is_active=True)
 
 
 def test_counts_progress_and_totals():
     sessions = [_session(1, ["ALPHA", "BETA"])]
-    executions = [(1, 38, "ALPHA", "Example", True, "generated", datetime(2026, 9, 2))]
+    executions = [(1, 38, "ALPHA", "Alpha review", True, "generated", datetime(2026, 9, 2))]
     answer_counts = [
         # enum members, as SQLAlchemy returns them, and plain strings
         (1, 38, AnswerStatus.COMPLETED, 60, datetime(2026, 9, 2, 10), None),
@@ -57,20 +57,20 @@ def test_counts_progress_and_totals():
     )
 
     row = result["sessions"][0]
-    snap = next(d for d in row["dd_types"] if d["code"] == "ALPHA")
-    idd = next(d for d in row["dd_types"] if d["code"] == "BETA")
+    alpha = next(d for d in row["dd_types"] if d["code"] == "ALPHA")
+    beta = next(d for d in row["dd_types"] if d["code"] == "BETA")
 
-    assert snap["status"] == "completed"  # generated -> completed
-    assert snap["to_review"] == 62  # completed + needs_review
-    assert snap["approved"] == 8 and snap["failed"] == 2
-    assert snap["answered"] == 70 and snap["total_questions"] == 72
-    assert snap["percentage"] == 97
-    assert snap["has_synthesis"] is True
-    assert snap["last_answer_at"] == datetime(2026, 9, 2, 11).isoformat()
+    assert alpha["status"] == "completed"  # generated -> completed
+    assert alpha["to_review"] == 62  # completed + needs_review
+    assert alpha["approved"] == 8 and alpha["failed"] == 2
+    assert alpha["answered"] == 70 and alpha["total_questions"] == 72
+    assert alpha["percentage"] == 97
+    assert alpha["has_synthesis"] is True
+    assert alpha["last_answer_at"] == datetime(2026, 9, 2, 11).isoformat()
 
     # Selected at creation, never started: listed as not started.
-    assert idd["status"] == "not_started" and idd["total_questions"] == 133
-    assert idd["percentage"] == 0
+    assert beta["status"] == "not_started" and beta["total_questions"] == 133
+    assert beta["percentage"] == 0
 
     assert row["last_activity_at"] == datetime(2026, 9, 5).isoformat()
     assert row["batch_pending"] is False
@@ -80,8 +80,8 @@ def test_counts_progress_and_totals():
 def test_running_pending_batch_and_ordering():
     sessions = [_session(1, ["ALPHA"]), _session(2, ["ALPHA"])]
     executions = [
-        (1, 38, "ALPHA", "Example", True, "in_progress", datetime(2026, 9, 1)),
-        (2, 38, "ALPHA", "Example", True, "paused", datetime(2026, 9, 10)),
+        (1, 38, "ALPHA", "Alpha review", True, "in_progress", datetime(2026, 9, 1)),
+        (2, 38, "ALPHA", "Alpha review", True, "paused", datetime(2026, 9, 10)),
     ]
     batches = [(1, 38, "in_progress", datetime(2026, 9, 2))]
 

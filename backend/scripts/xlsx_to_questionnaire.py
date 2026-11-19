@@ -7,8 +7,8 @@ format, documents to look at, analytical purpose) are therefore folded INTO the
 question text -- which is exactly what reaches the model, so the guidance is
 actually used rather than merely stored.
 
-Column names differ between questionnaires (EXAMPLE has "Expected answer
-format" / "Applicable to" / "Document / evidence expected", BETA has
+Column names differ between questionnaires (one workbook has "Expected answer
+format" / "Applicable to" / "Document / evidence expected", another has
 "Applicability" / "Analytical purpose" / "Expected answer / evidence"), so
 columns are mapped by header name, never by position.
 
@@ -59,10 +59,10 @@ HINT_COLUMNS = [
 # The columns naming the documents to consult. They go to their own field
 # (context_prompt) rather than into the question text: this is the one
 # instruction an analyst wants to adjust per company, and it must be editable.
-# The two workbooks name that column differently -- EXAMPLE says "Document /
-# evidence expected", the BETA "Expected answer / evidence" -- which is how the
-# two questionnaires ended up saying the same thing under two labels. Mapping
-# both here is what makes them speak the same language downstream.
+# Workbooks name that column differently -- "Document / evidence expected" in
+# one, "Expected answer / evidence" in another -- which is how questionnaires
+# end up saying the same thing under two labels. Mapping both here is what
+# makes them speak the same language downstream.
 SOURCE_COLUMNS = [
     "document / evidence expected",
     "expected answer / evidence",

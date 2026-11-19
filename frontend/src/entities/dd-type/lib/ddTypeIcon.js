@@ -16,7 +16,7 @@ import {
  */
 export const getDdTypeIcon = (ddType) => {
   const name = String((typeof ddType === 'object' ? ddType?.name : ddType) || '').toLowerCase();
-  if (name.includes('financial') || name.includes('example')) return ChartBarIcon;
+  if (name.includes('financial')) return ChartBarIcon;
   if (name.includes('operational') || name.includes('operation')) return CogIcon;
   if (name.includes('legal') || name.includes('compliance') || name.includes('sanity')) return ShieldCheckIcon;
   if (name.includes('investment')) return BriefcaseIcon;

@@ -2,6 +2,17 @@
 
 ## Non publié
 
+### Questionnaire d'exemple
+
+- Le questionnaire d'exemple est remplacé par un questionnaire fictif,
+  `examples/example_questionnaire.json` (code `EXAMPLE`) : 18 questions en 6
+  sections (identité du fonds, équipe, stratégie, risques, opérations, frais et
+  durabilité). Chaque section a une description et chaque
+  question une consigne « où chercher ». Un test vérifie qu'il s'importe.
+- Les commentaires du code et les tests ne nomment plus de questionnaire réel.
+  Le mot « snapshot » ne sert plus à choisir l'icône d'un type de DD : un type
+  ainsi nommé prend l'icône par défaut.
+
 ### Frontend : pages découpées (1/2)
 
 - Les confirmations s'ouvrent dans une fenêtre de l'application, et non plus

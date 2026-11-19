@@ -158,7 +158,7 @@ const SessionCreate = () => {
   // Helper function to categorize DD types
   const categorizeDdType = (name) => {
     const nameLower = name.toLowerCase();
-    if (nameLower.includes('financial') || nameLower.includes('example')) {
+    if (nameLower.includes('financial')) {
       return 'financial';
     }
     if (nameLower.includes('operational') || nameLower.includes('operation')) {

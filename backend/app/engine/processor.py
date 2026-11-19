@@ -88,7 +88,7 @@ class DDProcessor:
         ``context_prompt`` now carries the "where to look" instruction of the
         reference questionnaires, moved out of the question text so it can be
         edited. It is labelled "Where to look" whatever its origin, which is what
-        makes EXAMPLE and BETA speak the same language: their source workbooks
+        makes questionnaires speak the same language when their source workbooks
         name that column differently ("Document / evidence expected" against
         "Expected answer / evidence").
         """
