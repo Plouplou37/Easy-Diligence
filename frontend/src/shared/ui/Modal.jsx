@@ -32,16 +32,22 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
         ></div>
 
         {/* Modal */}
-        <div className={`${modalStyles.panel} ${sizeClasses[size] || sizeClasses.md} max-h-[90vh] overflow-hidden`}>
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-title"
+          className={`${modalStyles.panel} ${sizeClasses[size] || sizeClasses.md} max-h-[90vh] overflow-hidden`}
+        >
           {/* Header */}
           <div className={modalStyles.header}>
-            <h2 className={modalStyles.title}>
+            <h2 id="modal-title" className={modalStyles.title}>
               {title}
             </h2>
             <button
               type="button"
               onClick={onClose}
               className={modalStyles.close}
+              aria-label="Close"
             >
               <XMarkIcon className="h-5 w-5" />
             </button>

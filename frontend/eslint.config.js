@@ -69,7 +69,12 @@ export default [
       'react-refresh/only-export-components': 'warn',
       'no-console': ['warn', { allow: ['warn', 'error'] }],
       // caughtErrors: as with ESLint 8, an unused `catch (error)` is not reported.
-      'no-unused-vars': ['warn', { argsIgnorePattern: '^_', caughtErrors: 'none' }],
+      // ignoreRestSiblings: `const { node, ...rest } = props` is how a property
+      // is left out of an object.
+      'no-unused-vars': [
+        'warn',
+        { argsIgnorePattern: '^_', caughtErrors: 'none', ignoreRestSiblings: true },
+      ],
       'boundaries/dependencies': [
         'error',
         {

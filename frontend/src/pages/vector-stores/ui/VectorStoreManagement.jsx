@@ -10,12 +10,12 @@ import {
 } from '@heroicons/react/24/outline';
 import { Modal } from '@/shared/ui';
 import { Button, EmptyState, LoadingSpinner, PageHeader, field, pageLayout, panel, sectionHeader } from '@/shared/ui';
-import VectorStoreList from './VectorStoreList';
-import FileList from './FileList';
-import FileUploadModal from './FileUploadModal';
-import { useVectorStores } from '../model/useVectorStores';
-import { useFileUpload } from '../model/useFileUpload';
-import { useFileManagement } from '../model/useFileManagement';
+import { VectorStoreList } from '@/widgets/vector-store-browser';
+import { FileList } from '@/widgets/vector-store-browser';
+import { FileUploadModal } from '@/features/vector-store-manage';
+import { useVectorStores } from '@/features/vector-store-manage';
+import { useFileUpload } from '@/features/vector-store-manage';
+import { useFileManagement } from '@/features/vector-store-manage';
 import { formatBytes } from '@/shared/lib/format';
 import { vectorStoresAPI } from '@/entities/vector-store';
 

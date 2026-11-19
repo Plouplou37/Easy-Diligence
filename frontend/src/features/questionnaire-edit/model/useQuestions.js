@@ -1,8 +1,11 @@
 import { useState } from 'react';
-import { questionsAPI } from '@/entities/dd-type';
 import toast from 'react-hot-toast';
+import { questionsAPI } from '@/entities/dd-type';
+import { errorMessage } from '@/shared/api';
+import { useConfirm } from '@/shared/lib/confirm';
 
 export const useQuestions = (selectedDdType, onRefresh) => {
+  const confirm = useConfirm();
   const [editingQuestion, setEditingQuestion] = useState(null);
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
 
@@ -47,25 +50,19 @@ export const useQuestions = (selectedDdType, onRefresh) => {
       await onRefresh();
       return true;
     } catch (error) {
-      // Handle validation errors from backend
-      let errorMessage = 'Failed to save question';
-      if (error.response?.data?.detail) {
-        if (Array.isArray(error.response.data.detail)) {
-          // FastAPI validation error format
-          errorMessage = error.response.data.detail.map(e => e.msg).join(', ');
-        } else if (typeof error.response.data.detail === 'string') {
-          errorMessage = error.response.data.detail;
-        }
-      }
-      toast.error(errorMessage);
+      toast.error(errorMessage(error, 'Failed to save question'));
       return false;
     }
   };
 
   const deleteQuestion = async (questionId) => {
-    if (!window.confirm('Are you sure you want to delete this question?')) {
-      return false;
-    }
+    const confirmed = await confirm({
+      title: 'Delete question',
+      message: 'Delete this question? This cannot be undone.',
+      confirmLabel: 'Delete',
+      danger: true,
+    });
+    if (!confirmed) return false;
 
     try {
       await questionsAPI.deleteQuestion(questionId);
@@ -73,7 +70,7 @@ export const useQuestions = (selectedDdType, onRefresh) => {
       await onRefresh();
       return true;
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to delete question');
+      toast.error(errorMessage(error, 'Failed to delete question'));
       return false;
     }
   };

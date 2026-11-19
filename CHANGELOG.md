@@ -2,6 +2,27 @@
 
 ## Non publié
 
+### Frontend : pages découpées (1/2)
+
+- Les confirmations s'ouvrent dans une fenêtre de l'application, et non plus
+  dans le `confirm()` du navigateur. Le message nomme ce qui va disparaître ;
+  Échap, la croix ou un clic à côté valent « Annuler ».
+- La page des réponses charge toutes les réponses d'un type de DD. Elle n'en
+  recevait que 100 (la taille de page par défaut du serveur) : au-delà, les
+  suivantes manquaient sans aucun message.
+- Choisir une section dans les filtres ne recharge plus la page : la requête
+  envoyait un paramètre que le serveur ignorait. Après une régénération ou un
+  retour à une version, les sections et les réponses ouvertes le restent.
+- L'export CSV garde ses accents dans Excel (marque UTF-8 en tête de fichier).
+- Le bouton « Sources » d'une réponse ne compte plus les sources qui n'ont
+  rien à afficher (recherche de fichiers sans nom de fichier, recherche web
+  sans lien), et l'éditeur ne les montre plus comme des lignes vides.
+- La page d'une session, la carte d'un type de DD, la page des réponses et la
+  synthèse sont découpées en widgets (`dd-run-card`, `session-progress`,
+  `answers-board`) et en features (`dd-run-control`, `vector-store-assign`,
+  `session-actions`, `answer-review`, `summaries`). La page d'une session passe
+  de 648 à 198 lignes.
+
 ### Frontend : couches
 
 - Le code est rangé en Feature-Sliced Design (`app`, `pages`, `widgets`,

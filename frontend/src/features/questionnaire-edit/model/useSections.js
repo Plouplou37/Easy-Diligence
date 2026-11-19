@@ -1,8 +1,11 @@
 import { useState } from 'react';
-import { questionsAPI } from '@/entities/dd-type';
 import toast from 'react-hot-toast';
+import { questionsAPI } from '@/entities/dd-type';
+import { errorMessage } from '@/shared/api';
+import { useConfirm } from '@/shared/lib/confirm';
 
 export const useSections = (selectedDdType, onRefresh) => {
+  const confirm = useConfirm();
   const [editingSection, setEditingSection] = useState(null);
   const [showSectionModal, setShowSectionModal] = useState(false);
 
@@ -40,15 +43,20 @@ export const useSections = (selectedDdType, onRefresh) => {
       await onRefresh();
       return true;
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to save section');
+      toast.error(errorMessage(error, 'Failed to save section'));
       return false;
     }
   };
 
   const deleteSection = async (sectionId) => {
-    if (!window.confirm('Are you sure you want to delete this section? All questions in this section will also be deleted.')) {
-      return false;
-    }
+    const section = selectedDdType?.sections?.find((item) => item.id === sectionId);
+    const confirmed = await confirm({
+      title: 'Delete section',
+      message: `Delete the section "${section?.title || ''}" and all its questions? This cannot be undone.`,
+      confirmLabel: 'Delete',
+      danger: true,
+    });
+    if (!confirmed) return false;
 
     try {
       await questionsAPI.deleteSection(sectionId);
@@ -56,7 +64,7 @@ export const useSections = (selectedDdType, onRefresh) => {
       await onRefresh();
       return true;
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to delete section');
+      toast.error(errorMessage(error, 'Failed to delete section'));
       return false;
     }
   };

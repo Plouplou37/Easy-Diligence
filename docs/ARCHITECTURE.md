@@ -388,8 +388,8 @@ fait à la collecte.
   - `POST /summaries/.../generate/batch` lance le batch ;
   - `GET /summaries/.../batch` suit son état et fait la collecte ;
   - `POST /summaries/.../batch/cancel` l'annule.
-- **La collecte se fait dans le GET**, que le frontend (`SynthesisTab.jsx`)
-  appelle toutes les 15 secondes. Une tâche de fond ne survivrait pas à un
+- **La collecte se fait dans le GET**, que le frontend
+  (`features/summaries/model/useSynthesis.js`) appelle toutes les 15 secondes. Une tâche de fond ne survivrait pas à un
   redémarrage, alors qu'un batch peut vivre 24 heures.
 - L'état est suivi dans `dd_summary_batches`, une ligne par session et par type
   de DD. Relancer remplace la ligne.
@@ -569,6 +569,9 @@ Les scripts se lancent aussi depuis `backend/` : `uv run python scripts/<script>
     de couleur : l'ordre des feuilles de style déciderait alors du gagnant.
   - `LoadingSpinner` : en tailles lg et xl, le logo traversé par un reflet.
   - `Modal` : se ferme avec Échap.
+  - Confirmations : `const confirm = useConfirm()` (`shared/lib/confirm`),
+    puis `await confirm({ title, message, confirmLabel, danger })`, qui rend
+    `true` ou `false`. Jamais `window.confirm`.
   - Dans `shared/ui/` : `PageHeader`, `StatTile`, `EmptyState`,
     `SearchInput` et `StatusBadge`.
 - **Gabarit** : toutes les pages utilisent `pageLayout.container` (`max-w-7xl`) et
@@ -588,7 +591,9 @@ Les scripts se lancent aussi depuis `backend/` : `uv run python scripts/<script>
 - `AnswerCard` anime `grid-rows-[0fr]→[1fr]` plutôt qu'un `max-h` plafonné, qui
   coupait les longues réponses. Les tableaux markdown sont enveloppés dans un
   conteneur `overflow-x-auto` (`MARKDOWN_COMPONENTS`).
-- Les tuiles d'une carte de DD (`DDCard.jsx`) :
+- La page des réponses demande `limit=1000` (le plafond du serveur) : sans
+  cela, le serveur n'en renvoie que 100.
+- Les tuiles d'une carte de DD (`widgets/dd-run-card/ui/RunStatus.jsx`) :
   - le temps écoulé se mesure sur les horodatages des réponses ;
   - les tokens ne comptent que les versions `is_current` ;
   - la troisième tuile compte les réponses appuyées sur les documents.

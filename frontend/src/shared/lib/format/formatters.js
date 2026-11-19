@@ -37,3 +37,22 @@ export const getExpirationStatus = (expiresAt) => {
   if (diffDays <= 7) return 'warning';
   return 'normal';
 };
+
+/** A duration in seconds, short: "45s", "3m 20s", "1h 5m". */
+export const formatDuration = (seconds) => {
+  if (seconds < 60) return `${seconds}s`;
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
+  return `${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}m`;
+};
+
+/** Save a downloaded blob under a file name. */
+export const downloadBlob = (blob, filename) => {
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.URL.revokeObjectURL(url);
+};

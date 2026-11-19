@@ -3,13 +3,13 @@ import { useSearchParams } from 'react-router-dom';
 import { PlusIcon, FolderIcon } from '@heroicons/react/24/outline';
 import { Button, EmptyState, LoadingSpinner, PageHeader, pageLayout, panel, sectionHeader } from '@/shared/ui';
 import DDTypeSelector from './DDTypeSelector';
-import SectionCard from './SectionCard';
-import QuestionEditor from './QuestionEditor';
-import SectionEditor from './SectionEditor';
+import { SectionCard } from '@/widgets/questionnaire-tree';
+import { QuestionEditor } from '@/features/questionnaire-edit';
+import { SectionEditor } from '@/features/questionnaire-edit';
 import { useDDTypes } from '../model/useDDTypes';
-import { useSections } from '../model/useSections';
-import { useQuestions } from '../model/useQuestions';
-import { useDragDrop } from '../model/useDragDrop';
+import { useSections } from '@/features/questionnaire-edit';
+import { useQuestions } from '@/features/questionnaire-edit';
+import { useDragDrop } from '@/features/questionnaire-edit';
 
 const QuestionManagement = () => {
   const [searchParams] = useSearchParams();

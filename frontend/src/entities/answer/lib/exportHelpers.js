@@ -1,3 +1,4 @@
+import { downloadBlob } from '@/shared/lib/format';
 import { parseSourcesFromString, getSourceContent } from './sources';
 
 /**
@@ -72,25 +73,8 @@ export const exportAnswersToCSV = (answers, sessionId) => {
     ...rows.map(row => row.join(','))
   ].join('\n');
 
-  // Create and trigger download
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  // The byte order mark tells Excel the file is UTF-8: without it, Excel reads
+  // it in the system code page and garbles every accented letter.
+  const blob = new Blob(['﻿', csvContent], { type: 'text/csv;charset=utf-8;' });
   downloadBlob(blob, `session-${sessionId}-answers.csv`);
-};
-
-/**
- * Triggers a browser download for a Blob (e.g. a PDF/Excel file returned by
- * the backend export endpoint). Mirrors the object-URL pattern used for CSV.
- * @param {Blob} blob - The file content to download
- * @param {string} filename - Suggested filename (fallback if the server's
- *   Content-Disposition is not honoured by the browser)
- */
-export const downloadBlob = (blob, filename) => {
-  const url = window.URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  window.URL.revokeObjectURL(url);
 };

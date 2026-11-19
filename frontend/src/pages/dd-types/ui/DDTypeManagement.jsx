@@ -25,8 +25,10 @@ import {
 } from '@/shared/ui';
 import { ddTypesAPI, fetchDdTypes, getDdTypeIcon, questionsAPI } from '@/entities/dd-type';
 import toast from 'react-hot-toast';
+import { useConfirm } from '@/shared/lib/confirm';
 
 const DDTypeManagement = () => {
+  const confirm = useConfirm();
   const [ddTypes, setDdTypes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editingType, setEditingType] = useState(null);
@@ -196,9 +198,13 @@ const DDTypeManagement = () => {
   };
 
   const handleDelete = async (ddType) => {
-    if (!window.confirm(`Are you sure you want to delete "${ddType.name}"?`)) {
-      return;
-    }
+    const confirmed = await confirm({
+      title: 'Delete DD type',
+      message: `Delete "${ddType.name}" with its questionnaire? This cannot be undone.`,
+      confirmLabel: 'Delete',
+      danger: true,
+    });
+    if (!confirmed) return;
 
     try {
       await ddTypesAPI.delete(ddType.code);

@@ -1,118 +1,87 @@
-import { useState, useEffect } from 'react';
-import { ddTypesAPI, fetchDdTypes } from '@/entities/dd-type';
+import { useCallback, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
+import { ddTypesAPI, fetchDdTypes } from '@/entities/dd-type';
+import { errorMessage } from '@/shared/api';
+import { useConfirm } from '@/shared/lib/confirm';
 
+/**
+ * The DD types with their questionnaires, the one being edited (`initialCode`
+ * first: the ?dd_type= of the URL), and its validation and deletion.
+ */
 export const useDDTypes = (initialCode) => {
+  const confirm = useConfirm();
   const [ddTypes, setDdTypes] = useState([]);
-  const [selectedDdType, setSelectedDdType] = useState(null);
   const [selectedDdTypeCode, setSelectedDdTypeCode] = useState(initialCode || null);
   const [loading, setLoading] = useState(true);
+  // Derived, so that a reload shows the selected type's new questions.
+  const selectedDdType = ddTypes.find((ddType) => ddType.code === selectedDdTypeCode) || null;
 
-  useEffect(() => {
-    loadDdTypes();
-  }, []);
-
-  const loadDdTypes = async () => {
+  const loadDdTypes = useCallback(async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      const ddTypes = await fetchDdTypes({ withQuestions: true });
-      setDdTypes(ddTypes);
-
-      if (selectedDdTypeCode) {
-        const targetDdType = ddTypes.find(t => t.code === selectedDdTypeCode);
-        if (targetDdType) {
-          setSelectedDdType(targetDdType);
-        }
-      }
-    } catch (error) {
+      setDdTypes(await fetchDdTypes({ withQuestions: true }));
+    } catch {
       toast.error('Failed to load DD types');
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const refreshSelectedDdType = async () => {
-    if (!selectedDdType) return;
+  useEffect(() => {
+    loadDdTypes();
+  }, [loadDdTypes]);
 
+  // After a change to the questionnaire (which clears the cached list), behind
+  // the page: no spinner, the open sections stay open.
+  const refreshSelectedDdType = useCallback(async () => {
     try {
-      const ddTypes = await fetchDdTypes({ withQuestions: true });
-      setDdTypes(ddTypes);
-      const updatedDdType = ddTypes.find(t => t.code === selectedDdType.code);
-      if (updatedDdType) {
-        setSelectedDdType(updatedDdType);
-      }
-    } catch (error) {
-      // Silent error
+      setDdTypes(await fetchDdTypes({ withQuestions: true }));
+    } catch {
+      toast.error('Failed to reload the questionnaire');
     }
-  };
+  }, []);
 
-  const changeDdType = async (ddTypeCode) => {
-    setSelectedDdTypeCode(ddTypeCode);
-
-    if (ddTypeCode) {
-      const ddType = ddTypes.find(t => t.code === ddTypeCode);
-      setSelectedDdType(ddType || null);
-    } else {
-      setSelectedDdType(null);
-    }
-  };
+  const changeDdType = (code) => setSelectedDdTypeCode(code || null);
 
   const validateDdType = async () => {
-    if (!selectedDdType) {
-      toast.error('No DD type selected');
-      return false;
-    }
-
-    if (selectedDdType.is_validated) {
-      toast.error('DD type is already validated');
-      return false;
-    }
-
-    if (!window.confirm('Are you sure you want to validate this DD type? Once validated, it cannot be modified.')) {
-      return false;
-    }
-
+    if (!selectedDdType || selectedDdType.is_validated) return false;
+    const confirmed = await confirm({
+      title: 'Validate DD type',
+      message:
+        `Validate "${selectedDdType.name}"? Once validated, its questionnaire can no ` +
+        'longer be changed. This cannot be undone.',
+      confirmLabel: 'Validate',
+      danger: true,
+    });
+    if (!confirmed) return false;
     try {
       await ddTypesAPI.validate(selectedDdType.code);
       toast.success('DD type validated successfully');
-
-      setSelectedDdType(prev => ({
-        ...prev,
-        is_validated: true
-      }));
-
       await refreshSelectedDdType();
       return true;
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to validate DD type');
+      toast.error(errorMessage(error, 'Failed to validate DD type'));
       return false;
     }
   };
 
   const deleteDdType = async () => {
-    if (!selectedDdType) {
-      toast.error('No DD type selected');
-      return false;
-    }
-
-    if (selectedDdType.is_validated) {
-      toast.error('Cannot delete a validated DD type');
-      return false;
-    }
-
-    if (!window.confirm(`Are you sure you want to delete "${selectedDdType.name}"? This will delete all sections and questions.`)) {
-      return false;
-    }
-
+    if (!selectedDdType || selectedDdType.is_validated) return false;
+    const confirmed = await confirm({
+      title: 'Delete DD type',
+      message: `Delete "${selectedDdType.name}" with all its sections and questions? This cannot be undone.`,
+      confirmLabel: 'Delete',
+      danger: true,
+    });
+    if (!confirmed) return false;
     try {
       await ddTypesAPI.delete(selectedDdType.code);
       toast.success('DD type deleted successfully');
-      setSelectedDdType(null);
       setSelectedDdTypeCode(null);
-      await loadDdTypes();
+      await refreshSelectedDdType();
       return true;
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to delete DD type');
+      toast.error(errorMessage(error, 'Failed to delete DD type'));
       return false;
     }
   };
@@ -126,6 +95,6 @@ export const useDDTypes = (initialCode) => {
     refreshSelectedDdType,
     changeDdType,
     validateDdType,
-    deleteDdType
+    deleteDdType,
   };
 };
