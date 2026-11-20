@@ -29,7 +29,7 @@ export const sectionHeader = {
 
 // Content panels sitting on the wave background.
 export const panel = {
-  base: 'relative bg-surface border border-border rounded-lg shadow-sm',
+  base: 'relative bg-surface border border-border rounded-lg shadow-xs',
   // Navy-to-gold rail on the left edge of a main card (parent: `relative overflow-hidden`).
   rail: 'absolute inset-y-0 left-0 w-1 side-gradient',
   // Blue-to-green rail, used on stat tiles.
@@ -85,7 +85,7 @@ export const field = {
 // Segmented tabs.
 export const tabs = {
   group: 'inline-flex rounded-md border border-border overflow-hidden bg-surface',
-  tab: 'relative px-3.5 py-1.5 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-bleu-atlantis/40',
+  tab: 'relative px-3.5 py-1.5 text-sm font-medium transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-bleu-atlantis/40',
   divider: 'border-l border-border',
   active: 'bg-bleu-atlantis/10 text-bleu-atlantis',
   inactive: 'text-content-secondary hover:text-content hover:bg-surface-hover',

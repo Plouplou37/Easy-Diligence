@@ -62,7 +62,7 @@ const VectorStoreDetails = ({ store, refreshStore, onRefreshed, deleting, onDele
 
   return (
     <>
-      <div className="p-5 border-b border-border flex-shrink-0">
+      <div className="p-5 border-b border-border shrink-0">
         <div className="flex items-center justify-between gap-4 mb-4">
           <div>
             {/* The OpenAI id is internal: kept in the tooltip. */}
@@ -111,7 +111,7 @@ const VectorStoreDetails = ({ store, refreshStore, onRefreshed, deleting, onDele
         {problem && (
           <div className={`alert ${stale ? 'alert-error' : 'alert-warning'} mt-4 text-sm`}>
             <p className="flex items-start gap-2">
-              <ExclamationTriangleIcon className="w-5 h-5 flex-shrink-0" />
+              <ExclamationTriangleIcon className="w-5 h-5 shrink-0" />
               <span>
                 {problem}
                 {stale &&
@@ -123,7 +123,7 @@ const VectorStoreDetails = ({ store, refreshStore, onRefreshed, deleting, onDele
       </div>
 
       <div className="flex-1 min-h-0 flex flex-col p-5">
-        <div className="flex items-center justify-between gap-4 mb-4 flex-shrink-0">
+        <div className="flex items-center justify-between gap-4 mb-4 shrink-0">
           <div className={`${sectionHeader.wrapper} flex-1`}>
             <h3 className={sectionHeader.title}>
               {/* No count while loading: "Files (0)" read as an empty store. */}

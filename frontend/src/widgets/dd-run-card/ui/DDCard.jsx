@@ -41,16 +41,16 @@ const DDCard = ({
 
   return (
     <div
-      className={`${panel.base} overflow-hidden hover:shadow-md transition-shadow duration-200 h-[28rem]`}
+      className={`${panel.base} overflow-hidden hover:shadow-md transition-shadow duration-200 h-112`}
     >
       <div className={panel.rail} />
       {/* The card height is fixed (28rem): paddings, header height and the
           compact buttons are sized so a running DD -- stats, current question
           and actions -- still fits inside it. */}
       <div className="pl-6 pr-5 py-5 h-full flex flex-col">
-        <div className="h-[4.5rem] flex items-center justify-between mb-4">
+        <div className="h-18 flex items-center justify-between mb-4">
           <div className="flex items-start space-x-3 flex-1 min-w-0">
-            <div className="p-2 rounded-lg bg-surface-bg flex-shrink-0">
+            <div className="p-2 rounded-lg bg-surface-bg shrink-0">
               <DdTypeIcon className="w-5 h-5 text-content-secondary" />
             </div>
             <div className="min-w-0 flex-1">
@@ -68,7 +68,7 @@ const DDCard = ({
               </p>
             </div>
           </div>
-          <div className="flex-shrink-0 ml-3 flex items-center gap-2">
+          <div className="shrink-0 ml-3 flex items-center gap-2">
             {isInactive && (
               <span title="This DD type has been deactivated: it is no longer offered for new sessions. Existing answers stay available.">
                 <Badge variant="warning">Inactive</Badge>
@@ -104,7 +104,7 @@ const DDCard = ({
                 <span className="eyebrow leading-4 truncate" title={activeSection?.name}>
                   {activeSection ? `Sections — ${activeSection.name}` : 'Sections'}
                 </span>
-                <span className="text-xs text-content-muted flex-shrink-0">
+                <span className="text-xs text-content-muted shrink-0">
                   {sections.length > 0
                     ? `${completedSections}/${sections.length} completed`
                     : 'Ready to start'}

@@ -24,7 +24,7 @@ export const Button = ({
   const iconOnly = !children;
 
   const baseStyles =
-    'inline-flex items-center justify-center font-normal rounded-md transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50 disabled:cursor-not-allowed';
+    'inline-flex items-center justify-center font-normal rounded-md transition-colors duration-150 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50 disabled:cursor-not-allowed';
 
   const variants = {
     primary: 'bg-primary-dark text-white hover:bg-primary-dark/85',
@@ -95,7 +95,7 @@ export const Button = ({
           ></path>
         </svg>
       )}
-      {!loading && Icon && <Icon className={`${iconSizes[size] || iconSizes.md} flex-shrink-0`} />}
+      {!loading && Icon && <Icon className={`${iconSizes[size] || iconSizes.md} shrink-0`} />}
       {children}
     </button>
   );

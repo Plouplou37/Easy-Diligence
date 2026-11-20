@@ -56,7 +56,7 @@ export const LoadingSpinner = ({
 
   if (fullPage) {
     return (
-      <div className="fixed inset-x-0 bottom-0 top-[var(--navbar-height)] z-40 flex items-center justify-center backdrop-blur-md">
+      <div className="fixed inset-x-0 bottom-0 top-(--navbar-height) z-40 flex items-center justify-center backdrop-blur-md">
         <div className="flex flex-col items-center">{spinner}</div>
       </div>
     );

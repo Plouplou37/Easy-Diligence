@@ -40,7 +40,7 @@ export const UsersTable = ({ users, search, onView }) => (
             <tr key={user.id} className={`${tableStyles.row} ${tableStyles.rowAlt(index)}`}>
               <td className={`${tableStyles.td} whitespace-nowrap`}>
                 <div className="flex items-center">
-                  <div className="flex-shrink-0 h-10 w-10 rounded-full bg-surface-hover flex items-center justify-center">
+                  <div className="shrink-0 h-10 w-10 rounded-full bg-surface-hover flex items-center justify-center">
                     <UserIcon className="h-6 w-6 text-content-secondary" />
                   </div>
                   <div className="ml-3">

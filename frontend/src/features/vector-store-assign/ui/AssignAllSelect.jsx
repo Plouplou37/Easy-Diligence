@@ -14,7 +14,7 @@ export const AssignAllSelect = ({ vectorStores, onAssign }) => {
   };
 
   return (
-    <div className="flex items-center gap-3 flex-shrink-0">
+    <div className="flex items-center gap-3 shrink-0">
       <span className="text-xs text-content-muted">Assign to all:</span>
       <select
         value={value}

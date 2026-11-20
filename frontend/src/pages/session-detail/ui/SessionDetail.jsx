@@ -140,7 +140,7 @@ const SessionDetail = () => {
       {location.state?.newSession && (
         <div className="alert alert-success">
           <div className="flex items-start space-x-3">
-            <CheckCircleIcon className="w-5 h-5 mt-0.5 flex-shrink-0 text-theme-success" />
+            <CheckCircleIcon className="w-5 h-5 mt-0.5 shrink-0 text-theme-success" />
             <div>
               <h3 className="text-sm font-medium text-theme-success">Session created</h3>
               <p className="text-sm text-content-secondary mt-1">

@@ -76,7 +76,7 @@ const SourcesList = ({ sources: rawSources, compact = false }) => {
             </div>
             <div className={`${compact ? 'ml-4' : 'ml-5'} space-y-1`}>
               {validSources.map((source, idx) => (
-                <p key={idx} className="text-xs text-content-secondary break-words">
+                <p key={idx} className="text-xs text-content-secondary wrap-break-word">
                   <SourceContent source={source} />
                 </p>
               ))}

@@ -58,7 +58,7 @@ const SessionCreate = () => {
 
   return (
     <div className={`${pageLayout.container} h-full flex flex-col`}>
-      <div className="flex-shrink-0">
+      <div className="shrink-0">
         <PageHeader
           breadcrumb={[{ label: 'New Session' }]}
           title="Create New DD Session"

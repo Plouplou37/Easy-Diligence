@@ -15,7 +15,7 @@ const TONES = {
   info: {
     badge: 'bg-accent-blue/10 text-accent-blue border-accent-blue/30',
     text: 'text-accent-blue',
-    fill: 'bg-gradient-to-r from-accent-blue to-accent-green',
+    fill: 'bg-linear-to-r from-accent-blue to-accent-green',
     dot: 'bg-accent-blue',
   },
   warning: {

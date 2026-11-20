@@ -46,7 +46,7 @@ const VersionHistory = ({ answerId, versions, onRevert }) => {
             )}
           </div>
 
-          <div className="mt-2 text-sm text-content bg-surface p-2 rounded max-h-32 overflow-y-auto">
+          <div className="mt-2 text-sm text-content bg-surface p-2 rounded-sm max-h-32 overflow-y-auto">
             {version.content}
           </div>
         </div>

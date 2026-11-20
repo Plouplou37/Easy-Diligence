@@ -34,7 +34,7 @@ const SourcesManager = ({
                 variant="danger"
                 icon={XMarkIcon}
                 onClick={() => onRemoveSource(index)}
-                className="ml-2 flex-shrink-0"
+                className="ml-2 shrink-0"
                 aria-label="Remove source"
               />
             )}

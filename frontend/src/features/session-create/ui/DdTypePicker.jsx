@@ -154,7 +154,7 @@ export const DdTypePicker = ({ ddTypes, selected, onChange }) => {
 
       {selected.length === 0 && (
         <p className="alert alert-error mt-4 flex items-center gap-2">
-          <ExclamationTriangleIcon className="w-4 h-4 flex-shrink-0" />
+          <ExclamationTriangleIcon className="w-4 h-4 shrink-0" />
           Please select at least one due diligence type to continue.
         </p>
       )}

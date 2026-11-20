@@ -42,7 +42,7 @@ export const AssignedDocuments = ({ code, vectorStores, assigned, locked, onAssi
                 : undefined
             }
           >
-            <BookOpenIcon className="w-3 h-3 flex-shrink-0" />
+            <BookOpenIcon className="w-3 h-3 shrink-0" />
             <span className="truncate">{assigned.name}</span>
           </span>
           {!locked && onRemove && (

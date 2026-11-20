@@ -90,7 +90,7 @@ const RegenerateModal = ({ isOpen, onClose, onSubmit, loading }) => {
           {file ? (
             <div className="flex items-center justify-between form-surface px-3 py-2 text-sm">
               <span className="flex items-center text-content-secondary truncate">
-                <PaperClipIcon className="h-4 w-4 mr-2 flex-shrink-0" />
+                <PaperClipIcon className="h-4 w-4 mr-2 shrink-0" />
                 <span className="truncate">{file.name}</span>
               </span>
               <button

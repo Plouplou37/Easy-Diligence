@@ -82,7 +82,7 @@ const AppLayout = () => {
   return (
     <div className="min-h-screen flex flex-col">
       {/* Floating navbar */}
-      <nav className="fixed top-0 inset-x-0 z-40 mx-2 sm:mx-4 h-[var(--navbar-height)] flex items-center gap-4 px-4 rounded-b-xl border-x border-b border-border nav-bg backdrop-blur-sm shadow-md">
+      <nav className="fixed top-0 inset-x-0 z-40 mx-2 sm:mx-4 h-(--navbar-height) flex items-center gap-4 px-4 rounded-b-xl border-x border-b border-border nav-bg backdrop-blur-xs shadow-md">
         <Link
           to="/"
           onClick={closeMenus}
@@ -125,7 +125,7 @@ const AppLayout = () => {
             </button>
 
             {userMenuOpen && (
-              <div className={`absolute right-0 top-full mt-2 min-w-[13rem] z-50 ${menu.panel}`}>
+              <div className={`absolute right-0 top-full mt-2 min-w-52 z-50 ${menu.panel}`}>
                 <div className={menu.header}>
                   <p className="eyebrow">
                     {user?.first_name} {user?.last_name}

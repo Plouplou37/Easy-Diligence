@@ -10,7 +10,7 @@ import { Button, PasswordInput } from '@/shared/ui';
 const LinkProblem = ({ children }) => (
   <div className="alert alert-error space-y-2 text-sm">
     <p className="flex items-start gap-2">
-      <ExclamationTriangleIcon className="w-5 h-5 flex-shrink-0" />
+      <ExclamationTriangleIcon className="w-5 h-5 shrink-0" />
       <span>{children}</span>
     </p>
     <p>

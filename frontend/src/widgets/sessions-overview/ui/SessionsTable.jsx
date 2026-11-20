@@ -40,7 +40,7 @@ const DdTypeRow = ({ ddType, onOpenSession, onOpenAnswers }) => {
     <tr className="bg-surface-bg">
       <td className={`${tableStyles.td} pl-8`}>
         <span className="flex items-center gap-2 min-w-0">
-          <Icon className="w-4 h-4 flex-shrink-0 text-content-muted" />
+          <Icon className="w-4 h-4 shrink-0 text-content-muted" />
           <span className="truncate text-content-secondary" title={ddType.name}>
             {ddType.name}
           </span>

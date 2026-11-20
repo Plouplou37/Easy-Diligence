@@ -3,7 +3,7 @@ import { StatusBadge, panel, sectionHeader } from '@/shared/ui';
 
 const BAR = {
   completed: 'bg-theme-success',
-  in_progress: 'bg-gradient-to-r from-accent-blue to-accent-green',
+  in_progress: 'bg-linear-to-r from-accent-blue to-accent-green',
 };
 
 /**
@@ -20,12 +20,12 @@ export const SessionProgressPanel = ({ overall, isRunning, stale }) => (
         </p>
         {stale && (
           <p className="text-sm text-theme-warning mt-1 flex items-center gap-1.5">
-            <ExclamationTriangleIcon className="w-4 h-4 flex-shrink-0" />
+            <ExclamationTriangleIcon className="w-4 h-4 shrink-0" />
             Live updates interrupted — the figures below may be out of date.
           </p>
         )}
       </div>
-      <StatusBadge status={overall.status} size="lg" className="flex-shrink-0 tabular-nums">
+      <StatusBadge status={overall.status} size="lg" className="shrink-0 tabular-nums">
         {overall.completed} / {overall.total} Complete ({overall.percentage}%)
       </StatusBadge>
     </div>
@@ -50,7 +50,7 @@ export const SessionProgressPanel = ({ overall, isRunning, stale }) => (
       {overall.status === 'completed' && (
         <div className="mt-4 alert alert-success">
           <p className="text-sm flex items-center">
-            <CheckCircleIcon className="w-5 h-5 mr-2 flex-shrink-0" />
+            <CheckCircleIcon className="w-5 h-5 mr-2 shrink-0" />
             All due diligence types are complete.
           </p>
         </div>
@@ -59,7 +59,7 @@ export const SessionProgressPanel = ({ overall, isRunning, stale }) => (
       {isRunning && (
         <div className="mt-4 alert alert-info">
           <p className="text-sm flex items-center">
-            <ClockIcon className="w-5 h-5 mr-2 flex-shrink-0 animate-pulse" />
+            <ClockIcon className="w-5 h-5 mr-2 shrink-0 animate-pulse" />
             Processing in progress... Only one due diligence type can run at a time.
           </p>
         </div>

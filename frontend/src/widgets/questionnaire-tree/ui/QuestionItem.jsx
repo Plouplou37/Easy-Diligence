@@ -27,7 +27,7 @@ const QuestionItem = ({
       }}
       className={`p-3 border rounded-md bg-surface-bg ${
         dragOverQuestion === question.id
-          ? 'border-accent-blue border-2 !bg-accent-blue/10'
+          ? 'border-accent-blue border-2 bg-accent-blue/10!'
           : 'border-border hover:bg-surface-hover'
       } transition-colors`}
     >
@@ -37,17 +37,17 @@ const QuestionItem = ({
             <div
               draggable
               onDragStart={e => dragHandlers.onDragStart(e, question, sectionId)}
-              className="cursor-move p-1 hover:bg-surface-hover rounded mt-0.5"
+              className="cursor-move p-1 hover:bg-surface-hover rounded-sm mt-0.5"
             >
               <Bars3Icon className="h-4 w-4 text-content-muted" />
             </div>
           )}
-          <DocumentTextIcon className="h-5 w-5 text-content-muted mt-0.5 flex-shrink-0" />
+          <DocumentTextIcon className="h-5 w-5 text-content-muted mt-0.5 shrink-0" />
           <div className="flex-1">
             <div className="flex items-center space-x-2">
               {/* The full code stays reachable on hover: it is the unique id. */}
               <span
-                className="font-mono text-xs bg-surface-hover text-content-secondary px-2 py-0.5 rounded"
+                className="font-mono text-xs bg-surface-hover text-content-secondary px-2 py-0.5 rounded-sm"
                 title={`${question.question_code} · order ${question.order_index}`}
               >
                 {displayQuestionCode(question.question_code)}

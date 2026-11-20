@@ -23,7 +23,7 @@ du frontend. Pour installer et lancer l'application, voir le
   - `models/` : une table par fichier, avec ses formes d'API : une classe de
     base porte les champs et leurs limites, la table, le formulaire de création
     et la réponse en héritent.
-- **Frontend** : React 18, Vite 8, Tailwind 3, axios et react-router 7. Code dans
+- **Frontend** : React 18, Vite 8, Tailwind 4, axios et react-router 7. Code dans
   `frontend/src/`.
 - **LLM** : l'API **Responses** d'OpenAI (`client.responses.create`). Le modèle
   est choisi par `OPENAI_MODEL`. `openai_client.is_reasoning_model()` adapte les
@@ -552,7 +552,9 @@ Les scripts se lancent aussi depuis `backend/` : `uv run python scripts/<script>
   expose `mode`, `resolvedTheme`, `setMode`, `darkMode` et `toggleDarkMode`.
 - **Les couleurs sont des variables CSS**, déclarées dans `src/app/styles/index.css` (un bloc
   par thème) et exposées par `tailwind.config.js` via `color-mix`, si bien que
-  l'opacité Tailwind fonctionne (`bg-accent-blue/10`).
+  l'opacité Tailwind fonctionne (`bg-accent-blue/10`). Tailwind 4 lit encore ce
+  fichier de configuration par `@config` (mode de compatibilité) ; les classes
+  maison sont des `@utility` dans `index.css`.
   - Les tokens : `bg-surface`, `bg-surface-bg`, `bg-surface-hover`,
     `text-content(-secondary|-muted|-inverse)`, `border-border`,
     `theme-success|warning|error` (avec `-bg` et `-border`),

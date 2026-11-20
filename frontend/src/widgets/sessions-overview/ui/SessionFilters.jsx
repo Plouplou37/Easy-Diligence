@@ -98,7 +98,7 @@ export const SessionFilters = ({ filters }) => {
           <label className="flex items-end gap-2 pb-2 text-sm text-content cursor-pointer">
             <input
               type="checkbox"
-              className="w-4 h-4 rounded"
+              className="w-4 h-4 rounded-sm"
               checked={filters.reviewOnly}
               onChange={event => filters.setReviewOnly(event.target.checked)}
             />

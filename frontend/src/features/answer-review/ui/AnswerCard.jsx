@@ -81,7 +81,7 @@ const AnswerCard = ({
                 type="checkbox"
                 checked={approved}
                 onChange={onStatusToggle}
-                className="w-4 h-4 rounded"
+                className="w-4 h-4 rounded-sm"
                 title={approved ? 'Mark as Needs Review' : 'Mark as Approved'}
               />
               <span className="text-xs text-content-secondary">Validate</span>
@@ -211,8 +211,10 @@ const AnswerCard = ({
             )}
           </div>
 
+          {/* No margin of its own: the space-y of the block spaces it (Tailwind 3
+              cancelled this mb-4; Tailwind 4 no longer does). */}
           {!isEditing && shownSources > 0 && (
-            <div className="mb-4">
+            <div>
               <Button
                 onClick={() => setShowSources(shown => !shown)}
                 variant="ghost"

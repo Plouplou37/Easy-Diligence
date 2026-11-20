@@ -32,7 +32,7 @@ export const StatTile = ({
     >
       <div className={panel.railBrand} />
       <div className="flex items-center gap-4 pl-6 pr-5 py-4">
-        {Icon && <Icon className={`h-7 w-7 flex-shrink-0 ${iconClass}`} />}
+        {Icon && <Icon className={`h-7 w-7 shrink-0 ${iconClass}`} />}
         <dl className="min-w-0 flex-1">
           <dt className="eyebrow truncate">{label}</dt>
           <dd className="mt-1 text-fluid-xl font-light text-content tabular-nums truncate">

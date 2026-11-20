@@ -36,7 +36,7 @@ const FileList = ({ files, loading, onRemoveFile }) => {
             <tr key={file.id} className={`${tableStyles.row} ${tableStyles.rowAlt(index)}`}>
               <td className={tableStyles.td}>
                 <div className="flex items-center">
-                  <DocumentIcon className="h-5 w-5 text-accent-blue mr-2 flex-shrink-0" />
+                  <DocumentIcon className="h-5 w-5 text-accent-blue mr-2 shrink-0" />
                   <div
                     className="max-w-xs truncate text-sm font-medium text-content"
                     title={`${file.filename} · ID: ${file.id}`}

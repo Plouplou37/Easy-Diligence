@@ -13,7 +13,7 @@ export const MiniProgressBar = ({ current, total, status }) => {
           style={{ width: `${percentage}%` }}
         />
       </div>
-      <span className="text-xs text-content-muted tabular-nums min-w-[3rem]">{percentage}%</span>
+      <span className="text-xs text-content-muted tabular-nums min-w-12">{percentage}%</span>
     </div>
   );
 };

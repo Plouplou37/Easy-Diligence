@@ -28,7 +28,7 @@ export const DdTypesTable = ({ ddTypes, onEdit, onToggleActive, onDelete }) => {
             <tr key={ddType.code} className={`${tableStyles.row} ${tableStyles.rowAlt(index)}`}>
               <td className={tableStyles.td}>
                 <div className="flex items-center gap-3">
-                  <Icon className="w-5 h-5 flex-shrink-0 text-content-secondary" />
+                  <Icon className="w-5 h-5 shrink-0 text-content-secondary" />
                   <div className="min-w-0">
                     {/* The code is internal: kept in the tooltip. */}
                     <h3 className="text-sm font-medium text-content" title={`Code: ${ddType.code}`}>

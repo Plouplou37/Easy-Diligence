@@ -18,7 +18,7 @@ export const Card = ({
   className = '',
 }) => {
   return (
-    <div className={`relative bg-surface border border-border rounded-lg shadow-sm ${className}`}>
+    <div className={`relative bg-surface border border-border rounded-lg shadow-xs ${className}`}>
       {(title || description) && (
         <div className="px-5 py-3.5 border-b border-border">
           {title && (

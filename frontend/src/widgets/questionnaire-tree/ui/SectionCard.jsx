@@ -31,7 +31,7 @@ const SectionCard = ({
       onDragOver={e => !isValidated && dragHandlers.onDragOver(e, section)}
       onDragLeave={dragHandlers.onDragLeave}
       onDrop={e => !isValidated && dragHandlers.onDrop(e, section)}
-      className={`relative bg-surface rounded-lg shadow-sm ${
+      className={`relative bg-surface rounded-lg shadow-xs ${
         dragOverSection === section.id ? 'border-2 border-accent-blue' : 'border border-border'
       }`}
     >
@@ -42,7 +42,7 @@ const SectionCard = ({
               <div
                 draggable
                 onDragStart={e => dragHandlers.onDragStart(e, section)}
-                className="cursor-move p-1 hover:bg-surface-hover rounded"
+                className="cursor-move p-1 hover:bg-surface-hover rounded-sm"
               >
                 <Bars3Icon className="h-5 w-5 text-content-muted" />
               </div>

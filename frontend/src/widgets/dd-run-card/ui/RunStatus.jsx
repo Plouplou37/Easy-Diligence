@@ -22,7 +22,7 @@ export const RunStatus = ({ progress, isInactive }) => {
         <div className={`alert p-2 ${isInactive ? 'alert-warning' : 'alert-info'}`}>
           <div className="flex items-center space-x-2">
             <div
-              className={`w-2 h-2 rounded-full flex-shrink-0 ${isInactive ? 'bg-theme-warning' : 'bg-accent-blue'}`}
+              className={`w-2 h-2 rounded-full shrink-0 ${isInactive ? 'bg-theme-warning' : 'bg-accent-blue'}`}
             ></div>
             <span className="text-xs font-medium">
               {isInactive
@@ -65,7 +65,7 @@ export const RunStatus = ({ progress, isInactive }) => {
             {status === 'in_progress' && progress.current_section && (
               <div className="alert alert-info p-2">
                 <div className="flex items-center space-x-2">
-                  <div className="live-indicator animate-pulse flex-shrink-0"></div>
+                  <div className="live-indicator animate-pulse shrink-0"></div>
                   <span className="text-xs font-medium">{progress.current_section}</span>
                 </div>
                 {progress.current_question && (
@@ -82,10 +82,10 @@ export const RunStatus = ({ progress, isInactive }) => {
       {status === 'failed' && progress.last_error && (
         <div className="alert alert-error p-3">
           <div className="flex">
-            <XCircleIcon className="w-4 h-4 mt-0.5 flex-shrink-0" />
+            <XCircleIcon className="w-4 h-4 mt-0.5 shrink-0" />
             <div className="ml-2 flex-1">
               <span className="text-sm font-medium">Error:</span>
-              <p className="text-sm text-content-secondary mt-1 break-words">
+              <p className="text-sm text-content-secondary mt-1 wrap-break-word">
                 {progress.last_error}
               </p>
             </div>

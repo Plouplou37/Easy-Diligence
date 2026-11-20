@@ -33,7 +33,7 @@ const VectorStoreManagement = () => {
 
   return (
     <div className={`${pageLayout.container} h-full flex flex-col`}>
-      <div className="flex-shrink-0">
+      <div className="shrink-0">
         <PageHeader
           breadcrumb={[{ label: 'Vector Stores' }]}
           title="Vector Store Management"

@@ -2,6 +2,21 @@
 
 ## Non publié
 
+### Frontend : Tailwind 4
+
+- Tailwind 3 → 4, par l'outil officiel de migration. Les pages sont restées
+  identiques au pixel près : 36 captures comparées avant et après, en thème
+  clair et sombre.
+- Une seule différence visible, voulue : le pied des fenêtres (création d'un
+  type de DD, d'une question, d'une section, d'un vector store) touche enfin
+  le bas de la fenêtre. Tailwind 3 annulait sa marge et laissait une bande
+  blanche sous les boutons.
+- `npm audit` : 0 faille, outils de build compris. Les 2 alertes venaient de
+  `@tailwindcss/typography`, qui fige une ancienne version de
+  `postcss-selector-parser` ; un `overrides` de `package.json`, limité à ce
+  paquet, la remplace par la 6.1.6, corrigée (même version majeure).
+- `autoprefixer` n'est plus nécessaire et disparaît.
+
 ### Mot de passe oublié, vector stores disparus, serveur non bloqué
 
 - Le lien de l'e-mail « mot de passe oublié » mène à une page qui existe

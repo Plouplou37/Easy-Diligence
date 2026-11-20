@@ -34,14 +34,14 @@ const StoreMarker = ({ store }) => {
 
 const VectorStoreList = ({ stores, selectedStore, onSelectStore }) => (
   <div className={`${panel.base} w-1/3 flex flex-col overflow-hidden`}>
-    <div className={`${panel.header} flex-shrink-0`}>
+    <div className={`${panel.header} shrink-0`}>
       <div className={sectionHeader.wrapper}>
         <h3 className={sectionHeader.title}>Vector Stores</h3>
         <div className={sectionHeader.hairline} />
       </div>
     </div>
 
-    <div className="flex-1 overflow-y-auto max-h-[calc(100vh_-_var(--navbar-spacing)_-_220px)]">
+    <div className="flex-1 overflow-y-auto max-h-[calc(100vh-var(--navbar-spacing)-220px)]">
       <table className={`${tableStyles.table} ${tableStyles.inPanel}`}>
         <thead className={tableStyles.theadSticky}>
           <tr>
@@ -75,7 +75,7 @@ const VectorStoreList = ({ stores, selectedStore, onSelectStore }) => (
                     >
                       {store.name}
                     </span>
-                    <span className="flex items-center gap-1 flex-shrink-0">
+                    <span className="flex items-center gap-1 shrink-0">
                       <StoreMarker store={store} />
                     </span>
                   </div>
