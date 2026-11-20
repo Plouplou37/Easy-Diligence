@@ -6,7 +6,6 @@ import {
   DashboardTiles,
   SessionFilters,
   SessionsTable,
-  UserStatsTable,
   useDashboard,
   useSessionFilters,
 } from '@/widgets/sessions-overview';
@@ -84,8 +83,6 @@ const Dashboard = () => {
           </div>
         </>
       )}
-
-      {isAdmin && <UserStatsTable sessions={sessions} />}
     </div>
   );
 };

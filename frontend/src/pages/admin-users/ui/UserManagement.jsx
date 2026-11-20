@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import { UserDetailsModal, UsersTable, useUsers } from '@/features/user-admin';
+import { PlusIcon } from '@heroicons/react/24/outline';
+import { CreateUserModal, UserDetailsModal, UsersTable, useUsers } from '@/features/user-admin';
 import { Button, LoadingSpinner, PageHeader, SearchInput, pageLayout, panel } from '@/shared/ui';
 
 const UserManagement = () => {
   const users = useUsers();
   const [viewed, setViewed] = useState(null);
+  const [creating, setCreating] = useState(false);
   const { page, totalPages } = users;
 
   return (
@@ -14,6 +16,11 @@ const UserManagement = () => {
         title="User Management"
         subtitle="Roles and access of the application's accounts"
         meta={users.search ? `${users.total} matching users` : `${users.total} users total`}
+        actions={
+          <Button variant="primary" icon={PlusIcon} onClick={() => setCreating(true)}>
+            Create user
+          </Button>
+        }
       />
 
       <div className={`${panel.base} p-5`}>
@@ -61,6 +68,11 @@ const UserManagement = () => {
       </div>
 
       <UserDetailsModal user={viewed} onClose={() => setViewed(null)} />
+      <CreateUserModal
+        isOpen={creating}
+        onClose={() => setCreating(false)}
+        onCreate={users.create}
+      />
     </div>
   );
 };

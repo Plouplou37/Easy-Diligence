@@ -2,7 +2,7 @@
 
 import math
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_admin_user
@@ -10,12 +10,14 @@ from app.core.database import get_db
 from app.models.user import (
     AdminActionResponse,
     User,
+    UserCreate,
     UserListItem,
     UserListResponse,
     UserRoleUpdate,
     UserStatusUpdate,
 )
 from app.services import users
+from app.services.auth import create_user
 
 router = APIRouter()
 
@@ -39,6 +41,18 @@ def list_users(
         per_page=per_page,
         total_pages=math.ceil(total / per_page),
     )
+
+
+@router.post("/users", response_model=UserListItem, status_code=status.HTTP_201_CREATED)
+def create_account(
+    data: UserCreate,
+    admin: User = Depends(get_current_admin_user),
+    db: Session = Depends(get_db),
+):
+    """Create an account, with its role and a provisional password the admin
+    passes on. There is no self-registration: accounts are made here."""
+    account = create_user(db, data, password=data.password, role=data.role)
+    return UserListItem.model_validate(account)
 
 
 @router.put("/users/{user_id}/role", response_model=AdminActionResponse)

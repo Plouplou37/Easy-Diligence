@@ -106,6 +106,21 @@ export const useUsers = () => {
     }
   };
 
+  /** Resolves to true once created: the list shows it from the first page. */
+  const create = async account => {
+    try {
+      await adminAPI.createUser(account);
+      toast.success(`Account created for ${account.email}`);
+      setSearchTerm('');
+      if (page === 1) await load();
+      else setPage(1);
+      return true;
+    } catch (error) {
+      toast.error(errorMessage(error, 'Failed to create the account'));
+      return false;
+    }
+  };
+
   return {
     users: result.users,
     total: result.total,
@@ -119,5 +134,6 @@ export const useUsers = () => {
     setRole,
     setActive,
     remove,
+    create,
   };
 };

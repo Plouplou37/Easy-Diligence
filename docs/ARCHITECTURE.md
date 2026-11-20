@@ -265,8 +265,10 @@ cassé.
   - `backend/.env` est trouvé quel que soit le dossier de lancement, et les
     variables d'environnement priment sur lui.
 - **Rôles** : `Literal["admin", "analyst"]` (`models/user.py`).
-  - L'inscription (`UserRegister`) n'a pas de champ `role` et refuse tout champ
-    inconnu : un nouveau compte est toujours analyste.
+  - **Pas d'inscription libre.** Un administrateur crée les comptes
+    (`POST /admin/users`, `UserCreate`) : rôle choisi, mot de passe provisoire
+    que l'utilisateur change dans son profil. `UserCreate` refuse tout champ
+    inconnu.
   - Le premier administrateur se crée avec `python -m app.cli create-admin`
     (`app/cli.py`), qui demande le mot de passe au clavier.
   - **Supprimer un compte** (`services/users.py`) n'est possible que s'il ne

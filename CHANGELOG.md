@@ -2,6 +2,21 @@
 
 ## Non publié
 
+### Simplifications
+
+- **Plus d'inscription libre.** La page `/register` et la route
+  `POST /auth/register` disparaissent : n'importe qui pouvait se créer un
+  compte sur un outil interne. Un administrateur crée désormais les comptes
+  depuis User Management (« Create user ») : nom, identifiant, e-mail, rôle,
+  et un mot de passe provisoire qu'il transmet, que l'utilisateur change dans
+  son profil (`POST /admin/users`).
+- L'entrée « Questions » du menu disparaît : un questionnaire s'ouvre depuis
+  son type de DD (bouton « Questions »), et l'entrée « DD Types » reste
+  allumée sur sa page.
+- Le tableau « User Analytics » du tableau de bord disparaît.
+- Les anciennes adresses `/dashboard`, `/sessions` et `/answers` ne
+  redirigent plus : elles mènent à la page « introuvable ».
+
 ### Interface tout en anglais
 
 - Ce qui restait en français passe en anglais, comme le reste de

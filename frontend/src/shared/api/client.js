@@ -21,7 +21,7 @@ api.interceptors.request.use(config => {
 
 // Requests whose 401 is an answer for the user ("wrong password"), not an
 // expired session.
-const AUTH_FORMS = ['/auth/login', '/auth/register', '/auth/reset-password'];
+const AUTH_FORMS = ['/auth/login', '/auth/reset-password'];
 
 api.interceptors.response.use(
   response => response,

@@ -7,7 +7,6 @@ export const authAPI = {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     }),
   me: () => api.get('/auth/me'),
-  register: data => api.post('/auth/register', data),
   logout: () => api.post('/auth/logout'),
   updateProfile: updates => api.put('/auth/profile', updates),
   changePassword: (currentPassword, newPassword) =>

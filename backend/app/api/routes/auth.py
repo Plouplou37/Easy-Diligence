@@ -23,7 +23,6 @@ from app.models.user import (
     PasswordResetConfirm,
     RefreshRequest,
     Token,
-    UserRegister,
     UserResponse,
     UserUpdate,
 )
@@ -31,7 +30,6 @@ from app.models.user import User as UserModel
 from app.services.auth import (
     authenticate_user,
     change_password,
-    create_user,
     create_user_session,
     get_user_by_email,
     invalidate_user_sessions,
@@ -48,13 +46,6 @@ router = APIRouter()
 
 def _client_address(request: Request) -> str | None:
     return request.client.host if request.client else None
-
-
-@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-def register(user_register: UserRegister, db: Session = Depends(get_db)):
-    """Register a new account. It is always an analyst: the schema has no role
-    field and refuses one. Admins are made with `python -m app.cli create-admin`."""
-    return create_user(db, user_register, password=user_register.password)
 
 
 @router.post("/login", response_model=Token)

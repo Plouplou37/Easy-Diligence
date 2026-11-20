@@ -1,17 +1,10 @@
-import { Link } from 'react-router-dom';
 import { AuthShell, LoginForm } from '@/features/auth';
 
+// No self-registration: an administrator creates the accounts (User Management).
 const Login = () => (
   <AuthShell
     title="Sign in to your account"
-    subtitle={
-      <>
-        Or{' '}
-        <Link to="/register" className="text-link">
-          create a new account
-        </Link>
-      </>
-    }
+    subtitle="Your account is created by an administrator."
   >
     <LoginForm />
   </AuthShell>

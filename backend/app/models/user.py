@@ -94,20 +94,10 @@ class UserBase(UserProfile):
 
 
 class UserCreate(UserBase):
-    """Server-side creation, role included (the create-admin command, tests)."""
-
-    password: str = pydantic.Field(..., min_length=8)
-
-    @field_validator("password")
-    @classmethod
-    def validate_password(cls, v: str) -> str:
-        return validate_password_strength(v)
-
-
-class UserRegister(UserProfile):
-    """Self-registration. There is no role field, and unknown fields are
-    refused: a request carrying "role" gets a 422 instead of being trusted.
-    A registered account is always an analyst."""
+    """A new account, role included: made by an admin (POST /admin/users) or
+    by the create-admin command. There is no self-registration. The password
+    is a provisional one, which the user changes in their profile. Unknown
+    fields are refused rather than ignored."""
 
     model_config = ConfigDict(extra="forbid")
 

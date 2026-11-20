@@ -25,7 +25,8 @@ from app.core.exceptions import NotFoundError
 from app.core.login_throttle import LoginThrottle
 from app.core.security import hash_token
 from app.main import UnhandledErrorMiddleware, app, app_error_handler
-from app.models.user import User, UserSession
+from app.models.user import User, UserProfile, UserSession
+from app.services.auth import create_user
 
 PASSWORD = "Str0ngPassw0rd"
 
@@ -56,13 +57,19 @@ def client(db_factory, monkeypatch):
     monkeypatch.setattr(auth_routes, "login_throttle", LoginThrottle(3, 900))
     # Not used as a context manager: that would run the app's lifespan, which
     # creates the tables on the application's own engine, not on this test's.
-    yield TestClient(app)
+    test_client = TestClient(app)
+    test_client.db_factory = db_factory  # for create_account
+    yield test_client
     app.dependency_overrides.clear()
 
 
-def register(client, email="ana@example.com", username="ana", **extra):
-    body = {"email": email, "username": username, "password": PASSWORD, **extra}
-    return client.post("/api/auth/register", json=body)
+def create_account(client, email="ana@example.com", username="ana", role="analyst"):
+    """An account, as an admin or the create-admin command would make it."""
+    db = client.db_factory()
+    try:
+        return create_user(db, UserProfile(email=email, username=username), PASSWORD, role=role)
+    finally:
+        db.close()
 
 
 def login(client, email="ana@example.com", password=PASSWORD):
@@ -77,35 +84,58 @@ def make_admin(db_factory, email):
     db.close()
 
 
-# --- Registration -------------------------------------------------------------
+def admin_headers(client):
+    create_account(client, email="boss@example.com", username="boss", role="admin")
+    token = login(client, email="boss@example.com").json()["access_token"]
+    return {"Authorization": f"Bearer {token}"}
 
 
-def test_registration_refuses_a_role(client):
-    response = register(client, role="admin")
+def create_via_api(client, headers, **body):
+    account = {"email": "ana@example.com", "username": "ana", "password": PASSWORD, **body}
+    return client.post("/api/admin/users", json=account, headers=headers)
+
+
+# --- Account creation ---------------------------------------------------------
+
+
+def test_there_is_no_self_registration(client):
+    body = {"email": "ana@example.com", "username": "ana", "password": PASSWORD}
+    assert client.post("/api/auth/register", json=body).status_code in (404, 405)
+
+
+def test_only_an_admin_creates_accounts(client):
+    assert create_via_api(client, {}).status_code == 401
+    create_account(client, email="bob@example.com", username="bob")
+    token = login(client, email="bob@example.com").json()["access_token"]
+    analyst = {"Authorization": f"Bearer {token}"}
+    assert create_via_api(client, analyst).status_code == 403
+
+
+def test_an_admin_creates_an_account_with_a_provisional_password(client):
+    headers = admin_headers(client)
+    response = create_via_api(client, headers)
+    assert response.status_code == 201
+    assert response.json()["role"] == "analyst"  # the default
+    assert login(client).status_code == 200
+
+    other = create_via_api(client, headers, email="lead@example.com", username="lead", role="admin")
+    assert other.json()["role"] == "admin"
+
+
+def test_account_creation_refuses_unknown_fields(client):
+    response = create_via_api(client, admin_headers(client), is_active=False)
     assert response.status_code == 422
 
 
-def test_registered_account_is_an_analyst(client):
-    response = register(client)
-    assert response.status_code == 201
-    assert response.json()["role"] == "analyst"
-
-
 def test_password_longer_than_bcrypt_reads_is_refused(client):
-    response = client.post(
-        "/api/auth/register",
-        json={
-            "email": "long@example.com",
-            "username": "long",
-            "password": "Aa1" + "x" * 80,
-        },
-    )
+    response = create_via_api(client, admin_headers(client), password="Aa1" + "x" * 80)
     assert response.status_code == 422
 
 
 def test_duplicate_email_is_refused(client):
-    register(client)
-    response = register(client, username="other")
+    headers = admin_headers(client)
+    create_via_api(client, headers)
+    response = create_via_api(client, headers, username="other")
     assert response.status_code == 409
     assert response.json()["detail"] == "Email already registered"
 
@@ -114,14 +144,14 @@ def test_duplicate_email_is_refused(client):
 
 
 def test_login_returns_both_tokens(client):
-    register(client)
+    create_account(client)
     body = login(client).json()
     assert body["token_type"] == "bearer"
     assert body["access_token"] and body["refresh_token"]
 
 
 def test_login_with_a_wrong_password(client):
-    register(client)
+    create_account(client)
     response = login(client, password="Wrong-passw0rd")
     assert response.status_code == 401
     assert response.json()["detail"] == "Incorrect email or password"
@@ -129,13 +159,15 @@ def test_login_with_a_wrong_password(client):
 
 def test_email_case_does_not_matter(client):
     # Stored lowercase: PostgreSQL would otherwise compare it case-sensitively.
-    register(client, email="Mixed.Case@Example.com", username="mixed")
+    headers = admin_headers(client)
+    create_via_api(client, headers, email="Mixed.Case@Example.com", username="mixed")
     assert login(client, email="MIXED.case@example.COM").status_code == 200
-    assert register(client, email="mixed.case@example.com", username="again").status_code == 409
+    again = create_via_api(client, headers, email="mixed.case@example.com", username="again")
+    assert again.status_code == 409
 
 
 def test_inactive_account_cannot_log_in(client, db_factory):
-    register(client)
+    create_account(client)
     db = db_factory()
     db.query(User).filter(User.email == "ana@example.com").one().is_active = False
     db.commit()
@@ -147,7 +179,7 @@ def test_inactive_account_cannot_log_in(client, db_factory):
 
 
 def test_tokens_are_stored_hashed(client, db_factory):
-    register(client)
+    create_account(client)
     tokens = login(client).json()
 
     db = db_factory()
@@ -159,7 +191,7 @@ def test_tokens_are_stored_hashed(client, db_factory):
 
 
 def test_refresh_takes_the_token_in_the_body_and_rotates_it(client):
-    register(client)
+    create_account(client)
     old = login(client).json()["refresh_token"]
 
     assert client.post(f"/api/auth/refresh?refresh_token={old}").status_code == 422
@@ -174,7 +206,7 @@ def test_refresh_takes_the_token_in_the_body_and_rotates_it(client):
 
 
 def test_me_uses_the_shared_dependency(client):
-    register(client)
+    create_account(client)
     token = login(client).json()["access_token"]
     response = client.get("/api/auth/me", headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == 200
@@ -185,14 +217,14 @@ def test_me_uses_the_shared_dependency(client):
 
 
 def test_admin_routes_refuse_an_analyst(client):
-    register(client)
+    create_account(client)
     token = login(client).json()["access_token"]
     response = client.get("/api/admin/users", headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == 403
 
 
 def test_admin_routes_refuse_an_inactive_admin(client, db_factory):
-    register(client)
+    create_account(client)
     make_admin(db_factory, "ana@example.com")
     token = login(client).json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
@@ -206,8 +238,8 @@ def test_admin_routes_refuse_an_inactive_admin(client, db_factory):
 
 
 def test_role_update_accepts_only_known_roles(client, db_factory):
-    register(client)
-    register(client, email="bob@example.com", username="bob")
+    create_account(client)
+    create_account(client, email="bob@example.com", username="bob")
     make_admin(db_factory, "ana@example.com")
     headers = {"Authorization": f"Bearer {login(client).json()['access_token']}"}
 
@@ -223,7 +255,7 @@ def test_role_update_accepts_only_known_roles(client, db_factory):
 
 
 def test_login_is_throttled_after_repeated_failures(client):
-    register(client)
+    create_account(client)
     for _ in range(3):
         assert login(client, password="Wrong-passw0rd").status_code == 401
 
@@ -246,7 +278,7 @@ def test_throttle_window_expires():
 
 
 def test_reset_token_works_only_once(client, monkeypatch):
-    register(client)
+    create_account(client)
     sent = {}
 
     async def fake_send(to_email, reset_token, user_name=""):
@@ -359,5 +391,5 @@ def test_create_admin_command(db_factory, monkeypatch):
 
 
 @pytest.mark.parametrize("username", ["ab", "with space", "x" * 31])
-def test_registration_checks_the_username(client, username):
-    assert register(client, username=username).status_code == 422
+def test_account_creation_checks_the_username(client, username):
+    assert create_via_api(client, admin_headers(client), username=username).status_code == 422

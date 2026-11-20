@@ -101,15 +101,17 @@ L'application s'ouvre sur `http://localhost:5173`.
 
 ### 5. Premier administrateur
 
-Un compte créé depuis la page d'inscription est toujours analyste. Le premier
-administrateur se crée en ligne de commande, depuis `backend/` :
+Il n'y a pas d'inscription libre : un administrateur crée les comptes. Le
+premier se crée en ligne de commande, depuis `backend/` :
 
 ```bash
 uv run python -m app.cli create-admin <adresse e-mail> "<Prénom Nom>"
 ```
 
-Le mot de passe est demandé au clavier. Un administrateur peut ensuite changer
-le rôle des autres comptes depuis l'interface.
+Le mot de passe est demandé au clavier. Ensuite, un administrateur crée les
+autres comptes depuis **User Management** (« Create user »), avec leur rôle et
+un mot de passe provisoire qu'il leur transmet, et que chacun change dans son
+profil.
 
 ### 6. Premier questionnaire
 

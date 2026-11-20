@@ -3,7 +3,6 @@ import { Link, Outlet, useLocation } from 'react-router-dom';
 import {
   HomeIcon,
   PlusIcon,
-  QuestionMarkCircleIcon,
   TagIcon,
   UserCircleIcon,
   ArrowRightOnRectangleIcon,
@@ -30,8 +29,8 @@ const AppLayout = () => {
         { name: 'Dashboard', href: '/', icon: HomeIcon },
         { name: 'New Session', href: '/session/create', icon: PlusIcon },
         { name: 'Vector Stores', href: '/vector-stores', icon: BookOpenIcon },
-        // DD types & questions are now per-user owned, so every user manages their own
-        { name: 'Questions', href: '/questions', icon: QuestionMarkCircleIcon },
+        // A questionnaire opens from its DD type ("Questions" button), which
+        // keeps the DD Types entry lit on /questions.
         { name: 'DD Types', href: '/dd-types', icon: TagIcon },
       ],
     },
@@ -51,6 +50,7 @@ const AppLayout = () => {
     const path = location.pathname;
     if (path === href) return true;
     if (href === '/') return path.startsWith('/session/') && path !== '/session/create';
+    if (href === '/dd-types' && path === '/questions') return true;
     return href !== '/session/create' && path.startsWith(`${href}/`);
   };
 

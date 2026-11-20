@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Route, Routes } from 'react-router-dom';
 import { AdminUsersPage } from '@/pages/admin-users';
 import { DashboardPage } from '@/pages/dashboard';
 import { DdTypesPage } from '@/pages/dd-types';
@@ -6,7 +6,6 @@ import { LoginPage } from '@/pages/login';
 import { NotFoundPage } from '@/pages/not-found';
 import { ProfilePage } from '@/pages/profile';
 import { QuestionsPage } from '@/pages/questions';
-import { RegisterPage } from '@/pages/register';
 import { ResetPasswordPage } from '@/pages/reset-password';
 import { SessionAnswersPage } from '@/pages/session-answers';
 import { SessionCreatePage } from '@/pages/session-create';
@@ -19,7 +18,6 @@ export const AppRouter = () => (
   <Routes>
     <Route element={<GuestOnly />}>
       <Route path="/login" element={<LoginPage />} />
-      <Route path="/register" element={<RegisterPage />} />
     </Route>
 
     {/* The link of a reset e-mail: open whether or not someone is signed in. */}
@@ -41,10 +39,5 @@ export const AppRouter = () => (
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Route>
-
-    {/* Former addresses */}
-    <Route path="/dashboard" element={<Navigate to="/" replace />} />
-    <Route path="/sessions" element={<Navigate to="/" replace />} />
-    <Route path="/answers" element={<Navigate to="/" replace />} />
   </Routes>
 );

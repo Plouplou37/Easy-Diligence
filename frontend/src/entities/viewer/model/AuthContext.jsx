@@ -69,17 +69,6 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const register = async (name, username, email, password) => {
-    try {
-      await authAPI.register({ email, username, password, full_name: name });
-      return await login(email, password);
-    } catch (error) {
-      const message = errorMessage(error, 'Registration failed');
-      toast.error(message);
-      return { success: false, error: message };
-    }
-  };
-
   const logout = async () => {
     try {
       if (localStorage.getItem('authToken')) {
@@ -141,7 +130,6 @@ export const AuthProvider = ({ children }) => {
     user,
     loading,
     login,
-    register,
     logout,
     updateProfile,
     changePassword,
