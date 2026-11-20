@@ -47,8 +47,8 @@ class DDSession(SessionBase, table=True):
     # The DD types chosen at creation, as JSON: [{"code", "name"}].
     dd_types_json: str | None = Field(default=None, sa_type=Text)
 
-    created_at: datetime | None = timestamp_field()
-    updated_at: datetime | None = timestamp_field(updated=True)
+    created_at: datetime = timestamp_field(nullable=False)
+    updated_at: datetime = timestamp_field(updated=True, nullable=False)
 
     company: Optional["Company"] = Relationship(back_populates="sessions")
     answers: list["DDAnswer"] = Relationship(back_populates="session")

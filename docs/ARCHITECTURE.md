@@ -47,6 +47,10 @@ du frontend. Pour installer et lancer l'application, voir le
     depuis les modèles puis relue. Elle reprend l'état final des anciens
     correctifs SQL appliqués à la main sur la base MySQL : les index, les
     cascades et les contraintes `CHECK`.
+  - La migration `0002_integrity` pose les règles d'intégrité (ci-dessous).
+    Elle corrige d'abord les données qui les violent, et s'arrête sans rien
+    changer devant celles qui demandent une décision.
+    `scripts/audit_integrity.py` les liste avant de migrer.
   - `db/schema.sql` est le même schéma en un seul script SQL, régénéré avec
     `alembic upgrade head --sql`.
   - `alembic check` vérifie que les migrations correspondent aux modèles.
@@ -64,7 +68,35 @@ du frontend. Pour installer et lancer l'application, voir le
   - le type JSON (JSONB sous PostgreSQL) ;
   - les dates en `TIMESTAMP WITH TIME ZONE`, remplies par la base ;
   - les énumérations, stockées en texte avec une contrainte `CHECK` plutôt qu'en
-    type `ENUM` natif : ajouter un membre ne demande pas d'`ALTER TYPE`.
+    type `ENUM` natif : ajouter un membre ne demande pas d'`ALTER TYPE`. On
+    stocke la **valeur**, en minuscules (`needs_review`) :
+    `enum_type(…, store_values=True)`. Seul `dd_sessions.status` stocke encore
+    le nom ;
+  - les colonnes obligatoires avec une valeur par défaut (`defaulted_field`) :
+    NOT NULL, et la valeur par défaut est posée **par la base** aussi, pour
+    qu'une insertion en SQL direct la reçoive.
+- **La base tient elle-même ses règles** : le code ne suppose rien qu'elle ne
+  garantisse.
+  - Une exécution par session et type de DD ; au plus une réponse courante par
+    exécution et question (index unique partiel `WHERE is_current`) ; une
+    synthèse par session, type de DD et section ; une assignation de vector
+    store par session, type de DD (ou toute la session) et vector store, vers un
+    type de DD qui existe ; des codes de section uniques dans un type de DD, et
+    de question dans une section.
+  - Deux NULL sont différents pour SQL. La synthèse globale (`section_id`
+    NULL) et l'assignation à toute la session (`dd_type_id` NULL) ont donc
+    chacune un index unique partiel (`… WHERE section_id IS NULL`), plutôt
+    qu'un `NULLS NOT DISTINCT` propre à PostgreSQL : SQLite le connaît aussi,
+    et les tests voient la règle.
+  - Aucun booléen, statut, compteur ou date de création n'est NULL ; chaque
+    statut a sa contrainte `CHECK`, et `users.role` aussi. Seul
+    `dd_summary_batches.status` reste libre : il porte les statuts d'OpenAI,
+    qui peuvent changer.
+  - Une violation n'est jamais une erreur 500. Le code rattrape
+    l'`IntegrityError` et répond comme si sa propre vérification avait vu le
+    conflit : un code déjà pris donne un 409, une assignation ou une synthèse
+    déjà là est reprise. Une synthèse s'insère dans un savepoint, pour que
+    son échec laisse en place le reste de la transaction.
 - **Index** : PostgreSQL n'indexe pas les clés étrangères automatiquement,
   contrairement à MySQL. Les colonnes de jointure sont donc indexées
   explicitement dans les modèles.
@@ -90,8 +122,9 @@ du frontend. Pour installer et lancer l'application, voir le
 - `DDSession` (`models/session.py`) : une DD sur un fonds (`company_id`,
   `created_by`, `assigned_to`, `dd_types_json`).
 - `DDExecution` (`models/execution.py`) : l'exécution d'**un** type de DD dans une
-  session. Statuts : `not_started`, `in_progress`, `generated`, `failed`,
-  `paused`, etc. Elle porte le `conversation_id`.
+  session, une seule par couple. Statuts (`ExecutionStatus`) : `not_started`,
+  `in_progress`, `generated`, `failed`, `paused`, etc. Elle porte le
+  `conversation_id`.
 - `DDAnswer` (`models/answer.py`) : une réponse, versionnée par `version` et
   `is_current`, avec `status`, `response_id` et `sources` (JSON). L'historique va
   dans `DDAnswerHistory`.
@@ -255,9 +288,20 @@ cassé.
   deux questions**, l'arrêt n'est donc pas instantané.
 - **Reprise** : conserve le `conversation_id`, saute les réponses déjà faites et
   retente celles qui ont échoué.
+- **Un changement de statut est un seul `UPDATE` conditionnel**
+  (`services/processing._switch`) : `… WHERE id = … AND status IN (…)`, et le
+  nombre de lignes touchées dit qui l'a emporté. Deux clics, ou deux onglets,
+  ne lancent donc jamais deux traitements. Deux premiers démarrages
+  simultanés se heurtent à l'unicité de l'exécution : le second relit celle du
+  premier.
 - Les traitements tournent dans des `BackgroundTasks`, dans le processus web.
   Un redémarrage du serveur en plein traitement laisse l'exécution en
-  `in_progress` : il faut alors la relancer avec « Reprendre ».
+  `in_progress` : il faut alors la relancer avec « Resume ».
+- **Un traitement est bloqué** quand il est `in_progress` mais que ni son
+  exécution ni ses réponses n'ont bougé depuis 10 minutes (`STUCK_AFTER`).
+  « Resume » le reprend alors, une seule fois. La date de l'exécution seule ne
+  suffit pas : le moteur ne la touche qu'au début et à la fin d'un traitement,
+  qui peut durer plus d'une heure.
 
 ## Authentification et sécurité
 
@@ -516,6 +560,8 @@ Les vrais questionnaires restent dans `questionnaires/`, ignoré par git.
   `A.01`. Rien ne retrouve une question par son code (tout passe par son
   identifiant), mais filtrer des réponses par section demande aussi le type de
   DD, et l'export suit l'ordre du questionnaire, pas celui des codes ;
+- la base garantit cette unicité (une section par code dans son type de DD,
+  une question par code dans sa section) : un code déjà pris donne un 409 ;
 - le code est la référence affichée : par le badge de l'écran
   (`entities/dd-type/lib/questionCode.js`), devant la question dans l'export PDF, et par
   `scripts/update_questionnaire.py` pour l'alignement. Les trois lisent aussi
@@ -548,6 +594,11 @@ Les scripts se lancent aussi depuis `backend/` : `uv run python scripts/<script>
     références), ou si des réponses existent, sauf avec `--answered`.
   - Il remplit `context_prompt` quand il est vide, mais ne l'écrase jamais : la
     saisie d'un analyste prime sur un fichier.
+- `audit_integrity.py [--all]` : liste, en lecture seule, les lignes qui
+  violent les règles de la migration `0002`, avec leurs identifiants, et dit
+  ce que la migration en fait : elle corrige les unes et s'arrête devant les
+  autres, qui demandent une décision (code de sortie 1). À lancer avant de
+  migrer une base qui a des données.
 
 ## Frontend
 

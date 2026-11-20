@@ -22,7 +22,7 @@ class DDResponse(SQLModel, table=True):
         default=None, max_length=255, foreign_key="dd_responses.response_id", index=True
     )
     openai_response: Any = Field(sa_type=JSONType, nullable=False)
-    created_at: datetime | None = timestamp_field()
+    created_at: datetime = timestamp_field(nullable=False)
 
     execution: Optional["DDExecution"] = Relationship(back_populates="responses")
     previous_response: Optional["DDResponse"] = Relationship(

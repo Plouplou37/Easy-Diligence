@@ -81,7 +81,7 @@ def resume_dd_processing(
     db: Session = Depends(get_db),
 ):
     """Go on with a run: unanswered and failed questions, same conversation."""
-    execution = processing.check_resumable(db, session, dd_type)
+    execution = processing.resume(db, session, dd_type)
     _schedule(background_tasks, db, session, dd_type, resume=True)
     return {
         "message": f"Resumed {dd_type.code} processing",

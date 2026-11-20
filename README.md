@@ -72,7 +72,10 @@ uv run alembic upgrade head
 ```
 
 La même commande applique, plus tard, les migrations ajoutées au fil des
-versions, sans toucher aux données.
+versions, en gardant les données. Pour une base créée avant la migration
+`0002`, lancer d'abord `uv run python scripts/audit_integrity.py` (en lecture
+seule) : il liste les lignes que `0002` corrigera, et celles qui l'arrêteraient
+faute d'une décision.
 
 ### 3. Backend
 

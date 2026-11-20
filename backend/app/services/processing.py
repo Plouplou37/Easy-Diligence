@@ -4,18 +4,25 @@ The answering itself is the engine's (engine/processor.py). This module decides
 whether a run may start or resume, gathers what the engine needs (the vector
 stores, the company described to the model), and keeps the execution status
 right when the background run crashes.
+
+Each change of status is one conditional UPDATE (`_switch`), never a read then
+a write: of two clicks, or two tabs, only one gets the run.
 """
 
 import logging
-from collections.abc import Callable
-from datetime import datetime, timedelta
-from typing import Any
+from collections.abc import Callable, Sequence
+from datetime import UTC, datetime, timedelta
+from typing import Any, NoReturn
 
+from sqlalchemy import and_, exists, or_, select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
+from sqlalchemy.sql.elements import ColumnElement
 from sqlmodel import col
 
 from app.core import database
 from app.core.exceptions import InvalidRequestError, NotFoundError
+from app.models.answer import DDAnswer
 from app.models.base import stored_id
 from app.models.company import Company
 from app.models.dd_types import DDType
@@ -25,13 +32,23 @@ from app.models.vector_store import SessionVectorStore
 
 logger = logging.getLogger(__name__)
 
-# A run whose execution row has not moved for this long is considered stuck.
+# A run in progress that has written no answer, nor changed its execution, for
+# this long is considered stuck: Resume may take it over.
 STUCK_AFTER = timedelta(minutes=10)
 
-# Statuses a run may be resumed from: everything but the validated ones.
+# Statuses a run may be started from: neither running nor finished.
+_STARTABLE = (
+    ExecutionStatus.NOT_STARTED,
+    ExecutionStatus.FAILED,
+    ExecutionStatus.PAUSED,
+    ExecutionStatus.UNDER_REVIEW,
+)
+_FINISHED = (ExecutionStatus.GENERATED, ExecutionStatus.VALIDATED, ExecutionStatus.FINALIZED)
+
+# Statuses a run may be resumed from (besides a stuck run): all but the
+# validated ones and a run going on.
 _RESUMABLE = (
     ExecutionStatus.NOT_STARTED,
-    ExecutionStatus.IN_PROGRESS,
     ExecutionStatus.GENERATED,
     ExecutionStatus.FAILED,
     ExecutionStatus.PAUSED,
@@ -97,6 +114,96 @@ def run_context(db: Session, session: DDSession, dd_type: DDType) -> dict[str, A
     }
 
 
+def _stuck(execution_id: int) -> ColumnElement[bool]:
+    """The run is in progress, but neither it nor its answers have moved for
+    STUCK_AFTER. The execution row alone would not do: the engine only touches
+    it at the start and the end of a run, which may last more than an hour."""
+    since = datetime.now(UTC) - STUCK_AFTER
+    recent_answer = exists(
+        select(col(DDAnswer.id)).where(
+            col(DDAnswer.execution_id) == execution_id, col(DDAnswer.created_at) >= since
+        )
+    )
+    return and_(
+        col(DDExecution.status) == ExecutionStatus.IN_PROGRESS,
+        col(DDExecution.updated_at) < since,
+        ~recent_answer,
+    )
+
+
+def _is_stuck(db: Session, execution: DDExecution) -> bool:
+    execution_id = stored_id(execution)
+    query = select(col(DDExecution.id)).where(
+        col(DDExecution.id) == execution_id, _stuck(execution_id)
+    )
+    return db.execute(query).first() is not None
+
+
+def _switch(
+    db: Session,
+    execution: DDExecution,
+    to: ExecutionStatus,
+    allowed: Sequence[ExecutionStatus],
+    *,
+    or_stuck: bool = False,
+) -> bool:
+    """Set the status to `to` if it is still one of `allowed` (or the run is
+    stuck), in one conditional UPDATE. False when another request changed it
+    first; the execution is reloaded either way."""
+    execution_id = stored_id(execution)
+    condition: ColumnElement[bool] = col(DDExecution.status).in_(allowed)
+    if or_stuck:
+        condition = or_(condition, _stuck(execution_id))
+    result = db.execute(
+        update(DDExecution)
+        .where(col(DDExecution.id) == execution_id, condition)
+        .values(status=to)
+        .execution_options(synchronize_session=False)
+    )
+    db.commit()
+    db.refresh(execution)
+    return result.rowcount == 1
+
+
+def _create_running(db: Session, session: DDSession, dd_type: DDType) -> DDExecution | None:
+    """A new execution, in progress; None if a concurrent start created it
+    first (one execution per session and DD type)."""
+    execution = DDExecution(
+        session_id=stored_id(session),
+        dd_type_id=stored_id(dd_type),
+        status=ExecutionStatus.IN_PROGRESS,
+    )
+    db.add(execution)
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        return None
+    db.refresh(execution)
+    logger.info(
+        "Created execution %s for session %s, DD type %s",
+        execution.id,
+        session.id,
+        dd_type.code,
+    )
+    return execution
+
+
+def _refuse_start(db: Session, execution: DDExecution) -> NoReturn:
+    status = execution.status
+    if status in _FINISHED:
+        raise InvalidRequestError(
+            f"Execution already {status.value}: it cannot be restarted. "
+            "Use Resume to retry failed questions, or create a new session."
+        )
+    if status == ExecutionStatus.IN_PROGRESS and _is_stuck(db, execution):
+        logger.warning("Execution %s looks stuck", execution.id)
+        raise InvalidRequestError(
+            "This run looks stuck. Use Resume to continue from where it stopped."
+        )
+    raise InvalidRequestError("DD processing already in progress")
+
+
 def start(db: Session, session: DDSession, dd_type: DDType) -> DDExecution:
     """Mark the run in progress, creating its execution on first start.
 
@@ -104,64 +211,40 @@ def start(db: Session, session: DDSession, dd_type: DDType) -> DDExecution:
     is one already running.
     """
     execution = find_execution(db, stored_id(session), stored_id(dd_type))
-
     if execution is None:
-        execution = DDExecution(
-            session_id=stored_id(session),
-            dd_type_id=stored_id(dd_type),
-            status=ExecutionStatus.IN_PROGRESS.value,
-        )
-        db.add(execution)
-        db.commit()
-        db.refresh(execution)
-        logger.info(
-            "Created execution %s for session %s, DD type %s",
-            execution.id,
-            session.id,
-            dd_type.code,
-        )
-        return execution
+        created = _create_running(db, session, dd_type)
+        if created is not None:
+            return created
+        # Another start created it meanwhile: it is now running.
+        execution = get_execution(db, stored_id(session), stored_id(dd_type))
 
-    if execution.status in (
-        ExecutionStatus.VALIDATED,
-        ExecutionStatus.FINALIZED,
-        ExecutionStatus.GENERATED,
-    ):
-        raise InvalidRequestError(
-            f"Execution already {execution.status}: it cannot be restarted. "
-            "Use Resume to retry failed questions, or create a new session."
-        )
-    if execution.status == ExecutionStatus.IN_PROGRESS:
-        updated_at = execution.updated_at
-        if updated_at and datetime.now(updated_at.tzinfo) - updated_at > STUCK_AFTER:
-            logger.warning("Execution %s looks stuck (last update %s)", execution.id, updated_at)
-            raise InvalidRequestError(
-                "This run looks stuck. Use Resume to continue from where it stopped."
-            )
-        raise InvalidRequestError("DD processing already in progress")
-
-    logger.info("Restarting execution %s (was %s)", execution.id, execution.status)
-    execution.status = ExecutionStatus.IN_PROGRESS
-    db.commit()
+    previous = execution.status
+    if not _switch(db, execution, ExecutionStatus.IN_PROGRESS, _STARTABLE):
+        _refuse_start(db, execution)
+    logger.info("Restarting execution %s (was %s)", execution.id, previous.value)
     return execution
 
 
 def pause(db: Session, session: DDSession, dd_type: DDType) -> DDExecution:
     """Ask a running run to stop: the engine checks the status between questions."""
     execution = get_execution(db, stored_id(session), stored_id(dd_type))
-    if execution.status != ExecutionStatus.IN_PROGRESS:
-        raise InvalidRequestError(f"Cannot pause execution with status {execution.status}")
-    execution.status = ExecutionStatus.PAUSED
-    db.commit()
+    if not _switch(db, execution, ExecutionStatus.PAUSED, (ExecutionStatus.IN_PROGRESS,)):
+        raise InvalidRequestError(f"Cannot pause execution with status {execution.status.value}")
     logger.info("Paused execution %s", execution.id)
     return execution
 
 
-def check_resumable(db: Session, session: DDSession, dd_type: DDType) -> DDExecution:
-    """The execution to resume, if its status allows it."""
+def resume(db: Session, session: DDSession, dd_type: DDType) -> DDExecution:
+    """Mark the run in progress again, for the engine to go on with it.
+
+    A run going on is not resumed a second time, unless it is stuck: then this
+    takes it over.
+    """
     execution = get_execution(db, stored_id(session), stored_id(dd_type))
-    if execution.status not in _RESUMABLE:
-        raise InvalidRequestError(f"Cannot resume execution with status {execution.status}")
+    if not _switch(db, execution, ExecutionStatus.IN_PROGRESS, _RESUMABLE, or_stuck=True):
+        if execution.status == ExecutionStatus.IN_PROGRESS:
+            raise InvalidRequestError("DD processing already in progress")
+        raise InvalidRequestError(f"Cannot resume execution with status {execution.status.value}")
     return execution
 
 

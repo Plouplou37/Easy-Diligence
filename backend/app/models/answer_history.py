@@ -26,7 +26,7 @@ class DDAnswerHistory(SQLModel, table=True):
     sources: Any | None = Field(default=None, sa_type=JSONType)
     edited_by: int | None = Field(default=None, foreign_key="users.id")
     edit_reason: str | None = Field(default=None, sa_type=Text)
-    created_at: datetime | None = timestamp_field()
+    created_at: datetime = timestamp_field(nullable=False)
 
     answer: Optional["DDAnswer"] = Relationship(back_populates="history")
     editor: Optional["User"] = Relationship(

@@ -338,5 +338,131 @@ CREATE INDEX ix_dd_answer_history_answer_version ON dd_answer_history (answer_id
 
 INSERT INTO alembic_version (version_num) VALUES ('0001') RETURNING alembic_version.version_num;
 
+-- Running upgrade 0001 -> 0002
+
+ALTER TABLE dd_answers DROP CONSTRAINT ck_dd_answers_answer_status;
+
+ALTER TABLE users ALTER COLUMN role SET NOT NULL;
+
+ALTER TABLE users ALTER COLUMN role SET DEFAULT 'analyst';
+
+ALTER TABLE users ALTER COLUMN is_active SET NOT NULL;
+
+ALTER TABLE users ALTER COLUMN is_active SET DEFAULT true;
+
+ALTER TABLE users ALTER COLUMN is_verified SET NOT NULL;
+
+ALTER TABLE users ALTER COLUMN is_verified SET DEFAULT false;
+
+ALTER TABLE users ALTER COLUMN created_at SET NOT NULL;
+
+ALTER TABLE user_sessions ALTER COLUMN created_at SET NOT NULL;
+
+ALTER TABLE dd_types ALTER COLUMN is_active SET NOT NULL;
+
+ALTER TABLE dd_types ALTER COLUMN is_active SET DEFAULT true;
+
+ALTER TABLE dd_types ALTER COLUMN is_system SET NOT NULL;
+
+ALTER TABLE dd_types ALTER COLUMN is_system SET DEFAULT false;
+
+ALTER TABLE dd_types ALTER COLUMN is_validated SET NOT NULL;
+
+ALTER TABLE dd_types ALTER COLUMN is_validated SET DEFAULT false;
+
+ALTER TABLE dd_types ALTER COLUMN order_index SET NOT NULL;
+
+ALTER TABLE dd_types ALTER COLUMN order_index SET DEFAULT 0;
+
+ALTER TABLE dd_types ALTER COLUMN created_at SET NOT NULL;
+
+ALTER TABLE dd_types ALTER COLUMN updated_at SET NOT NULL;
+
+ALTER TABLE dd_sessions ALTER COLUMN created_at SET NOT NULL;
+
+ALTER TABLE dd_sessions ALTER COLUMN updated_at SET NOT NULL;
+
+ALTER TABLE dd_executions ALTER COLUMN status SET NOT NULL;
+
+ALTER TABLE dd_executions ALTER COLUMN status SET DEFAULT 'not_started';
+
+ALTER TABLE dd_executions ALTER COLUMN created_at SET NOT NULL;
+
+ALTER TABLE dd_executions ALTER COLUMN updated_at SET NOT NULL;
+
+ALTER TABLE dd_answers ALTER COLUMN version SET NOT NULL;
+
+ALTER TABLE dd_answers ALTER COLUMN version SET DEFAULT 1;
+
+ALTER TABLE dd_answers ALTER COLUMN is_current SET NOT NULL;
+
+ALTER TABLE dd_answers ALTER COLUMN is_current SET DEFAULT true;
+
+ALTER TABLE dd_answers ALTER COLUMN status SET NOT NULL;
+
+ALTER TABLE dd_answers ALTER COLUMN status SET DEFAULT 'needs_review';
+
+ALTER TABLE dd_answers ALTER COLUMN tokens_used SET NOT NULL;
+
+ALTER TABLE dd_answers ALTER COLUMN tokens_used SET DEFAULT 0;
+
+ALTER TABLE dd_answers ALTER COLUMN retry_count SET NOT NULL;
+
+ALTER TABLE dd_answers ALTER COLUMN retry_count SET DEFAULT 0;
+
+ALTER TABLE dd_answers ALTER COLUMN created_at SET NOT NULL;
+
+ALTER TABLE dd_answers ALTER COLUMN updated_at SET NOT NULL;
+
+ALTER TABLE dd_sections ALTER COLUMN created_at SET NOT NULL;
+
+ALTER TABLE dd_questions ALTER COLUMN created_at SET NOT NULL;
+
+ALTER TABLE dd_summaries ALTER COLUMN generated_at SET NOT NULL;
+
+ALTER TABLE dd_summary_batches ALTER COLUMN created_at SET NOT NULL;
+
+ALTER TABLE session_vector_stores ALTER COLUMN assigned_at SET NOT NULL;
+
+ALTER TABLE dd_responses ALTER COLUMN created_at SET NOT NULL;
+
+ALTER TABLE dd_messages ALTER COLUMN created_at SET NOT NULL;
+
+ALTER TABLE dd_answer_history ALTER COLUMN created_at SET NOT NULL;
+
+ALTER TABLE vector_stores ALTER COLUMN created_at SET NOT NULL;
+
+ALTER TABLE dd_answers ALTER COLUMN execution_id SET NOT NULL;
+
+ALTER TABLE dd_answers ALTER COLUMN question_id SET NOT NULL;
+
+ALTER TABLE user_sessions ALTER COLUMN user_id SET NOT NULL;
+
+ALTER TABLE dd_answers ADD CONSTRAINT ck_dd_answers_answer_status CHECK (status IN ('completed', 'failed', 'draft', 'needs_review', 'approved', 'rejected'));
+
+ALTER TABLE dd_executions ADD CONSTRAINT ck_dd_executions_execution_status CHECK (status IN ('not_started', 'in_progress', 'generated', 'failed', 'paused', 'under_review', 'validated', 'finalized'));
+
+ALTER TABLE users ADD CONSTRAINT ck_users_role CHECK (role IN ('admin', 'analyst'));
+
+ALTER TABLE dd_executions ADD CONSTRAINT uq_dd_executions_session_id UNIQUE (session_id, dd_type_id);
+
+ALTER TABLE dd_sections ADD CONSTRAINT uq_dd_sections_dd_type_id UNIQUE (dd_type_id, section_code);
+
+ALTER TABLE dd_questions ADD CONSTRAINT uq_dd_questions_section_id UNIQUE (section_id, question_code);
+
+ALTER TABLE session_vector_stores ADD CONSTRAINT uq_session_vector_stores_session_id UNIQUE (session_id, dd_type_id, vector_store_id);
+
+CREATE UNIQUE INDEX ix_dd_answers_one_current ON dd_answers (execution_id, question_id) WHERE is_current;
+
+CREATE UNIQUE INDEX ix_dd_summaries_one_synthesis ON dd_summaries (session_id, dd_type_id) WHERE section_id IS NULL;
+
+CREATE UNIQUE INDEX ix_session_vector_stores_one_session_wide ON session_vector_stores (session_id, vector_store_id) WHERE dd_type_id IS NULL;
+
+CREATE INDEX ix_session_vector_stores_dd_type_id ON session_vector_stores (dd_type_id);
+
+ALTER TABLE session_vector_stores ADD CONSTRAINT fk_session_vector_stores_dd_type_id_dd_types FOREIGN KEY(dd_type_id) REFERENCES dd_types (id) ON DELETE CASCADE;
+
+UPDATE alembic_version SET version_num='0002' WHERE alembic_version.version_num = '0001';
+
 COMMIT;
 

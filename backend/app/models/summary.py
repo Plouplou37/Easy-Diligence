@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import Text, UniqueConstraint
+from sqlalchemy import Index, Text, UniqueConstraint, text
 from sqlmodel import Field, Relationship
 
 from app.models.base import SQLModel, timestamp_field
@@ -33,6 +33,17 @@ class DDSummary(DDSummaryBase, table=True):
         UniqueConstraint(
             "session_id", "dd_type_id", "section_id", name="unique_session_ddtype_section_summary"
         ),
+        # The constraint above lets two syntheses through: two NULL section_id
+        # are distinct to SQL. A partial index rather than NULLS NOT DISTINCT
+        # (PostgreSQL only), so that the SQLite tests see the rule too.
+        Index(
+            "ix_dd_summaries_one_synthesis",
+            "session_id",
+            "dd_type_id",
+            unique=True,
+            postgresql_where=text("section_id IS NULL"),
+            sqlite_where=text("section_id IS NULL"),
+        ),
     )
 
     id: int | None = Field(default=None, primary_key=True)
@@ -44,7 +55,7 @@ class DDSummary(DDSummaryBase, table=True):
     )
     # NULL = AI-generated and untouched; set = manually edited
     edited_by: int | None = Field(default=None, foreign_key="users.id")
-    generated_at: datetime | None = timestamp_field()
+    generated_at: datetime = timestamp_field(nullable=False)
     updated_at: datetime | None = timestamp_field(updated=True)
 
     session: Optional["DDSession"] = Relationship()
@@ -82,10 +93,12 @@ class DDSummaryBatch(SQLModel, table=True):
     output_file_id: str | None = Field(default=None, max_length=255)
     # OpenAI's own status (validating, in_progress, completed, failed,
     # expired, cancelled), plus 'collected' once the results have been stored.
+    # Free text, unlike the other statuses: OpenAI may add values, and a CHECK
+    # would then refuse a batch the moment OpenAI reports it.
     status: str = Field(default="validating", max_length=50)
     error_message: str | None = Field(default=None, sa_type=Text)
     created_by: int | None = Field(default=None, foreign_key="users.id")
-    created_at: datetime | None = timestamp_field()
+    created_at: datetime = timestamp_field(nullable=False)
     updated_at: datetime | None = timestamp_field(updated=True)
 
     session: Optional["DDSession"] = Relationship()

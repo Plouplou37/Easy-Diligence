@@ -13,6 +13,7 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
 from openai import NotFoundError as OpenAINotFound
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from sqlmodel import col
 
@@ -283,6 +284,18 @@ def list_assignments(db: Session, session: DDSession) -> list[dict[str, Any]]:
     ]
 
 
+def _find_assignment(
+    db: Session, store_id: str, session_id: int, dd_type_id: int | None
+) -> SessionVectorStore | None:
+    return _scope_filter(
+        db.query(SessionVectorStore).filter(
+            col(SessionVectorStore.vector_store_id) == store_id,
+            col(SessionVectorStore.session_id) == session_id,
+        ),
+        dd_type_id,
+    ).first()
+
+
 def _any_store(db: Session, store_id: str) -> VectorStore:
     """Any store: assignments are shared, a colleague's store can serve a session."""
     store = db.get(VectorStore, store_id)
@@ -296,39 +309,47 @@ def assign(
 ) -> dict[str, Any]:
     """Assign a store to the session, or to one of its DD types only."""
     store = _any_store(db, store_id)
+    session_id = stored_id(session)
     dd_type = None
     if dd_type_id is not None:
         dd_type = db.get(DDType, dd_type_id)
         if dd_type is None:
             raise NotFoundError("DD type not found")
 
-    existing = _scope_filter(
-        db.query(SessionVectorStore).filter(
-            col(SessionVectorStore.vector_store_id) == store_id,
-            col(SessionVectorStore.session_id) == session.id,
-        ),
-        dd_type_id,
-    ).first()
-    if existing is not None:
+    def already_assigned(existing: SessionVectorStore) -> dict[str, Any]:
         return {
             "message": "Vector store already assigned to session",
             "assignment": {
                 "vector_store_id": store_id,
-                "session_id": session.id,
+                "session_id": session_id,
                 "dd_type_id": dd_type_id,
                 "dd_type_code": dd_type.code if dd_type else None,
                 "assigned_at": existing.assigned_at,
             },
         }
 
+    existing = _find_assignment(db, store_id, session_id, dd_type_id)
+    if existing is not None:
+        return already_assigned(existing)
+
     assignment = SessionVectorStore(
         vector_store_id=store_id,
-        session_id=stored_id(session),
+        session_id=session_id,
         dd_type_id=dd_type_id,
         assigned_by=stored_id(user),
     )
     db.add(assignment)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        # The same assignment, made at the same time by another request: the
+        # database kept one row (uq_session_vector_stores_session_id, or
+        # ix_session_vector_stores_one_session_wide for the whole session).
+        db.rollback()
+        existing = _find_assignment(db, store_id, session_id, dd_type_id)
+        if existing is None:
+            raise
+        return already_assigned(existing)
     db.refresh(assignment)
     return {
         "message": "Vector store assigned to session successfully",

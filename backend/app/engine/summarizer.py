@@ -21,6 +21,7 @@ Two paths share the same prompts and the same request body:
 import asyncio
 import logging
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import ConflictError, InvalidRequestError, NotFoundError
@@ -77,11 +78,9 @@ def _custom_id_for(section_id: int) -> str:
     return f"{_CUSTOM_ID_PREFIX}{section_id}"
 
 
-def _upsert_summary(
-    db: Session, session_id: int, dd_type_id: int, section_id, text: str
-) -> DDSummary:
-    """Create or overwrite the current summary for a (session, dd_type, section) scope."""
-    existing = (
+def _find_summary(db: Session, session_id: int, dd_type_id: int, section_id) -> DDSummary | None:
+    # `== None` renders IS NULL: the synthesis is the row without a section.
+    return (
         db.query(DDSummary)
         .filter(
             DDSummary.session_id == session_id,
@@ -90,17 +89,42 @@ def _upsert_summary(
         )
         .first()
     )
+
+
+def _overwrite(summary: DDSummary, text: str) -> DDSummary:
+    summary.summary_text = text
+    summary.edited_by = None  # regenerated -> back to AI-generated
+    return summary
+
+
+def _upsert_summary(
+    db: Session, session_id: int, dd_type_id: int, section_id, text: str
+) -> DDSummary:
+    """Create or overwrite the current summary for a (session, dd_type, section) scope.
+
+    The caller commits. Two generations at the same time both find no row: the
+    database keeps one (unique_session_ddtype_section_summary, or
+    ix_dd_summaries_one_synthesis for the synthesis), and the second one then
+    overwrites it. The insert runs in a savepoint, so that its failure leaves
+    the caller's other writes in place.
+    """
+    existing = _find_summary(db, session_id, dd_type_id, section_id)
     if existing:
-        existing.summary_text = text
-        existing.edited_by = None  # regenerated -> back to AI-generated
-        return existing
+        return _overwrite(existing, text)
     summary = DDSummary(
         session_id=session_id,
         dd_type_id=dd_type_id,
         section_id=section_id,
         summary_text=text,
     )
-    db.add(summary)
+    try:
+        with db.begin_nested():
+            db.add(summary)
+    except IntegrityError:
+        existing = _find_summary(db, session_id, dd_type_id, section_id)
+        if existing is None:
+            raise
+        return _overwrite(existing, text)
     return summary
 
 

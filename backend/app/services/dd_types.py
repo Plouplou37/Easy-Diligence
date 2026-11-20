@@ -157,8 +157,15 @@ def import_dd_type(
 
 
 def update_dd_type(db: Session, dd_type: DDType, data: DDTypeUpdate) -> DDType:
-    """Change a DD type's name, code, description, icon, order or activity."""
-    changes: dict[str, Any] = data.model_dump(exclude_unset=True)
+    """Change a DD type's name, code, description, icon, order or activity.
+
+    Only the description and the icon may be emptied: a null sent for another
+    field leaves it as it is (the columns are NOT NULL)."""
+    changes: dict[str, Any] = {
+        field: value
+        for field, value in data.model_dump(exclude_unset=True).items()
+        if value is not None or field in ("description", "icon")
+    }
     new_code = changes.get("code")
     if new_code and new_code != dd_type.code:
         if dd_type.is_system:

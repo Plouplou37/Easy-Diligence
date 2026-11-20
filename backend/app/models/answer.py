@@ -6,11 +6,18 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Any, Optional
 
 from pydantic import field_validator
-from sqlalchemy import CheckConstraint, Index, Text
+from sqlalchemy import CheckConstraint, Index, Text, text
 from sqlmodel import Field, Relationship
 
 from app.core.pagination import PaginationMeta
-from app.models.base import TIMESTAMP, JSONType, SQLModel, enum_type, timestamp_field
+from app.models.base import (
+    TIMESTAMP,
+    JSONType,
+    SQLModel,
+    defaulted_field,
+    enum_type,
+    timestamp_field,
+)
 
 if TYPE_CHECKING:
     from app.models.answer_history import DDAnswerHistory
@@ -66,6 +73,16 @@ class DDAnswer(SQLModel, table=True):
         # The dashboard counts the current answers of every session by status.
         Index("ix_dd_answers_session_current_status", "session_id", "is_current", "status"),
         Index("ix_dd_answers_execution_status", "execution_id", "status"),
+        # At most one current answer per question of a run. Partial on SQLite
+        # too, so the tests see the rule.
+        Index(
+            "ix_dd_answers_one_current",
+            "execution_id",
+            "question_id",
+            unique=True,
+            postgresql_where=text("is_current"),
+            sqlite_where=text("is_current"),
+        ),
         CheckConstraint(
             "confidence_score IS NULL OR (confidence_score >= 0 AND confidence_score <= 1)",
             name="confidence_range",
@@ -75,9 +92,7 @@ class DDAnswer(SQLModel, table=True):
 
     id: int | None = Field(default=None, primary_key=True)
     session_id: int = Field(foreign_key="dd_sessions.id", ondelete="CASCADE")
-    execution_id: int | None = Field(
-        default=None, foreign_key="dd_executions.id", ondelete="CASCADE"
-    )
+    execution_id: int = Field(foreign_key="dd_executions.id", ondelete="CASCADE")
 
     # Codes copied from the question at answer time (required).
     section_code: str = Field(max_length=50)
@@ -85,14 +100,15 @@ class DDAnswer(SQLModel, table=True):
 
     # References to the questionnaire
     section_id: int | None = Field(default=None, foreign_key="dd_sections.id", index=True)
-    question_id: int | None = Field(default=None, foreign_key="dd_questions.id", index=True)
+    question_id: int = Field(foreign_key="dd_questions.id", index=True)
     dd_type_id: int | None = Field(default=None, foreign_key="dd_types.id", index=True)
 
     # Version control fields
-    version: int | None = Field(default=1)
-    is_current: bool | None = Field(default=True)
-    status: AnswerStatus | None = Field(
-        default=AnswerStatus.NEEDS_REVIEW, sa_type=enum_type(AnswerStatus, "answer_status")
+    version: int = defaulted_field(1)
+    is_current: bool = defaulted_field(True)
+    status: AnswerStatus = defaulted_field(
+        AnswerStatus.NEEDS_REVIEW,
+        sa_type=enum_type(AnswerStatus, "answer_status", store_values=True),
     )
     edited_by: int | None = Field(default=None, foreign_key="users.id")
     edited_at: datetime | None = Field(default=None, sa_type=TIMESTAMP)
@@ -103,7 +119,7 @@ class DDAnswer(SQLModel, table=True):
     confidence_score: float | None = Field(default=None)  # no longer filled; kept for history
 
     # Processing metadata
-    tokens_used: int | None = Field(default=0)
+    tokens_used: int = defaulted_field(0)
 
     # The OpenAI response that produced this answer: keeps the context chain
     # right when a question is retried.
@@ -116,7 +132,7 @@ class DDAnswer(SQLModel, table=True):
     )
 
     # Error tracking for robust retry logic
-    retry_count: int | None = Field(default=0)
+    retry_count: int = defaulted_field(0)
     error_type: ErrorType | None = Field(
         default=None, sa_type=enum_type(ErrorType, "error_type", store_values=True)
     )
@@ -125,8 +141,8 @@ class DDAnswer(SQLModel, table=True):
 
     # Timestamps
     answered_at: datetime | None = Field(default=None, sa_type=TIMESTAMP)
-    created_at: datetime | None = timestamp_field()
-    updated_at: datetime | None = timestamp_field(updated=True)
+    created_at: datetime = timestamp_field(nullable=False)
+    updated_at: datetime = timestamp_field(updated=True, nullable=False)
 
     session: Optional["DDSession"] = Relationship(back_populates="answers")
     execution: Optional["DDExecution"] = Relationship(back_populates="answers")

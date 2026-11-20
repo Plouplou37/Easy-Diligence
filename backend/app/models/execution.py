@@ -2,10 +2,10 @@ import enum
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import Index
+from sqlalchemy import Index, UniqueConstraint
 from sqlmodel import Field, Relationship
 
-from app.models.base import SQLModel, timestamp_field
+from app.models.base import SQLModel, defaulted_field, enum_type, timestamp_field
 
 if TYPE_CHECKING:
     from app.models.answer import DDAnswer
@@ -27,20 +27,26 @@ class ExecutionStatus(str, enum.Enum):
 
 
 class DDExecution(SQLModel, table=True):
-    """One run of one DD type within a session."""
+    """The run of one DD type within a session: one per (session, DD type),
+    started once, then resumed (services/processing.py)."""
 
     __tablename__ = "dd_executions"
-    __table_args__ = (Index("ix_dd_executions_session_status", "session_id", "status"),)
+    __table_args__ = (
+        Index("ix_dd_executions_session_status", "session_id", "status"),
+        UniqueConstraint("session_id", "dd_type_id"),
+    )
 
     id: int | None = Field(default=None, primary_key=True)
     session_id: int = Field(foreign_key="dd_sessions.id", ondelete="CASCADE")
     dd_type_id: int = Field(foreign_key="dd_types.id", ondelete="RESTRICT", index=True)
-    # Plain text holding an ExecutionStatus value.
-    status: str | None = Field(default=ExecutionStatus.NOT_STARTED.value, max_length=50)
+    status: ExecutionStatus = defaulted_field(
+        ExecutionStatus.NOT_STARTED,
+        sa_type=enum_type(ExecutionStatus, "execution_status", store_values=True),
+    )
     conversation_id: str | None = Field(default=None, max_length=255, unique=True)
     validator_id: int | None = Field(default=None, foreign_key="users.id")
-    created_at: datetime | None = timestamp_field()
-    updated_at: datetime | None = timestamp_field(updated=True)
+    created_at: datetime = timestamp_field(nullable=False)
+    updated_at: datetime = timestamp_field(updated=True, nullable=False)
 
     session: Optional["DDSession"] = Relationship(back_populates="executions")
     dd_type: Optional["DDType"] = Relationship(back_populates="executions")

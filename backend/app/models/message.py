@@ -26,6 +26,6 @@ class DDMessage(SQLModel, table=True):
     content: str | None = Field(default=None, sa_type=Text)
     tool_calls: Any | None = Field(default=None, sa_type=JSONType)
     openai_message_id: str | None = Field(default=None, max_length=255, index=True)
-    created_at: datetime | None = timestamp_field()
+    created_at: datetime = timestamp_field(nullable=False)
 
     response: Optional["DDResponse"] = Relationship(back_populates="messages")

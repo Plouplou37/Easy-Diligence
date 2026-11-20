@@ -4,7 +4,7 @@ the API reads and returns."""
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import CheckConstraint, Index, Text
+from sqlalchemy import CheckConstraint, Index, Text, UniqueConstraint
 from sqlmodel import Field, Relationship
 
 from app.models.base import SQLModel, timestamp_field
@@ -26,6 +26,7 @@ class DDSection(SectionBase, table=True):
     __tablename__ = "dd_sections"
     __table_args__ = (
         Index("ix_dd_sections_dd_type_order", "dd_type_id", "order_index"),
+        UniqueConstraint("dd_type_id", "section_code"),
         CheckConstraint("order_index >= 0", name="order_non_negative"),
     )
 
@@ -33,7 +34,7 @@ class DDSection(SectionBase, table=True):
     dd_type_id: int = Field(foreign_key="dd_types.id")
     section_code: str = Field(max_length=50)  # A, B... (services/question_codes.py)
     order_index: int = Field(default=0)
-    created_at: datetime | None = timestamp_field()
+    created_at: datetime = timestamp_field(nullable=False)
 
     dd_type_obj: Optional["DDType"] = Relationship(back_populates="sections")
     questions: list["DDQuestion"] = Relationship(
@@ -72,13 +73,14 @@ class DDQuestion(QuestionBase, table=True):
     __tablename__ = "dd_questions"
     __table_args__ = (
         Index("ix_dd_questions_section_order", "section_id", "order_index"),
+        UniqueConstraint("section_id", "question_code"),
         CheckConstraint("order_index >= 0", name="order_non_negative"),
     )
 
     id: int | None = Field(default=None, primary_key=True)
     section_id: int = Field(foreign_key="dd_sections.id")
     question_code: str = Field(max_length=50)  # A.01... (services/question_codes.py)
-    created_at: datetime | None = timestamp_field()
+    created_at: datetime = timestamp_field(nullable=False)
 
     section: Optional["DDSection"] = Relationship(back_populates="questions")
 

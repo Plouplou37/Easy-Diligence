@@ -132,7 +132,7 @@ def test_a_new_question_takes_the_next_code(client, analyst, own_type, auth_head
     duplicate = client.post(
         url, json={"question_text": "Again?", "question_code": "A.01"}, headers=headers
     )
-    assert duplicate.status_code == 400
+    assert duplicate.status_code == 409
 
     listed = client.get(url, headers=headers).json()
     assert [q["question_code"] for q in listed] == ["A.01", "A.02", "A.03"]

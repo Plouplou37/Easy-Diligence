@@ -4,15 +4,21 @@ Only the owner of a DD type (or an admin) may change it, and only until it is
 validated: validation freezes the structure, so that answers keep matching the
 questions they were written for. A new section takes the next letter, a new
 question the next code of its section (services/question_codes.py).
+
+Codes are unique in their DD type (sections) or section (questions), and the
+database holds the rule: a code taken meanwhile by another request is a
+conflict too, not an error.
 """
 
+from collections.abc import Callable
 from typing import Any
 
 from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from sqlmodel import col
 
-from app.core.exceptions import InvalidRequestError, NotFoundError
+from app.core.exceptions import ConflictError, InvalidRequestError, NotFoundError
 from app.models.base import stored_id
 from app.models.dd_types import DDType
 from app.models.questions import (
@@ -64,10 +70,33 @@ def _editable_question(db: Session, question_id: int, user: User) -> DDQuestion:
     return question
 
 
-def _apply(row: Any, changes: dict[str, Any], db: Session) -> None:
-    for field, value in changes.items():
-        setattr(row, field, value)
-    db.commit()
+SECTION_CODE_TAKEN = "Section code already exists in this DD type"
+QUESTION_CODE_TAKEN = "Question code already exists in this section"
+
+
+def _section_code_taken(db: Session, dd_type_id: int, code: str) -> bool:
+    return (
+        db.query(DDSection).filter_by(dd_type_id=dd_type_id, section_code=code).first() is not None
+    )
+
+
+def _question_code_taken(db: Session, section_id: int, code: str) -> bool:
+    return (
+        db.query(DDQuestion).filter_by(section_id=section_id, question_code=code).first()
+        is not None
+    )
+
+
+def _commit(db: Session, row: Any, code_taken: Callable[[], bool], message: str) -> None:
+    """Commit; a code taken meanwhile by another request is a ConflictError.
+    Any other integrity error is left to propagate."""
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        if code_taken():
+            raise ConflictError(message) from None
+        raise
     db.refresh(row)
 
 
@@ -91,32 +120,42 @@ def create_section(db: Session, code: str, data: SectionCreate, user: User) -> D
         # section after one at 0 at 0 again).
         order_index = 0 if last is None else last + 1
 
+    section_code = next_section_code(existing)
     section = DDSection(
         dd_type_id=dd_type_id,
-        section_code=next_section_code(existing),
+        section_code=section_code,
         title=data.title,
         description=data.description,
         order_index=order_index,
     )
     db.add(section)
-    db.commit()
-    db.refresh(section)
+    _commit(
+        db,
+        section,
+        lambda: _section_code_taken(db, dd_type_id, section_code),
+        # Only a section added at the same time can have taken the letter.
+        "Another section was added at the same time: please try again.",
+    )
     return section
 
 
 def update_section(db: Session, section_id: int, data: SectionUpdate, user: User) -> DDSection:
     section = _editable_section(db, section_id, user)
+    dd_type_id = section.dd_type_id
     changes = data.model_dump(exclude_unset=True)
     new_code = changes.get("section_code")
-    if new_code and new_code != section.section_code:
-        taken = (
-            db.query(DDSection)
-            .filter_by(dd_type_id=section.dd_type_id, section_code=new_code)
-            .first()
-        )
-        if taken is not None:
-            raise InvalidRequestError("Section code already exists in this DD type")
-    _apply(section, changes, db)
+    if new_code == section.section_code:
+        new_code = None
+    if new_code and _section_code_taken(db, dd_type_id, new_code):
+        raise ConflictError(SECTION_CODE_TAKEN)
+    for field, value in changes.items():
+        setattr(section, field, value)
+    _commit(
+        db,
+        section,
+        lambda: new_code is not None and _section_code_taken(db, dd_type_id, new_code),
+        SECTION_CODE_TAKEN,
+    )
     return section
 
 
@@ -157,34 +196,43 @@ def create_question(
     existing = [q.question_code for q in section.questions]
     question_code = data.question_code or next_question_code(section.section_code, existing)
     if question_code in existing:
-        raise InvalidRequestError("Question code already exists in this section")
+        raise ConflictError(QUESTION_CODE_TAKEN)
 
+    section_id = stored_id(section)
     question = DDQuestion(
-        section_id=stored_id(section),
+        section_id=section_id,
         question_code=question_code,
         question_text=data.question_text,
         context_prompt=data.context_prompt,
         order_index=data.order_index,
     )
     db.add(question)
-    db.commit()
-    db.refresh(question)
+    _commit(
+        db,
+        question,
+        lambda: _question_code_taken(db, section_id, question_code),
+        QUESTION_CODE_TAKEN,
+    )
     return question
 
 
 def update_question(db: Session, question_id: int, data: QuestionUpdate, user: User) -> DDQuestion:
     question = _editable_question(db, question_id, user)
+    section_id = question.section_id
     changes = data.model_dump(exclude_unset=True)
     new_code = changes.get("question_code")
-    if new_code and new_code != question.question_code:
-        taken = (
-            db.query(DDQuestion)
-            .filter_by(section_id=question.section_id, question_code=new_code)
-            .first()
-        )
-        if taken is not None:
-            raise InvalidRequestError("Question code already exists in this section")
-    _apply(question, changes, db)
+    if new_code == question.question_code:
+        new_code = None
+    if new_code and _question_code_taken(db, section_id, new_code):
+        raise ConflictError(QUESTION_CODE_TAKEN)
+    for field, value in changes.items():
+        setattr(question, field, value)
+    _commit(
+        db,
+        question,
+        lambda: new_code is not None and _question_code_taken(db, section_id, new_code),
+        QUESTION_CODE_TAKEN,
+    )
     return question
 
 

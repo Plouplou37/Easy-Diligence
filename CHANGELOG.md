@@ -2,6 +2,38 @@
 
 ## Non publié
 
+### Intégrité de la base (migration 0002)
+
+- **La base garantit elle-même ce que le code supposait** : une seule
+  exécution par session et type de DD, au plus une réponse courante par
+  question, une synthèse par section et une seule synthèse globale, une
+  assignation de vector store par portée (et le type de DD assigné existe),
+  des codes de section et de question uniques. Jusqu'ici, deux clics ou deux
+  requêtes simultanées pouvaient créer des doublons.
+- **Deux clics ne lancent plus deux traitements.** « Resume » sur un
+  traitement déjà en cours le relançait une seconde fois en parallèle ; c'est
+  désormais refusé (« already in progress »). Démarrer, mettre en pause et
+  reprendre changent le statut d'un seul coup, sous condition.
+- Un traitement long qui répond toujours n'est plus pris pour « bloqué » au
+  bout de 10 minutes : il ne l'est que si aucune réponse n'a été écrite
+  depuis 10 minutes. « Resume » reprend un traitement bloqué, une seule fois.
+- Un code de section ou de question déjà pris renvoie un **409** (au lieu
+  d'un 400), même quand une autre requête l'a pris au même moment.
+- Aucun booléen, statut, compteur ou date de création ne peut plus être NULL,
+  et la base pose elle-même les valeurs par défaut. Chaque statut est vérifié
+  par une contrainte `CHECK`, le rôle d'un utilisateur aussi.
+- Les statuts des réponses sont stockés par leur valeur, en minuscules
+  (`needs_review`), comme les autres. L'API ne change pas : elle renvoyait
+  déjà les valeurs.
+- Envoyer `null` pour `is_active` ou `order_index` d'un type de DD laisse le
+  champ tel quel, au lieu de le vider.
+- **Avant de migrer une base qui a des données** :
+  `uv run python scripts/audit_integrity.py` (depuis `backend/`, en lecture
+  seule) liste les lignes en cause. La migration corrige les doublons et les
+  NULL. Elle s'arrête, sans rien changer, devant ce qui demande une décision :
+  exécutions en double, réponses sans exécution ou sans question, codes en
+  double, statut ou rôle inconnu.
+
 ### CI : migrations vérifiées sur PostgreSQL
 
 - La CI joue les migrations sur un PostgreSQL 17 jetable : `alembic upgrade

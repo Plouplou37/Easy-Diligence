@@ -8,7 +8,7 @@ alter or drop a constraint later without guessing the name the database chose.
 import enum
 from typing import Any, cast
 
-from sqlalchemy import JSON, DateTime, Enum, func
+from sqlalchemy import JSON, DateTime, Enum, false, func, text, true
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import QueryableAttribute
 from sqlmodel import Field, SQLModel
@@ -40,12 +40,37 @@ def timestamp_field(*, created: bool = True, updated: bool = False, nullable: bo
     return Field(default=None, sa_type=TIMESTAMP, sa_column_kwargs=column_kwargs, nullable=nullable)
 
 
+def defaulted_field(default: bool | int | str | enum.Enum, *, sa_type: Any = None) -> Any:
+    """A NOT NULL column whose default is set by the database too, not only by
+    Python: a row inserted in plain SQL gets it as well.
+
+    An enum member's default is its stored value, so the column's enum_type
+    must use store_values.
+    """
+    value = default.value if isinstance(default, enum.Enum) else default
+    server_default: Any
+    if isinstance(value, bool):
+        server_default = true() if value else false()
+    elif isinstance(value, int):
+        server_default = text(str(value))
+    else:
+        server_default = str(value)  # rendered as a quoted literal
+    extra: dict[str, Any] = {} if sa_type is None else {"sa_type": sa_type}
+    return Field(
+        default=default,
+        nullable=False,
+        sa_column_kwargs={"server_default": server_default},
+        **extra,
+    )
+
+
 def enum_type(enum_cls: type[enum.Enum], name: str, *, store_values: bool = False) -> Enum:
     """An enum stored as text with a CHECK constraint, not as a native ENUM type:
     adding a member then only needs the constraint replaced, not ALTER TYPE.
 
-    By default the member NAMES are stored (SQLAlchemy's default, kept as the
-    existing data used it); store_values stores the member values instead.
+    The convention is store_values: the member values are stored, lowercase
+    ('needs_review'). Without it, the member NAMES are stored (SQLAlchemy's
+    default), which only dd_sessions.status still does.
     """
     return Enum(
         enum_cls,
@@ -78,6 +103,7 @@ __all__ = [
     "JSONType",
     "TIMESTAMP",
     "SQLModel",
+    "defaulted_field",
     "enum_type",
     "relation",
     "stored_id",

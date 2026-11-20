@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import Text
+from sqlalchemy import Index, Text, UniqueConstraint, text
 from sqlmodel import Field, Relationship
 
 from app.models.base import SQLModel, timestamp_field
@@ -24,7 +24,7 @@ class VectorStore(VectorStoreBase, table=True):
 
     id: str = Field(primary_key=True, max_length=255)  # OpenAI vector store ID
     created_by: int = Field(foreign_key="users.id", index=True)  # owner
-    created_at: datetime | None = timestamp_field()
+    created_at: datetime = timestamp_field(nullable=False)
     updated_at: datetime | None = timestamp_field(updated=True)
 
     creator: Optional["User"] = Relationship()
@@ -36,12 +36,29 @@ class SessionVectorStore(SQLModel, table=True):
     session when dd_type_id is NULL."""
 
     __tablename__ = "session_vector_stores"
+    __table_args__ = (
+        UniqueConstraint("session_id", "dd_type_id", "vector_store_id"),
+        # The constraint above lets a store be assigned twice to the whole
+        # session: two NULL dd_type_id are distinct to SQL. Partial index rather
+        # than NULLS NOT DISTINCT, as for dd_summaries (models/summary.py).
+        Index(
+            "ix_session_vector_stores_one_session_wide",
+            "session_id",
+            "vector_store_id",
+            unique=True,
+            postgresql_where=text("dd_type_id IS NULL"),
+            sqlite_where=text("dd_type_id IS NULL"),
+        ),
+    )
 
     id: int | None = Field(default=None, primary_key=True)
     session_id: int = Field(foreign_key="dd_sessions.id", ondelete="CASCADE", index=True)
-    dd_type_id: int | None = Field(default=None)  # NULL = whole session
+    # NULL = whole session
+    dd_type_id: int | None = Field(
+        default=None, foreign_key="dd_types.id", ondelete="CASCADE", index=True
+    )
     vector_store_id: str = Field(max_length=255, foreign_key="vector_stores.id", index=True)
-    assigned_at: datetime | None = timestamp_field()
+    assigned_at: datetime = timestamp_field(nullable=False)
     assigned_by: int = Field(foreign_key="users.id")
 
     session: Optional["DDSession"] = Relationship()

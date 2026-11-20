@@ -2,23 +2,32 @@
 or returns (registration, profile, tokens, passwords, admin management)."""
 
 from datetime import datetime
-from typing import TYPE_CHECKING, Annotated, Literal, Optional
+from typing import TYPE_CHECKING, Annotated, Literal, Optional, get_args
 
 import pydantic
 from pydantic import AfterValidator, BaseModel, ConfigDict, EmailStr, field_validator
-from sqlalchemy import Text
+from sqlalchemy import CheckConstraint, String, Text
 from sqlmodel import Field, Relationship
 
 from app.core.validation import validate_password_strength
-from app.models.base import TIMESTAMP, SQLModel, timestamp_field
+from app.models.base import TIMESTAMP, SQLModel, defaulted_field, timestamp_field
 
 if TYPE_CHECKING:
     from app.models.company import Company
     from app.models.session import DDSession
 
+Role = Literal["admin", "analyst"]
+
 
 class User(SQLModel, table=True):
     __tablename__ = "users"
+    # The roles of Role, and nothing else.
+    __table_args__ = (
+        CheckConstraint(
+            "role IN ({})".format(", ".join(f"'{role}'" for role in get_args(Role))),
+            name="role",
+        ),
+    )
 
     id: int | None = Field(default=None, primary_key=True)
     # Stored lowercase (schemas/user.py): PostgreSQL compares text case-sensitively.
@@ -28,11 +37,12 @@ class User(SQLModel, table=True):
     full_name: str | None = Field(default=None, max_length=255)
     company: str | None = Field(default=None, max_length=255)
     phone: str | None = Field(default=None, max_length=50)
-    role: str | None = Field(default="analyst", max_length=50)  # schemas.user.Role
-    is_active: bool | None = Field(default=True)
-    is_verified: bool | None = Field(default=False)
+    role: str = defaulted_field("analyst", sa_type=String(50))  # a Role
+    is_active: bool = defaulted_field(True)
+    is_verified: bool = defaulted_field(False)
     last_login: datetime | None = Field(default=None, sa_type=TIMESTAMP)
-    created_at: datetime | None = timestamp_field()
+    created_at: datetime = timestamp_field(nullable=False)
+    # NULL until the first change.
     updated_at: datetime | None = timestamp_field(created=False, updated=True)
 
     sessions_created: list["DDSession"] = Relationship(
@@ -56,23 +66,19 @@ class UserSession(SQLModel, table=True):
     __tablename__ = "user_sessions"
 
     id: int | None = Field(default=None, primary_key=True)
-    user_id: int | None = Field(
-        default=None, foreign_key="users.id", ondelete="CASCADE", index=True
-    )
+    user_id: int = Field(foreign_key="users.id", ondelete="CASCADE", index=True)
     access_token_hash: str = Field(max_length=64, unique=True)
     refresh_token_hash: str | None = Field(default=None, max_length=64, unique=True)
     expires_at: datetime = Field(sa_type=TIMESTAMP)
     ip_address: str | None = Field(default=None, max_length=45)  # fits IPv6
     user_agent: str | None = Field(default=None, sa_type=Text)
-    created_at: datetime | None = timestamp_field()
+    created_at: datetime = timestamp_field(nullable=False)
 
     user: Optional["User"] = Relationship()
 
 
 # --- What the API reads and returns ---------------------------------------------
 # Pydantic's Field, not SQLModel's: SQLModel ignores `pattern` (and `regex`).
-
-Role = Literal["admin", "analyst"]
 
 # Email addresses are stored and compared lowercase: PostgreSQL compares text
 # case-sensitively, so Jane@x.com and jane@x.com would otherwise be two accounts.
