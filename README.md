@@ -29,10 +29,92 @@ rédiger une synthèse par type de DD, puis exportent un rapport PDF.
 - **Comptes et cloisonnement** : rôles `admin` et `analyst`. Chacun ne voit que
   ses propres données, et l'administrateur voit tout.
 
-## Démarrage en local
+## Démarrage avec Docker
 
-Le déploiement par Docker Compose arrive dans une prochaine version. En
-attendant, l'application se lance à la main.
+Il ne faut que Docker (avec Compose v2) et une clé d'API OpenAI.
+
+```
+navigateur ──► proxy ──/api──► backend ──► db
+                 └──── / ────► frontend
+```
+
+Quatre services (`docker-compose.yml`) :
+- **`proxy`** : nginx, le seul point d'entrée, sur le port 8080. Il transmet
+  `/api` au backend et le reste au frontend, et porte les limites (taille des
+  fichiers, délais) et les en-têtes de sécurité ;
+- **`frontend`** : l'application construite, servie en fichiers statiques ;
+- **`backend`** : l'API. Elle applique les migrations à chaque démarrage ;
+- **`db`** : PostgreSQL 17, dont les données vivent dans le volume `db-data`.
+
+La base et le backend ne sont joignables que depuis les autres services, pas
+depuis la machine.
+
+### Premier démarrage
+
+Depuis la racine du dépôt :
+
+```bash
+cp .env.template .env
+# remplir dans .env : POSTGRES_PASSWORD, OPENAI_API_KEY, JWT_SECRET_KEY
+docker compose up -d --build
+docker compose exec backend python -m app.cli create-admin <adresse e-mail> "<Prénom Nom>"
+```
+
+La dernière commande demande le mot de passe du premier administrateur.
+L'application s'ouvre ensuite sur `http://localhost:8080`. Pour un autre
+port, mettre `APP_PORT` dans `.env`. Un administrateur crée ensuite les autres
+comptes depuis **User Management**.
+
+Le questionnaire d'exemple (`examples/example_questionnaire.json`) s'importe
+depuis la page **DD Types**.
+
+### Au quotidien
+
+```bash
+docker compose ps                       # l'état des services
+docker compose logs -f backend          # les journaux d'un service
+docker compose down                     # tout arrêter (les données restent)
+git pull && docker compose up -d --build   # mettre à jour : migrations comprises
+```
+
+`docker compose down -v` supprime aussi le volume `db-data`, **donc toutes les
+données**.
+
+### Sauvegarde
+
+```bash
+# sauvegarder la base dans un fichier
+docker compose exec -T db sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB"' > sauvegarde.sql
+# la restaurer, dans une base vide
+docker compose exec -T db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"' < sauvegarde.sql
+```
+
+### Accéder à la base depuis la machine
+
+Le port 5432 n'est pas publié. Pour l'ouvrir, sur cette machine seulement,
+créer un `docker-compose.override.yml` à la racine (ignoré par git) :
+
+```yaml
+services:
+  db:
+    ports:
+      - "127.0.0.1:5432:5432"
+```
+
+### Bannière des rapports PDF
+
+Le dossier `branding/` du dépôt (ignoré par git) est monté dans le backend, en
+lecture seule, sur `/app/branding`. Pour une bannière en tête des PDF, y
+déposer l'image, puis mettre dans `.env` :
+`BRAND_BANNER_PATH=/app/branding/<fichier>`. Sans dossier `branding/`, Docker
+en crée un vide, et les rapports sortent sans bannière.
+
+### Scripts et commandes d'administration
+
+Ils se lancent dans le conteneur du backend, par exemple :
+`docker compose exec backend python scripts/audit_integrity.py`.
+
+## Lancement à la main (développement)
 
 ### Prérequis
 
@@ -130,14 +212,11 @@ On peut aussi l'importer depuis la page **DD Types**.
 
 ### Build de production
 
-```bash
-cd frontend
-npm run build
-```
-
-Le dossier `frontend/dist/` est un site statique à servir tel quel, avec un
-renvoi de toutes les routes vers `index.html`. Le backend se lance alors sans
-`--reload`.
+En production, l'application tourne avec Docker (« Démarrage avec Docker »).
+Sans Docker : `npm run build` dans `frontend/` produit `frontend/dist/`, un site
+statique à servir tel quel, avec un renvoi de toutes les routes vers
+`index.html` (voir `frontend/nginx.conf`) et `/api` transmis au backend (voir
+`proxy/nginx.conf`). Le backend se lance alors sans `--reload`.
 
 ## Faire évoluer la base
 
@@ -206,6 +285,10 @@ aussi les couches du frontend.
   PostgreSQL 17 jetable : montée, `alembic check`, descente complète puis
   remontée, et `db/schema.sql` à jour. Elle relance enfin les tests sur ce
   PostgreSQL. Un test en échec apparaît en annotation sur la pull request.
+  Enfin, elle construit et démarre toute l'application avec docker compose,
+  puis l'utilise à travers le proxy : l'application et l'une de ses routes,
+  les en-têtes de sécurité, l'API, la création du premier administrateur et
+  sa connexion.
 
 ## Structure du dépôt
 
@@ -220,8 +303,9 @@ backend/              API FastAPI
     models/           tables SQLModel et ce que l'API en lit et en renvoie
   alembic/            migrations de la base (Alembic)
   db/schema.sql       script SQL complet du schéma, généré
-  scripts/            import et mise à jour de questionnaires
+  scripts/            import et mise à jour de questionnaires, audit de la base
   tests/
+  Dockerfile          image du backend
 frontend/             application React (Vite, Tailwind)
   src/                Feature-Sliced Design, du haut vers le bas :
     app/              routeur, fournisseurs (thème, connexion), styles globaux
@@ -232,6 +316,10 @@ frontend/             application React (Vite, Tailwind)
                       session, revue des réponses, administration
     entities/         objets métier : appels d'API, modèle, petits composants
     shared/           client HTTP, composants d'interface, utilitaires
+  Dockerfile          image du frontend (construit par Node, servi par nginx)
+  nginx.conf          le service des fichiers de l'application
+proxy/                le point d'entrée : nginx devant le frontend et le backend
+docker-compose.yml    les quatre services (proxy, frontend, backend, db)
 examples/             questionnaire d'exemple au format d'import
 docs/ARCHITECTURE.md  conception détaillée
 .github/workflows/    intégration continue

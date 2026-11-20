@@ -42,3 +42,6 @@ Cahier des charges*.md
 .idea/
 .DS_Store
 Thumbs.db
+
+# Local Docker overrides (README, port 5432 of the database)
+docker-compose.override.yml

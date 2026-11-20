@@ -36,6 +36,48 @@ du frontend. Pour installer et lancer l'application, voir le
   « Authentification et sécurité ».
 - **Tâches longues** : les `BackgroundTasks` de FastAPI, dans le processus web.
 
+## Déploiement
+
+L'application tourne avec docker compose (`docker-compose.yml`, README
+« Démarrage avec Docker »), en quatre services :
+
+```
+navigateur ──► proxy ──/api──► backend ──► db
+                 └──── / ────► frontend
+```
+
+- **`proxy`** (`proxy/nginx.conf`) : le seul point d'entrée, et le seul port
+  publié. Toutes les règles du trafic y vivent :
+  - la taille des envois (110 Mo, pour les 100 Mo de `MAX_UPLOAD_SIZE`) ;
+  - des délais de 10 minutes sur `/api`, pour les régénérations et les
+    synthèses qui attendent OpenAI ;
+  - les en-têtes de sécurité ;
+  - `X-Forwarded-For`, **posé** et non complété : un en-tête envoyé par le
+    client ne peut pas choisir l'adresse que comptent les limites de
+    connexion.
+
+  Le HTTPS s'y branchera.
+- **`frontend`** : l'application construite par Node, servie en fichiers
+  statiques par nginx (`frontend/nginx.conf`). Les fichiers de `assets/`
+  portent une empreinte et se mettent en cache pour de bon ; toute autre
+  route reçoit `index.html`, jamais mis en cache.
+- **`backend`** : l'image Python avec uv (`backend/Dockerfile`), qui tourne
+  sous un utilisateur sans droits. Au démarrage, `alembic upgrade head` puis
+  uvicorn. uvicorn fait confiance aux en-têtes du proxy
+  (`--forwarded-allow-ips '*'`) : seul le proxy peut joindre le backend.
+- **`db`** : PostgreSQL 17, données dans le volume `db-data`. Aucun port
+  publié.
+- Les services se joignent par leur nom, sans adresse en dur. Ils démarrent
+  dans l'ordre de leurs contrôles de santé : `db`, puis `backend` et
+  `frontend`, puis `proxy`.
+- Le réglage vient d'un seul `.env` à la racine. `docker-compose.yml` impose
+  au backend la base `db`, quoi que dise le fichier pour un lancement à la
+  main.
+- Pas de Redis : le cache se replie en mémoire.
+- Les versions des images sont figées (`VERSION.md`). La CI construit et
+  démarre l'ensemble à chaque pull request, puis s'en sert à travers le
+  proxy.
+
 ## Base de données
 
 - **PostgreSQL**, configuré par `POSTGRES_*` ou `DATABASE_URL`

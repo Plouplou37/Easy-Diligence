@@ -1,6 +1,6 @@
 """Administration commands: `uv run python -m app.cli --help`.
 
-In Docker: `docker compose exec backend uv run python -m app.cli <command>`.
+With Docker: `docker compose exec backend python -m app.cli <command>`.
 """
 
 import re
