@@ -31,6 +31,9 @@ class Company(CompanyBase, table=True):
     id: int | None = Field(default=None, primary_key=True)
     created_by: int | None = Field(default=None, foreign_key="users.id", index=True)
     updated_by: int | None = Field(default=None, foreign_key="users.id", index=True)
+    # THROWAWAY (branch verif-alembic-check, never merged): a column without a
+    # migration, which `alembic check` in the CI must refuse.
+    probe_without_migration: str | None = Field(default=None, max_length=10)
     created_at: datetime | None = timestamp_field(nullable=False)
     updated_at: datetime | None = timestamp_field(updated=True, nullable=False)
 
