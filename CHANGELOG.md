@@ -2,6 +2,18 @@
 
 ## Non publié
 
+### README et ménage
+
+- Le README commence par un guide de lancement pas à pas : ce qu'il faut,
+  la configuration (avec la génération des secrets sous Linux, macOS et
+  Windows), le démarrage, le premier administrateur, une première due
+  diligence et les problèmes courants.
+- Les scripts n'ajoutent plus `backend/` au chemin de Python avant d'importer
+  l'application : uv l'installe comme paquet. Leurs 9 marqueurs `# noqa: E402`
+  disparaissent, avec l'exception correspondante de ruff.
+- `.git-blame-ignore-revs` pointe vers les commits de formatage actuels (backend
+  et frontend). Il nommait un commit disparu au nettoyage de l'historique.
+
 ### Docker Compose
 
 - **L'application se lance avec Docker** : `cp .env.template .env`, remplir

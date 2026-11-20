@@ -10,75 +10,129 @@ OpenAI : il cherche dans les documents de la session et sur le web, et cite ses
 sources. Les analystes relisent, corrigent ou régénèrent les réponses, font
 rédiger une synthèse par type de DD, puis exportent un rapport PDF.
 
-## Fonctionnalités
+## Lancer l'application
 
-- **Questionnaires** : création et édition dans l'interface, ou import d'un
-  fichier JSON (voir [`examples/`](examples/)). Chaque question peut porter une
-  consigne « où chercher » transmise au modèle.
-- **Moteur de réponses** : un appel par question avec deux outils, la recherche
-  dans les documents (vector stores OpenAI) et la recherche web. Le traitement
-  peut être mis en pause et repris.
-- **Revue** : réponses versionnées, éditables, régénérables une à une, avec un
-  statut de relecture.
-- **Synthèses** : un résumé par section, puis une synthèse par type de DD.
-  Elles se rédigent en direct ou en différé via la Batch API d'OpenAI, deux fois
-  moins chère.
-- **Export** : un rapport PDF à deux niveaux (la synthèse en corps de texte, le
-  détail des questions et réponses en annexe), et un export CSV des réponses
-  depuis la page de revue.
-- **Comptes et cloisonnement** : rôles `admin` et `analyst`. Chacun ne voit que
-  ses propres données, et l'administrateur voit tout.
+L'application tourne avec Docker : il n'y a ni Python, ni Node, ni PostgreSQL
+à installer.
 
-## Démarrage avec Docker
+### Ce qu'il faut
 
-Il ne faut que Docker (avec Compose v2) et une clé d'API OpenAI.
+- **Docker**, avec Compose v2 : Docker Desktop sous Windows et macOS, Docker
+  Engine sous Linux. `docker compose version` doit répondre ;
+- **Git**, pour récupérer le code ;
+- **une clé d'API OpenAI** (https://platform.openai.com/api-keys), sur un
+  compte qui a accès au modèle choisi (`OPENAI_MODEL`, voir `.env.template`).
 
-```
-navigateur ──► proxy ──/api──► backend ──► db
-                 └──── / ────► frontend
-```
-
-Quatre services (`docker-compose.yml`) :
-- **`proxy`** : nginx, le seul point d'entrée, sur le port 8080. Il transmet
-  `/api` au backend et le reste au frontend, et porte les limites (taille des
-  fichiers, délais) et les en-têtes de sécurité ;
-- **`frontend`** : l'application construite, servie en fichiers statiques ;
-- **`backend`** : l'API. Elle applique les migrations à chaque démarrage ;
-- **`db`** : PostgreSQL 17, dont les données vivent dans le volume `db-data`.
-
-La base et le backend ne sont joignables que depuis les autres services, pas
-depuis la machine.
-
-### Premier démarrage
-
-Depuis la racine du dépôt :
+### 1. Récupérer le code
 
 ```bash
-cp .env.template .env
-# remplir dans .env : POSTGRES_PASSWORD, OPENAI_API_KEY, JWT_SECRET_KEY
+git clone https://github.com/Plouplou37/Easy-Diligence.git
+cd Easy-Diligence
+```
+
+### 2. Configurer
+
+Copier le modèle de configuration en `.env`, à la racine du dépôt :
+
+```bash
+cp .env.template .env               # Linux, macOS, Git Bash
+Copy-Item .env.template .env        # Windows PowerShell
+```
+
+Puis ouvrir `.env` et remplir les trois valeurs obligatoires :
+
+| Variable | Valeur |
+| --- | --- |
+| `POSTGRES_PASSWORD` | un mot de passe pour la base, à générer (ci-dessous) |
+| `OPENAI_API_KEY` | la clé d'API OpenAI |
+| `JWT_SECRET_KEY` | une clé de 32 caractères au moins, à générer (ci-dessous) |
+
+Pour générer un secret :
+
+```bash
+openssl rand -hex 32                # Linux, macOS, Git Bash
+```
+
+```powershell
+# Windows PowerShell
+$b = New-Object byte[] 32; [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b); -join ($b | ForEach-Object { $_.ToString('x2') })
+```
+
+Le reste de `.env` est facultatif, et chaque variable y est commentée. Deux
+valeurs sont utiles dès le départ :
+- `FRONTEND_URL=http://localhost:8080` : l'adresse mise dans les e-mails de
+  réinitialisation du mot de passe ;
+- `APP_PORT` : le port de l'application, si 8080 est déjà pris.
+
+Le fichier `.env` contient des secrets : il est ignoré par git, et ne doit
+jamais être committé.
+
+### 3. Démarrer
+
+```bash
 docker compose up -d --build
+```
+
+Le premier démarrage construit les images et prend quelques minutes. Les
+suivants sont immédiats. Pour vérifier que tout tourne :
+
+```bash
+docker compose ps
+```
+
+Les quatre services (`proxy`, `frontend`, `backend`, `db`) doivent être
+`running` et `healthy`.
+
+### 4. Créer le premier administrateur
+
+Il n'y a pas d'inscription libre : le premier compte se crée en ligne de
+commande. La commande demande son mot de passe (8 caractères au moins, avec une
+majuscule, une minuscule et un chiffre).
+
+```bash
 docker compose exec backend python -m app.cli create-admin <adresse e-mail> "<Prénom Nom>"
 ```
 
-La dernière commande demande le mot de passe du premier administrateur.
-L'application s'ouvre ensuite sur `http://localhost:8080`. Pour un autre
-port, mettre `APP_PORT` dans `.env`. Un administrateur crée ensuite les autres
-comptes depuis **User Management**.
+L'application s'ouvre sur **http://localhost:8080**, où l'on se connecte avec
+cette adresse et ce mot de passe. L'administrateur crée ensuite les autres
+comptes depuis **User Management** (« Create user »), avec un mot de passe
+provisoire que chacun change dans son profil.
 
-Le questionnaire d'exemple (`examples/example_questionnaire.json`) s'importe
-depuis la page **DD Types**.
+### 5. Première due diligence
+
+1. **DD Types** > **Add DD Type** > **Import from File** : importer le
+   questionnaire d'exemple, `examples/example_questionnaire.json`
+   (18 questions fictives, en 6 sections).
+2. **Vector Stores** > **Create Vector Store**, puis y déposer les documents du
+   fonds (prospectus, présentation, DDQ…).
+3. **New Session** : choisir ou créer le fonds, choisir le questionnaire, puis
+   **Create Session**.
+4. Sur la page de la session, rattacher le vector store (**Assign to all**),
+   puis **Start** sur la carte du questionnaire. Compter environ 15 secondes par
+   question. La carte suit l'avancement, et le traitement peut être mis en
+   pause puis repris.
+5. Relire les réponses (**Review Answers**), rédiger la synthèse
+   (**Synthesis**), puis exporter le rapport PDF (**Export PDF**).
+
+### En cas de problème
+
+- **Un service n'est pas `healthy`** : lire ses journaux, par exemple
+  `docker compose logs backend`. Une variable obligatoire manquante y est
+  nommée, et `docker compose up` refuse de démarrer sans `POSTGRES_PASSWORD`.
+- **Le port 8080 est déjà pris** : mettre `APP_PORT=8090` (par exemple) dans
+  `.env`, puis relancer `docker compose up -d`.
+- **Repartir de zéro** : `docker compose down -v` supprime aussi la base, **donc
+  toutes les données**.
 
 ### Au quotidien
 
 ```bash
-docker compose ps                       # l'état des services
-docker compose logs -f backend          # les journaux d'un service
-docker compose down                     # tout arrêter (les données restent)
-git pull && docker compose up -d --build   # mettre à jour : migrations comprises
+docker compose ps                          # l'état des services
+docker compose logs -f backend             # les journaux d'un service
+docker compose down                        # tout arrêter (les données restent)
+docker compose up -d                       # relancer
+git pull && docker compose up -d --build   # mettre à jour, migrations comprises
 ```
-
-`docker compose down -v` supprime aussi le volume `db-data`, **donc toutes les
-données**.
 
 ### Sauvegarde
 
@@ -88,6 +142,9 @@ docker compose exec -T db sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB"' 
 # la restaurer, dans une base vide
 docker compose exec -T db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"' < sauvegarde.sql
 ```
+
+Les données vivent dans le volume Docker `db-data`, que `docker compose down`
+conserve.
 
 ### Accéder à la base depuis la machine
 
@@ -113,6 +170,43 @@ en crée un vide, et les rapports sortent sans bannière.
 
 Ils se lancent dans le conteneur du backend, par exemple :
 `docker compose exec backend python scripts/audit_integrity.py`.
+
+### Comment c'est construit
+
+```
+navigateur ──► proxy ──/api──► backend ──► db
+                 └──── / ────► frontend
+```
+
+Quatre services (`docker-compose.yml`) :
+- **`proxy`** : nginx, le seul point d'entrée, sur le port 8080. Il transmet
+  `/api` au backend et le reste au frontend, et porte les limites (taille des
+  fichiers, délais) et les en-têtes de sécurité ;
+- **`frontend`** : l'application construite, servie en fichiers statiques ;
+- **`backend`** : l'API. Elle applique les migrations à chaque démarrage ;
+- **`db`** : PostgreSQL 17, dont les données vivent dans le volume `db-data`.
+
+La base et le backend ne sont joignables que depuis les autres services, pas
+depuis la machine.
+
+## Fonctionnalités
+
+- **Questionnaires** : création et édition dans l'interface, ou import d'un
+  fichier JSON (voir [`examples/`](examples/)). Chaque question peut porter une
+  consigne « où chercher » transmise au modèle.
+- **Moteur de réponses** : un appel par question avec deux outils, la recherche
+  dans les documents (vector stores OpenAI) et la recherche web. Le traitement
+  peut être mis en pause et repris.
+- **Revue** : réponses versionnées, éditables, régénérables une à une, avec un
+  statut de relecture.
+- **Synthèses** : un résumé par section, puis une synthèse par type de DD.
+  Elles se rédigent en direct ou en différé via la Batch API d'OpenAI, deux fois
+  moins chère.
+- **Export** : un rapport PDF à deux niveaux (la synthèse en corps de texte, le
+  détail des questions et réponses en annexe), et un export CSV des réponses
+  depuis la page de revue.
+- **Comptes et cloisonnement** : rôles `admin` et `analyst`. Chacun ne voit que
+  ses propres données, et l'administrateur voit tout.
 
 ## Lancement à la main (développement)
 
