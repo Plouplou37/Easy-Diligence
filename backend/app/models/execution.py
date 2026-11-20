@@ -12,7 +12,6 @@ if TYPE_CHECKING:
     from app.models.dd_types import DDType
     from app.models.response import DDResponse
     from app.models.session import DDSession
-    from app.models.user import User
 
 
 class ExecutionStatus(str, enum.Enum):
@@ -44,15 +43,11 @@ class DDExecution(SQLModel, table=True):
         sa_type=enum_type(ExecutionStatus, "execution_status", store_values=True),
     )
     conversation_id: str | None = Field(default=None, max_length=255, unique=True)
-    validator_id: int | None = Field(default=None, foreign_key="users.id")
     created_at: datetime = timestamp_field(nullable=False)
     updated_at: datetime = timestamp_field(updated=True, nullable=False)
 
     session: Optional["DDSession"] = Relationship(back_populates="executions")
     dd_type: Optional["DDType"] = Relationship(back_populates="executions")
-    validator: Optional["User"] = Relationship(
-        sa_relationship_kwargs={"foreign_keys": "DDExecution.validator_id"}
-    )
     responses: list["DDResponse"] = Relationship(
         back_populates="execution", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
     )

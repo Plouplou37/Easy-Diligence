@@ -1,17 +1,17 @@
 /**
- * The DD types of a session: those chosen at its creation (`dd_types_json`),
- * or else those it has actually run. Showing the whole library instead put
- * Start buttons on questionnaires that were never part of the session.
+ * The DD types of a session: those chosen at its creation (`session.dd_types`,
+ * in the order chosen), or else those it has actually run. Showing the whole
+ * library instead put Start buttons on questionnaires that were never part of
+ * the session.
+ *
+ * Matched by id: a DD type renamed, or given a new code, stays the session's.
  */
 export const getSessionDdTypes = (session, ddTypes, progressByCode) => {
-  if (session?.dd_types_json) {
-    try {
-      const chosen = JSON.parse(session.dd_types_json);
-      const found = ddTypes.filter(ddType => chosen.some(item => item.code === ddType.code));
-      if (found.length > 0) return found;
-    } catch (error) {
-      console.error('Unreadable dd_types_json for this session:', error);
-    }
+  const chosen = session?.dd_types ?? [];
+  if (chosen.length > 0) {
+    const byId = new Map(ddTypes.map(ddType => [ddType.id, ddType]));
+    const found = chosen.map(item => byId.get(item.id)).filter(Boolean);
+    if (found.length > 0) return found;
   }
   return ddTypes.filter(ddType => progressByCode[ddType.code] !== undefined);
 };

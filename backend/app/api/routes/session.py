@@ -27,7 +27,7 @@ def create_session(
     current_user: User = Depends(get_current_active_user),
 ):
     """Create a DD session on a company the user can see."""
-    return sessions_service.create_session(db, data, current_user)
+    return SessionResponse.of(sessions_service.create_session(db, data, current_user))
 
 
 @router.get("/{session_identifier}", response_model=SessionResponse)
@@ -44,7 +44,6 @@ def get_session_status(
     """The session with the progress of each of its DD type runs."""
     return SessionStatusResponse(
         id=stored_id(session),
-        status=session.status,
         progress=sessions_service.session_progress(db, session),
     )
 
@@ -54,7 +53,6 @@ def list_sessions(
     company_id: int | None = None,
     page: int = 1,
     limit: int = 50,
-    status: str | None = None,
     created_by: int | None = None,
     search: str | None = None,
     db: Session = Depends(get_db),
@@ -67,7 +65,6 @@ def list_sessions(
         current_user,
         params,
         company_id=company_id,
-        status=status,
         created_by=created_by,
         search=search,
     )

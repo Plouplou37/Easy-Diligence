@@ -9,8 +9,12 @@ import { useConfirm } from '@/shared/lib/confirm';
 import { downloadBlob } from '@/shared/lib/format';
 import { Button, menu } from '@/shared/ui';
 
-// A session can be deleted unless it is running or finished.
-const UNDELETABLE = ['in_progress', 'completed'];
+// A session can be deleted unless it is running or finished: the status
+// derived from its runs (getSessionStatus), which the server checks too.
+const UNDELETABLE = {
+  in_progress: 'Cannot delete a session while one of its DD types is running',
+  completed: 'Cannot delete a completed session',
+};
 
 /** The session's report as a PDF (the syntheses, then every answer). */
 const usePdfExport = sessionId => {
@@ -93,11 +97,14 @@ export const ExportMenu = ({ sessionId, answers }) => {
   );
 };
 
-/** Delete the session and everything in it, after confirmation. */
-export const DeleteSessionButton = ({ session, sessionId }) => {
+/**
+ * Delete the session and everything in it, after confirmation. `status` is
+ * the session's, derived from its runs (getOverallStatus).
+ */
+export const DeleteSessionButton = ({ session, sessionId, status }) => {
   const navigate = useNavigate();
   const confirm = useConfirm();
-  const locked = UNDELETABLE.includes(session.status);
+  const lockedBecause = UNDELETABLE[status];
 
   const remove = async () => {
     const confirmed = await confirm({
@@ -125,8 +132,8 @@ export const DeleteSessionButton = ({ session, sessionId }) => {
       size="sm"
       icon={TrashIcon}
       onClick={remove}
-      disabled={locked}
-      title={locked ? `Cannot delete a session with status "${session.status}"` : 'Delete session'}
+      disabled={Boolean(lockedBecause)}
+      title={lockedBecause || 'Delete session'}
     >
       Delete Session
     </Button>

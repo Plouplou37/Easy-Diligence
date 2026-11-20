@@ -7,7 +7,7 @@ from datetime import datetime
 from typing import Any
 
 from sqlalchemy import case, distinct, func, or_
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session, joinedload, selectinload
 from sqlmodel import col
 
 from app.core.exceptions import InvalidRequestError, NotFoundError, PermissionDeniedError
@@ -18,7 +18,7 @@ from app.models.company import Company
 from app.models.dd_types import DDType
 from app.models.execution import DDExecution, ExecutionStatus
 from app.models.questions import DDQuestion, DDSection
-from app.models.session import DDSession, SessionCreate, SessionStatus
+from app.models.session import DDSession, SessionCreate, SessionDDType
 from app.models.user import User
 from app.services.authz import (
     assert_company_view,
@@ -27,8 +27,14 @@ from app.services.authz import (
     filter_sessions_for_user,
 )
 
-# A session can be deleted unless it is running or finished.
-_UNDELETABLE = (SessionStatus.IN_PROGRESS, SessionStatus.COMPLETED)
+# The statuses at which a DD type is done, for the user: the same as the
+# frontend's FINISHED_STATUSES (entities/execution), `generated` read as done.
+_FINISHED = (
+    ExecutionStatus.GENERATED,
+    ExecutionStatus.UNDER_REVIEW,
+    ExecutionStatus.VALIDATED,
+    ExecutionStatus.FINALIZED,
+)
 
 
 # --- Lookup -----------------------------------------------------------------
@@ -81,23 +87,26 @@ def create_session(db: Session, data: SessionCreate, user: User) -> DDSession:
         db.query(DDType).filter(col(DDType.is_active).is_(True)), user
     )
     if data.dd_type_ids:
-        dd_types = dd_types.filter(col(DDType.id).in_(data.dd_type_ids))
-    selected = dd_types.order_by(col(DDType.order_index), col(DDType.id)).all()
+        # In the order chosen; a type the user cannot see, or inactive, is left out.
+        found = {t.id: t for t in dd_types.filter(col(DDType.id).in_(data.dd_type_ids))}
+        selected = [found[i] for i in dict.fromkeys(data.dd_type_ids) if i in found]
+    else:
+        selected = dd_types.order_by(col(DDType.order_index), col(DDType.id)).all()
 
     session = DDSession(
         session_code=code,
         company_id=data.company_id,
         name=data.name,
         description=data.description,
-        status=SessionStatus.CREATED,
         created_by=user.id,
         assigned_to=user.id,
-        # The DD types chosen for the session, read by the frontend.
-        dd_types_json=(
-            json.dumps([{"code": t.code, "name": t.name} for t in selected]) if selected else None
-        ),
     )
     db.add(session)
+    db.flush()
+    db.add_all(
+        SessionDDType(session_id=stored_id(session), dd_type_id=stored_id(dd_type), position=n)
+        for n, dd_type in enumerate(selected)
+    )
     db.commit()
     db.refresh(session)
     return session
@@ -109,7 +118,6 @@ def list_sessions(
     params: PaginationParams,
     *,
     company_id: int | None = None,
-    status: str | None = None,
     created_by: int | None = None,
     search: str | None = None,
 ) -> tuple[list[DDSession], int, dict[str, Any]]:
@@ -123,12 +131,6 @@ def list_sessions(
     if company_id:
         query = query.filter(col(DDSession.company_id) == company_id)
         filters["company_id"] = company_id
-    if status:
-        try:
-            query = query.filter(col(DDSession.status) == SessionStatus(status))
-        except ValueError:
-            raise InvalidRequestError(f"Unknown session status '{status}'") from None
-        filters["status"] = status
     if created_by:
         query = query.filter(col(DDSession.created_by) == created_by)
         filters["created_by"] = created_by
@@ -142,10 +144,34 @@ def list_sessions(
     query = query.options(
         joinedload(relation(DDSession.company)),
         joinedload(relation(DDSession.creator)),
-    ).order_by(col(DDSession.created_at).desc())
+        selectinload(relation(DDSession.dd_type_links)).joinedload(relation(SessionDDType.dd_type)),
+    ).order_by(col(DDSession.created_at).desc(), col(DDSession.id).desc())
 
     total = query.count()
     return paginate_query(query, params).all(), total, filters
+
+
+def _deletion_refusal(db: Session, session: DDSession) -> str | None:
+    """Why the session may not be deleted, read from its runs; None if it may.
+
+    Not while a DD type runs: the background task would go on writing to
+    deleted rows. Nor once every DD type chosen (or, without a choice, every
+    one started) has run: a completed due diligence is kept.
+    """
+    statuses: dict[int, ExecutionStatus] = {
+        row.dd_type_id: row.status
+        for row in db.query(col(DDExecution.dd_type_id), col(DDExecution.status))
+        .filter(col(DDExecution.session_id) == session.id)
+        .all()
+    }
+    if ExecutionStatus.IN_PROGRESS in statuses.values():
+        return "Cannot delete a session while one of its DD types is running. Pause it first."
+    chosen = [link.dd_type_id for link in session.dd_type_links] or list(statuses)
+    if chosen and all(
+        dd_type_id in statuses and statuses[dd_type_id] in _FINISHED for dd_type_id in chosen
+    ):
+        return "Cannot delete a completed session: every one of its DD types has run."
+    return None
 
 
 def delete_session(db: Session, session: DDSession, user: User) -> None:
@@ -155,12 +181,9 @@ def delete_session(db: Session, session: DDSession, user: User) -> None:
     """
     if session.created_by != user.id:
         raise PermissionDeniedError("Only the session creator can delete this session")
-    if session.status in _UNDELETABLE:
-        status = session.status.value if session.status else "unknown"
-        raise InvalidRequestError(
-            f"Cannot delete session with status '{status}'. Only sessions with status "
-            "'created', 'documents_uploaded', 'failed', or 'paused' can be deleted."
-        )
+    refusal = _deletion_refusal(db, session)
+    if refusal is not None:
+        raise InvalidRequestError(refusal)
     db.delete(session)
     db.commit()
 

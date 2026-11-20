@@ -13,7 +13,6 @@ from app.models.answer import DDAnswer
 from app.models.answer_history import DDAnswerHistory
 from app.models.company import Company
 from app.models.dd_types import DDType
-from app.models.execution import DDExecution
 from app.models.session import DDSession
 from app.models.summary import DDSummary, DDSummaryBatch
 from app.models.user import Role, User
@@ -84,7 +83,6 @@ def _owns_data(db: Session, user_id: int) -> bool:
         DDAnswerHistory.edited_by,
         DDSummary.edited_by,
         DDSummaryBatch.created_by,
-        DDExecution.validator_id,
     ]
     return any(
         db.query(column).filter(col(column) == user_id).first() is not None for column in pointers

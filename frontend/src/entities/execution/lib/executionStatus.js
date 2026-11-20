@@ -16,8 +16,9 @@ export const IN_PROGRESS_STATUSES = ['in_progress', 'partial', 'paused'];
  * The one rule for every screen. The Dashboard and the session page each had
  * their own (the latter knew neither `paused` nor `partial`, and judged "done"
  * on a percentage), so one session could read "Partial" on the first and
- * "In Progress" on the second. The backend `session.status` is no help: it
- * never moves past `documents_uploaded`.
+ * "In Progress" on the second. A session has no status of its own in the
+ * backend: its state is that of its runs, and the deletion guard
+ * (services/sessions.py) reads them by the same rule.
  *
  * @param {Array<{status: string}>} progressList - Progress of the DD types shown for the session
  * @param {number} totalConfigured - Number of DD types configured on the session

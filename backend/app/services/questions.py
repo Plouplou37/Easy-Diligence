@@ -13,12 +13,13 @@ conflict too, not an error.
 from collections.abc import Callable
 from typing import Any
 
-from sqlalchemy import func
+from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from sqlmodel import col
 
 from app.core.exceptions import ConflictError, InvalidRequestError, NotFoundError
+from app.models.answer import DDAnswer
 from app.models.base import stored_id
 from app.models.dd_types import DDType
 from app.models.questions import (
@@ -159,9 +160,23 @@ def update_section(db: Session, section_id: int, data: SectionUpdate, user: User
     return section
 
 
+ANSWERED = "{} has answers: it cannot be deleted. Create a new DD type to change the structure."
+
+
+def _has_answers(db: Session, *conditions: Any) -> bool:
+    return db.query(col(DDAnswer.id)).filter(*conditions).first() is not None
+
+
 def delete_section(db: Session, section_id: int, user: User) -> None:
-    """Delete a section and its questions."""
+    """Delete a section and its questions, unless one of them has answers: the
+    answers keep pointing at the questions they were written for."""
     section = _editable_section(db, section_id, user)
+    questions = select(col(DDQuestion.id)).where(col(DDQuestion.section_id) == section.id)
+    if _has_answers(
+        db,
+        or_(col(DDAnswer.section_id) == section.id, col(DDAnswer.question_id).in_(questions)),
+    ):
+        raise ConflictError(ANSWERED.format("This section"))
     db.delete(section)
     db.commit()
 
@@ -237,7 +252,10 @@ def update_question(db: Session, question_id: int, data: QuestionUpdate, user: U
 
 
 def delete_question(db: Session, question_id: int, user: User) -> None:
+    """Delete a question, unless it has answers."""
     question = _editable_question(db, question_id, user)
+    if _has_answers(db, col(DDAnswer.question_id) == question.id):
+        raise ConflictError(ANSWERED.format("This question"))
     db.delete(question)
     db.commit()
 

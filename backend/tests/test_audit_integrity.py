@@ -10,6 +10,7 @@ import json
 from pathlib import Path
 
 import pytest
+from sqlalchemy import text
 
 SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "audit_integrity.py"
 
@@ -38,13 +39,17 @@ def test_a_sound_database_has_nothing_to_report(
     assert "0 finding(s)" in audit_script.report(findings, show_all=False)
 
 
+# dd_types_json first: on PostgreSQL, ALTER TABLE waits for the locks of the
+# sessions opened before it.
 def test_an_unknown_dd_type_code_is_listed(
-    engine, db, analyst, make_dd_type, make_dd_session, audit_script
+    dd_types_json, engine, db, analyst, make_dd_type, make_dd_session, audit_script
 ):
     known = make_dd_type()
     session = make_dd_session(analyst)
-    session.dd_types_json = json.dumps(
-        [{"code": known.code, "name": "Known"}, {"code": "GONE", "name": "Deleted"}]
+    chosen = [{"code": known.code, "name": "Known"}, {"code": "GONE", "name": "Deleted"}]
+    db.execute(
+        text("UPDATE dd_sessions SET dd_types_json = :chosen WHERE id = :id"),
+        {"chosen": json.dumps(chosen), "id": session.id},
     )
     db.commit()
 

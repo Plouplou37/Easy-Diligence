@@ -23,7 +23,7 @@ import sys
 from dataclasses import dataclass
 from typing import Any, get_args
 
-from sqlalchemy import Connection, Table, create_engine, text
+from sqlalchemy import Connection, Table, create_engine, inspect, text
 
 from app.core.database_settings import DatabaseSettings, load_settings
 from app.models import ExecutionStatus
@@ -31,7 +31,7 @@ from app.models.base import SQLModel
 from app.models.user import Role
 
 DECIDE = "migration 0002 stops: your decision first"
-UNTOUCHED = "nothing (listed for the later migration of this column)"
+UNTOUCHED = "nothing (migration 0003 leaves these codes out)"
 
 
 @dataclass
@@ -144,14 +144,25 @@ def _default_of(table: Table, column: str) -> str:
     return arg if isinstance(arg, str) else str(arg)
 
 
+def _columns(connection: Connection, table: str) -> set[str]:
+    """The columns the table has in this database; none if it has no such
+    table. The script runs on databases of any revision."""
+    inspector = inspect(connection)
+    if not inspector.has_table(table):
+        return set()
+    return {column["name"] for column in inspector.get_columns(table)}
+
+
 def _null_checks(connection: Connection) -> list[Finding]:
     """NULL in every column the models declare NOT NULL. Those already NOT
-    NULL in the database find nothing."""
+    NULL in the database find nothing; tables and columns the database does
+    not have yet are left out."""
     findings = []
     for table in SQLModel.metadata.sorted_tables:
+        present = _columns(connection, table.name)
         key = next(iter(table.primary_key.columns)).name
         for column in table.columns:
-            if column.nullable or column.primary_key:
+            if column.nullable or column.primary_key or column.name not in present:
                 continue
             action = _NULL_ACTIONS.get(
                 (table.name, column.name),
@@ -169,10 +180,13 @@ def _null_checks(connection: Connection) -> list[Finding]:
 
 def _unknown_dd_type_codes(connection: Connection) -> Finding:
     """Sessions whose dd_types_json names a DD type that does not exist (or is
-    not readable JSON). Not touched by 0002: listed for the migration that
-    replaces this column with a table."""
+    not readable JSON). Not touched by 0002: listed for 0003, which replaces
+    this column with a table and leaves these codes out. Nothing to list once
+    0003 has run."""
     codes = {row[0] for row in connection.execute(text("SELECT code FROM dd_types"))}
-    ids = []
+    ids: list[Any] = []
+    if "dd_types_json" not in _columns(connection, "dd_sessions"):
+        return Finding("sessions naming an unknown DD type in dd_types_json", UNTOUCHED, ids)
     rows = connection.execute(
         text(
             "SELECT id, dd_types_json FROM dd_sessions WHERE dd_types_json IS NOT NULL ORDER BY id"

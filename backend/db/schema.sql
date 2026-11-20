@@ -464,5 +464,40 @@ ALTER TABLE session_vector_stores ADD CONSTRAINT fk_session_vector_stores_dd_typ
 
 UPDATE alembic_version SET version_num='0002' WHERE alembic_version.version_num = '0001';
 
+-- Running upgrade 0002 -> 0003
+
+CREATE TABLE session_dd_types (
+    session_id INTEGER NOT NULL, 
+    dd_type_id INTEGER NOT NULL, 
+    position INTEGER NOT NULL, 
+    CONSTRAINT pk_session_dd_types PRIMARY KEY (session_id, dd_type_id), 
+    CONSTRAINT fk_session_dd_types_dd_type_id_dd_types FOREIGN KEY(dd_type_id) REFERENCES dd_types (id) ON DELETE RESTRICT, 
+    CONSTRAINT fk_session_dd_types_session_id_dd_sessions FOREIGN KEY(session_id) REFERENCES dd_sessions (id) ON DELETE CASCADE
+);
+
+CREATE INDEX ix_session_dd_types_dd_type_id ON session_dd_types (dd_type_id);
+
+ALTER TABLE dd_sessions DROP COLUMN dd_types_json;
+
+DROP INDEX ix_dd_sessions_company_status;
+
+ALTER TABLE dd_sessions DROP CONSTRAINT ck_dd_sessions_session_status;
+
+ALTER TABLE dd_sessions DROP COLUMN status;
+
+CREATE INDEX ix_dd_sessions_company_id ON dd_sessions (company_id);
+
+ALTER TABLE dd_answers DROP CONSTRAINT ck_dd_answers_confidence_range;
+
+ALTER TABLE dd_answers DROP COLUMN confidence_score;
+
+ALTER TABLE dd_executions DROP CONSTRAINT fk_dd_executions_validator_id_users;
+
+ALTER TABLE dd_executions DROP COLUMN validator_id;
+
+ALTER TABLE users DROP COLUMN is_verified;
+
+UPDATE alembic_version SET version_num='0003' WHERE alembic_version.version_num = '0002';
+
 COMMIT;
 
