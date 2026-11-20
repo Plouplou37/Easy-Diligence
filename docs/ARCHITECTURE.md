@@ -52,6 +52,11 @@ du frontend. Pour installer et lancer l'application, voir le
   - `alembic check` vérifie que les migrations correspondent aux modèles.
   - Alembic ne lit que les réglages de la base (`DatabaseSettings`) : une
     migration ne demande ni la clé OpenAI ni la clé JWT.
+  - **La CI vérifie les migrations sur un vrai PostgreSQL 17** (service jetable
+    du job `backend`, identifiants propres à la CI) : `upgrade head`, `check`,
+    `downgrade base` puis de nouveau `upgrade head` (chaque descente est
+    jouée), et `db/schema.sql` comparé à un script régénéré. Les tests, eux,
+    restent sur SQLite : `DATABASE_URL` n'est posé que pour ces étapes.
 - **Les modèles** (`models/`) sont en SQLModel : chaque table est à la fois un
   modèle SQLAlchemy et un modèle Pydantic. `models/base.py` fixe :
   - une **convention de nommage** des contraintes, pour que les migrations

@@ -2,6 +2,14 @@
 
 ## Non publié
 
+### CI : migrations vérifiées sur PostgreSQL
+
+- La CI joue les migrations sur un PostgreSQL 17 jetable : `alembic upgrade
+  head`, `alembic check` (les migrations correspondent aux modèles), une
+  descente complète puis une remontée, et la comparaison de `db/schema.sql`
+  avec un script régénéré. Jusqu'ici, rien ne les exécutait : les tests créent
+  leurs tables sur SQLite.
+
 ### Simplifications
 
 - **Plus d'inscription libre.** La page `/register` et la route

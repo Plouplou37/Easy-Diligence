@@ -14,6 +14,23 @@ jobs:
     defaults:
       run:
         working-directory: backend
+    # A real PostgreSQL for the migrations: the tests run on SQLite, and nothing
+    # else checks what is PostgreSQL's own (JSONB, partial indexes, NULLS NOT
+    # DISTINCT, CHECK constraints). Throwaway credentials of this CI only.
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: easy_diligence_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ci -d easy_diligence_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v7
 
@@ -37,6 +54,33 @@ jobs:
 
       - name: Tests
         run: uv run pytest
+
+      # DATABASE_URL is set for these steps only: the tests keep their SQLite
+      # (pytest-env), and nothing else reaches this database.
+      - name: Migrations apply on PostgreSQL
+        env:
+          DATABASE_URL: postgresql+psycopg://ci:ci@localhost:5432/easy_diligence_ci
+        run: uv run alembic upgrade head
+
+      - name: Migrations match the models
+        env:
+          DATABASE_URL: postgresql+psycopg://ci:ci@localhost:5432/easy_diligence_ci
+        run: uv run alembic check
+
+      # Down to nothing, then up again: every downgrade is run once.
+      - name: Migrations go down and up again
+        env:
+          DATABASE_URL: postgresql+psycopg://ci:ci@localhost:5432/easy_diligence_ci
+        run: |
+          uv run alembic downgrade base
+          uv run alembic upgrade head
+
+      - name: db/schema.sql is up to date
+        env:
+          DATABASE_URL: postgresql+psycopg://ci:ci@localhost:5432/easy_diligence_ci
+        run: |
+          uv run alembic upgrade head --sql > "$RUNNER_TEMP/schema.sql"
+          diff -u db/schema.sql "$RUNNER_TEMP/schema.sql"
 
       - name: Known vulnerabilities
         run: uv run pip-audit --skip-editable

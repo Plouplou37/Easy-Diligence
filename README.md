@@ -191,7 +191,9 @@ aussi les couches du frontend.
   `uv run --project backend pre-commit install`.
 - **Sur GitHub**, la CI (`.github/workflows/ci.yml`) lance le lint, le
   formatage, les types, les tests et l'audit du backend, puis le lint, le
-  formatage et le build du frontend.
+  formatage et le build du frontend. Elle joue aussi les migrations sur un
+  PostgreSQL 17 jetable : montée, `alembic check`, descente complète puis
+  remontée, et `db/schema.sql` à jour.
 
 ## Structure du dépôt
 
