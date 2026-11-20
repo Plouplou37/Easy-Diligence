@@ -23,8 +23,10 @@ export const Button = ({
 }) => {
   const iconOnly = !children;
 
+  // The press shows at once (pointer down, not release): a slight scale-down,
+  // left out when the system asks for reduced motion.
   const baseStyles =
-    'inline-flex items-center justify-center font-normal rounded-md transition-colors duration-150 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50 disabled:cursor-not-allowed';
+    'inline-flex items-center justify-center font-normal rounded-md transition duration-150 ease-out motion-safe:active:scale-[0.97] focus:outline-hidden focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50 disabled:cursor-not-allowed';
 
   const variants = {
     primary: 'bg-primary-dark text-white hover:bg-primary-dark/85',

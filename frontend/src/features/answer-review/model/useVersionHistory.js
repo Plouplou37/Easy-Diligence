@@ -1,11 +1,9 @@
 import { useState } from 'react';
 import toast from 'react-hot-toast';
 import { answersAPI } from '@/entities/answer';
-import { useConfirm } from '@/shared/lib/confirm';
 
 /** The versions of each answer, loaded when first shown, and the revert. */
 export const useVersionHistory = () => {
-  const confirm = useConfirm();
   const [showVersionHistory, setShowVersionHistory] = useState({});
   const [versionHistory, setVersionHistory] = useState({});
 
@@ -25,20 +23,14 @@ export const useVersionHistory = () => {
     }
   };
 
+  // No confirmation: a revert creates a new version and loses nothing, so it
+  // is undone by reverting again. Confirmations are kept for what cannot be undone.
   const revertToVersion = async (answerId, version, onReload) => {
-    const confirmed = await confirm({
-      title: 'Revert answer',
-      message:
-        `Revert to version ${version}? A new version is created with its content; ` +
-        'the current one stays in the history.',
-      confirmLabel: 'Revert',
-    });
-    if (!confirmed) return;
     try {
       await answersAPI.revertToVersion(answerId, version);
       await onReload();
       await fetchVersionHistory(answerId);
-      toast.success(`Reverted to version ${version}`);
+      toast.success(`Reverted to version ${version}. The previous text stays in the history.`);
     } catch {
       toast.error('Failed to revert to version');
     }

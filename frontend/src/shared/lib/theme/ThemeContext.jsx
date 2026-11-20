@@ -31,6 +31,18 @@ const applyTheme = theme => {
   document.documentElement.style.colorScheme = theme;
 };
 
+const EASE_MS = 300;
+
+// A change of theme the user caused, or the system's: eased over a quarter
+// second (`.theme-changing` in index.css) rather than flashing from one to the
+// other. Not on the first paint, and never under reduced motion.
+const easeThemeChange = () => {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const root = document.documentElement;
+  root.classList.add('theme-changing');
+  window.setTimeout(() => root.classList.remove('theme-changing'), EASE_MS);
+};
+
 export const ThemeProvider = ({ children }) => {
   const [mode, setModeState] = useState(readStoredMode);
   const [resolvedTheme, setResolvedTheme] = useState(() => resolveTheme(mode));
@@ -47,6 +59,7 @@ export const ThemeProvider = ({ children }) => {
     const mql = window.matchMedia('(prefers-color-scheme: dark)');
     const handleChange = event => {
       const theme = event.matches ? 'dark' : 'light';
+      easeThemeChange();
       setResolvedTheme(theme);
       applyTheme(theme);
     };
@@ -55,6 +68,7 @@ export const ThemeProvider = ({ children }) => {
   }, [mode]);
 
   const setMode = useCallback(newMode => {
+    easeThemeChange();
     setModeState(newMode);
     try {
       localStorage.setItem(STORAGE_KEY, newMode);

@@ -23,7 +23,7 @@ export const Card = ({
         <div className="px-5 py-3.5 border-b border-border">
           {title && (
             <div className="flex items-center gap-3">
-              <h3 className="flex items-center gap-2 text-fluid-sm font-medium text-content uppercase tracking-[0.18em] whitespace-nowrap">
+              <h3 className="flex items-center gap-2 text-fluid-sm font-medium text-content uppercase tracking-[0.08em] whitespace-nowrap">
                 {title}
               </h3>
               <div className="flex-1 h-px hairline-gradient opacity-40" />

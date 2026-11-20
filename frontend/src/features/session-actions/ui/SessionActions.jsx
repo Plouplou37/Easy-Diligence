@@ -72,7 +72,10 @@ export const ExportMenu = ({ sessionId, answers }) => {
       {open && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div role="menu" className={`absolute right-0 mt-2 w-48 z-20 py-1 ${menu.panel}`}>
+          <div
+            role="menu"
+            className={`absolute right-0 mt-2 w-48 z-20 py-1 origin-top-right animate-scale-in ${menu.panel}`}
+          >
             <button role="menuitem" onClick={choose(exportPdf)} className={menu.item}>
               PDF report
             </button>

@@ -15,7 +15,7 @@ export const pageLayout = {
 export const pageHeader = {
   wrapper: 'mb-6',
   eyebrow: 'eyebrow',
-  title: 'text-fluid-xl font-medium tracking-tight text-content',
+  title: 'text-fluid-xl font-medium leading-tight tracking-tight text-content',
   subtitle: 'mt-1 text-sm text-content-secondary',
   hairline: 'mt-4 h-px hairline-gradient opacity-40',
 };
@@ -23,7 +23,7 @@ export const pageHeader = {
 // Section title: uppercase label followed by a hairline.
 export const sectionHeader = {
   wrapper: 'flex items-center gap-3',
-  title: 'text-fluid-sm font-medium text-content uppercase tracking-[0.18em] whitespace-nowrap',
+  title: 'text-fluid-sm font-medium text-content uppercase tracking-[0.08em] whitespace-nowrap',
   hairline: 'flex-1 h-px hairline-gradient opacity-40',
 };
 

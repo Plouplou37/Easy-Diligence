@@ -33,7 +33,7 @@ const SummaryBlock = ({ title, summary, onSaved }) => {
   return (
     <div className={`${panel.base} p-5`}>
       <div className="flex items-center justify-between gap-3 mb-3">
-        <h3 className="text-fluid-sm font-medium text-content uppercase tracking-[0.18em]">
+        <h3 className="text-fluid-sm font-medium text-content uppercase tracking-[0.08em]">
           {title}
         </h3>
         <div className={sectionHeader.hairline} />

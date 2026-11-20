@@ -551,10 +551,12 @@ Les scripts se lancent aussi depuis `backend/` : `uv run python scripts/<script>
   dans `DD_THEME` (`light`, `dark` ou `system`). `shared/lib/theme/ThemeContext.jsx`
   expose `mode`, `resolvedTheme`, `setMode`, `darkMode` et `toggleDarkMode`.
 - **Les couleurs sont des variables CSS**, déclarées dans `src/app/styles/index.css` (un bloc
-  par thème) et exposées par `tailwind.config.js` via `color-mix`, si bien que
-  l'opacité Tailwind fonctionne (`bg-accent-blue/10`). Tailwind 4 lit encore ce
-  fichier de configuration par `@config` (mode de compatibilité) ; les classes
-  maison sont des `@utility` dans `index.css`.
+  par thème) et exposées en classes par le bloc `@theme inline` du même
+  fichier (Tailwind 4, sans fichier de configuration JavaScript). `inline` :
+  chaque classe porte sa valeur, si bien qu'une classe et une variable de même
+  nom ne se masquent pas (`bg-bleu` est le bleu fixe de la marque,
+  `var(--color-bleu)` suit le thème). L'opacité fonctionne
+  (`bg-accent-blue/10`). Les classes maison sont des `@utility`.
   - Les tokens : `bg-surface`, `bg-surface-bg`, `bg-surface-hover`,
     `text-content(-secondary|-muted|-inverse)`, `border-border`,
     `theme-success|warning|error` (avec `-bg` et `-border`),
@@ -583,7 +585,12 @@ Les scripts se lancent aussi depuis `backend/` : `uv run python scripts/<script>
 - **Composants** :
   - `Button` : primary (bleu nuit plein), secondary (contour), ghost, danger et
     success ; sans enfant, c'est un bouton-icône. Ne pas lui ajouter de classes
-    de couleur : l'ordre des feuilles de style déciderait alors du gagnant.
+    de couleur : l'ordre des feuilles de style déciderait alors du gagnant. Il
+    répond à l'appui (pointeur enfoncé, pas relâché) par une légère réduction
+    (`motion-safe:active:scale-[0.97]`) ; `pill-action` et les tuiles
+    cliquables aussi.
+  - Menus : ils naissent du bouton qui les ouvre (`origin-top-right
+    animate-scale-in`).
   - `LoadingSpinner` : en tailles lg et xl, le logo traversé par un reflet.
   - `Modal` : se ferme avec Échap, la croix ou un clic à côté. C'est la seule
     fenêtre de l'application : il n'y a plus de fenêtre faite à la main.
@@ -606,8 +613,27 @@ Les scripts se lancent aussi depuis `backend/` : `uv run python scripts/<script>
   l'en-tête `PageHeader` (fil d'Ariane, titre, actions à droite). Les détails
   techniques (codes, identifiants, tokens) n'apparaissent qu'au survol (`title`).
 - **Logo** : `public/logo-white.svg` et l'icône `public/icon.svg`.
-- **Police** : Roboto, auto-hébergée (`@fontsource/roboto`, importée dans
-  `main.jsx`).
+- **Charte** (skill `apple-design`, 4.4) :
+  - **police du système** (`system-ui` : Segoe UI sous Windows), rien à
+    télécharger ;
+  - **interlettrage selon la taille** : négatif sur les grands textes (titres,
+    chiffres des tuiles : `tracking-tight`), léger sur les petits libellés en
+    capitales (0,06 à 0,08 em, jamais plus) ;
+  - **barre de navigation** en matière translucide (`nav-bg` : surface à 72 %,
+    flou et saturation), la page défile dessous ;
+  - **confirmation** pour ce qui ne se défait pas seulement (supprimer, valider
+    un type de DD) : revenir à une version n'en demande plus, car l'ancienne
+    reste dans l'historique.
+- **Accessibilité** (section 12 de `index.css`, hors couches) : l'application
+  suit les réglages du système.
+  - **Réduire les animations** : rien ne bouge (fenêtres et menus en fondu,
+    transitions instantanées, ni appui animé, ni reflet, ni pulsation).
+  - **Réduire la transparence** : surfaces pleines, sans flou.
+  - **Contraste élevé** : bordures et textes secondaires renforcés (tokens
+    redéfinis par thème).
+  - Un **changement de thème** s'adoucit sur un quart de seconde
+    (`.theme-changing`, posée par `shared/lib/theme` le temps du changement),
+    sauf animations réduites.
 - ⚠️ Ne jamais poser `filter`, `transform`, `backdrop-filter` ou `isolation` sur un
   conteneur de page. `Modal` (`fixed z-50`) passerait alors sous la barre de
   navigation.

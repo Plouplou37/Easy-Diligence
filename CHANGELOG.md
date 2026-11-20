@@ -2,6 +2,30 @@
 
 ## Non publié
 
+### Frontend : charte apple-design
+
+- La police est celle du système (Segoe UI sous Windows) : Roboto n'est plus
+  téléchargé avec l'application.
+- L'interlettrage suit la taille : titres et grands chiffres plus serrés,
+  libellés en capitales bien moins espacés (0,06 à 0,08 em au lieu de 0,1 à
+  0,22 em).
+- Boutons, pastilles et tuiles cliquables répondent dès l'appui. Les menus
+  (compte, export) naissent du bouton qui les ouvre.
+- La barre de navigation est une matière translucide, floutée, sous laquelle
+  la page défile ; elle porte le nom « Easy Diligence » (au lieu de
+  « DD Automation »).
+- L'application suit les réglages d'accessibilité du système : animations
+  réduites (plus rien ne bouge), transparence réduite (surfaces pleines),
+  contraste élevé (bordures et textes secondaires renforcés). Un changement de
+  thème s'adoucit au lieu de basculer d'un coup.
+- Revenir à une version d'une réponse ne demande plus de confirmation : rien
+  n'est perdu, l'ancienne version reste dans l'historique.
+- Le menu du compte affiche le nom de l'utilisateur : il lisait des champs
+  (`first_name`, `last_name`) qu'un compte n'a pas, et restait vide.
+- La configuration de Tailwind passe dans le CSS (`@theme`) :
+  `tailwind.config.js` disparaît. Vérifié : les 36 captures étaient identiques
+  avant que la charte ne change quoi que ce soit.
+
 ### Frontend : Tailwind 4
 
 - Tailwind 3 → 4, par l'outil officiel de migration. Les pages sont restées

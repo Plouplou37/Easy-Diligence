@@ -82,13 +82,13 @@ const AppLayout = () => {
   return (
     <div className="min-h-screen flex flex-col">
       {/* Floating navbar */}
-      <nav className="fixed top-0 inset-x-0 z-40 mx-2 sm:mx-4 h-(--navbar-height) flex items-center gap-4 px-4 rounded-b-xl border-x border-b border-border nav-bg backdrop-blur-xs shadow-md">
+      <nav className="fixed top-0 inset-x-0 z-40 mx-2 sm:mx-4 h-(--navbar-height) flex items-center gap-4 px-4 rounded-b-xl border-x border-b border-border nav-bg shadow-md">
         <Link
           to="/"
           onClick={closeMenus}
-          className="shrink-0 text-fluid-sm font-normal uppercase tracking-[0.2em] whitespace-nowrap logo-gradient-hover"
+          className="shrink-0 text-fluid-md font-semibold tracking-tight whitespace-nowrap logo-gradient-hover"
         >
-          DD Automation
+          Easy Diligence
         </Link>
 
         {/* Desktop links */}
@@ -120,16 +120,20 @@ const AppLayout = () => {
             <button
               onClick={() => setUserMenuOpen(!userMenuOpen)}
               className="p-1.5 rounded-md text-content hover:text-bleu-atlantis transition-colors"
+              aria-label="Account menu"
+              aria-expanded={userMenuOpen}
             >
               <UserCircleIcon className="h-6 w-6" />
             </button>
 
             {userMenuOpen && (
-              <div className={`absolute right-0 top-full mt-2 min-w-52 z-50 ${menu.panel}`}>
+              <div
+                className={`absolute right-0 top-full mt-2 min-w-52 z-50 origin-top-right animate-scale-in ${menu.panel}`}
+              >
                 <div className={menu.header}>
-                  <p className="eyebrow">
-                    {user?.first_name} {user?.last_name}
-                  </p>
+                  {/* An account has a full name, not a first and a last one: the
+                      line used to be empty. */}
+                  <p className="eyebrow">{user?.full_name || user?.username}</p>
                   <p className="mt-0.5 text-xs text-content-muted truncate">{user?.email}</p>
                 </div>
                 <div className="py-1">
@@ -171,7 +175,7 @@ const AppLayout = () => {
             onClick={() => setMobileMenuOpen(false)}
           />
           <div
-            className={`fixed z-40 top-[calc(var(--navbar-height)+0.5rem)] inset-x-2 sm:inset-x-4 py-2 xl:hidden animate-fade-in ${menu.panel}`}
+            className={`fixed z-40 top-[calc(var(--navbar-height)+0.5rem)] inset-x-2 sm:inset-x-4 py-2 xl:hidden origin-top animate-scale-in ${menu.panel}`}
           >
             {navigation.map(section => (
               <div key={section.name} className="py-1">
