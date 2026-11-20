@@ -1,0 +1,9 @@
+# Copy to backend.hcl (ignored by git), with the bucket created at the first
+# step of README.md, then: terraform init -backend-config=backend.hcl
+
+bucket       = "easydiligence-tfstate-123456789012"
+key          = "easy-diligence-prod.tfstate"
+region       = "eu-west-3"
+encrypt      = true
+# A lock file next to the state: two applies never run at once.
+use_lockfile = true

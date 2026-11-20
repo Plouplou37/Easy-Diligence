@@ -1,0 +1,17 @@
+# Copy to terraform.tfvars (ignored by git) and fill in.
+
+subscription_id = "00000000-0000-0000-0000-000000000000"
+
+# The tag of the images built with az acr build (README): a date, a version,
+# or a commit. Never latest.
+image_tag = "2026-11-20"
+
+# Optional: the defaults are in variables.tf.
+# location     = "francecentral"
+# environment  = "prod"
+# openai_model = "gpt-5.6-luna"
+# postgres_sku = "B_Standard_B1ms"
+# backend_env = {
+#   LOG_LEVEL      = "INFO"
+#   SMTP_HOSTNAME  = "smtp.office365.com"
+# }

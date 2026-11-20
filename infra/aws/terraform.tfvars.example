@@ -1,0 +1,20 @@
+# Copy to terraform.tfvars (ignored by git) and fill in.
+
+# The tag of the images pushed to ECR (README): a date, a version, or a commit.
+# Never latest.
+image_tag = "2026-11-20"
+
+# HTTPS: the domain, pointed at the load balancer, and its ACM certificate
+# (README). Without them, HTTP only, for a test.
+# domain_name     = "dd.example.com"
+# certificate_arn = "arn:aws:acm:eu-west-3:123456789012:certificate/..."
+
+# Optional: the defaults are in variables.tf.
+# region            = "eu-west-3"
+# environment       = "prod"
+# openai_model      = "gpt-5.6-luna"
+# db_instance_class = "db.t4g.micro"
+# backend_env = {
+#   LOG_LEVEL     = "INFO"
+#   SMTP_HOSTNAME = "smtp.office365.com"
+# }

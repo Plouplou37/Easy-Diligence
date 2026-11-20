@@ -45,3 +45,12 @@ Thumbs.db
 
 # Local Docker overrides (README, port 5432 of the database)
 docker-compose.override.yml
+
+# Terraform (infra/): the providers, the states, and the files of one
+# deployment (they name a subscription). .terraform.lock.hcl is committed.
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+terraform.tfvars
+backend.hcl

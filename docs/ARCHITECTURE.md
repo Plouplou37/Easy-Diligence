@@ -46,17 +46,26 @@ navigateur ──► proxy ──/api──► backend ──► db
                  └──── / ────► frontend
 ```
 
-- **`proxy`** (`proxy/nginx.conf`) : le seul point d'entrée, et le seul port
-  publié. Toutes les règles du trafic y vivent :
+- **`proxy`** (`proxy/default.conf.template`) : le seul point d'entrée, et le
+  seul port publié. Toutes les règles du trafic y vivent :
   - la taille des envois (110 Mo, pour les 100 Mo de `MAX_UPLOAD_SIZE`) ;
   - des délais de 10 minutes sur `/api`, pour les régénérations et les
     synthèses qui attendent OpenAI ;
-  - les en-têtes de sécurité ;
+  - les en-têtes de sécurité, et un `/healthz` à lui ;
   - `X-Forwarded-For`, **posé** et non complété : un en-tête envoyé par le
     client ne peut pas choisir l'adresse que comptent les limites de
-    connexion.
+    connexion. Derrière un proxy de confiance (`TRUSTED_PROXIES` : l'entrée
+    d'Azure, le load balancer d'AWS), l'adresse du client est lue dans son
+    `X-Forwarded-For`, en partant de la droite ;
+  - les services amont (`BACKEND_UPSTREAM`, `FRONTEND_UPSTREAM`), **résolus à
+    chaque requête** : un backend recréé par une mise à jour est joint à sa
+    nouvelle adresse sans redémarrer le proxy ;
+  - `Host` porte le nom du service amont : l'entrée interne d'Azure aiguille
+    sur lui.
 
-  Le HTTPS s'y branchera.
+  C'est un modèle, rendu au démarrage du conteneur à partir de ces
+  variables. `proxy/Dockerfile` donne les valeurs de docker compose, `infra/`
+  celles des clouds.
 - **`frontend`** : l'application construite par Node, servie en fichiers
   statiques par nginx (`frontend/nginx.conf`). Les fichiers de `assets/`
   portent une empreinte et se mettent en cache pour de bon ; toute autre
@@ -77,6 +86,31 @@ navigateur ──► proxy ──/api──► backend ──► db
 - Les versions des images sont figées (`VERSION.md`). La CI construit et
   démarre l'ensemble à chaque pull request, puis s'en sert à travers le
   proxy.
+
+### Sur le cloud (`infra/`)
+
+Les mêmes images, sur des services managés, décrits en Terraform, au choix :
+
+| | Azure (`infra/azure/`) | AWS (`infra/aws/`) |
+| --- | --- | --- |
+| Conteneurs | Container Apps | ECS sur Fargate |
+| Entrée publique, HTTPS | le proxy, HTTPS fourni sur `*.azurecontainerapps.io` | un load balancer devant le proxy, HTTPS avec un domaine et son certificat ACM |
+| Base | PostgreSQL Flexible Server 17, privé | RDS PostgreSQL 17, privé |
+| Secrets | Key Vault, lu par une identité managée | Secrets Manager, lu par le rôle d'exécution |
+| Images | Container Registry, construites par `az acr build` | ECR, poussées par `docker push` |
+| Noms internes | ceux des Container Apps | Cloud Map (`backend.<…>.internal`) |
+
+- **Le backend reste à une seule instance, toujours allumée** : un traitement
+  vit dans son processus. Sur AWS, l'ancienne tâche s'arrête avant que la
+  nouvelle démarre, pour ne jamais avoir deux moteurs, ni deux migrations, à
+  la fois.
+- **Les secrets** : l'URL de la base et la clé JWT sont générées par
+  Terraform. Elles sont aussi dans son état, gardé dans un stockage réservé à
+  ceux qui déploient. La clé OpenAI est déposée à la main : Terraform ne la
+  voit jamais.
+- La CI vérifie ce code (`terraform fmt`, `terraform validate`) sans rien
+  déployer. Le déploiement se lance à la main, en suivant le README de chaque
+  dossier.
 
 ## Base de données
 
