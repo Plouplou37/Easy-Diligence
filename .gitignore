@@ -36,6 +36,7 @@ branding/
 # Local tooling
 .claude/
 PLAN-MIGRATION.md
+REPRISE.md
 # Working specifications ("Cahier des charges — …"), kept out of the repository
 Cahier des charges*.md
 .vscode/

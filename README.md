@@ -323,7 +323,7 @@ En production, l'application tourne avec Docker (« Démarrage avec Docker »).
 Sans Docker : `npm run build` dans `frontend/` produit `frontend/dist/`, un site
 statique à servir tel quel, avec un renvoi de toutes les routes vers
 `index.html` (voir `frontend/nginx.conf`) et `/api` transmis au backend (voir
-`proxy/nginx.conf`). Le backend se lance alors sans `--reload`.
+`proxy/default.conf.template`). Le backend se lance alors sans `--reload`.
 
 ## Faire évoluer la base
 
@@ -443,6 +443,6 @@ CHANGELOG.md          journal des changements
   moteur de réponses, le cloisonnement par utilisateur, les synthèses, l'export
   PDF et le design system du frontend.
 - [`VERSION.md`](VERSION.md) : la version de l'application et celle des outils
-  (Python, uv, Node). Les versions des dépendances sont figées dans
-  `backend/uv.lock` et `frontend/package-lock.json`.
+  (Python, uv, Node, images Docker, Terraform). Les versions des dépendances
+  sont figées dans `backend/uv.lock` et `frontend/package-lock.json`.
 - [`CHANGELOG.md`](CHANGELOG.md) : le journal des changements.

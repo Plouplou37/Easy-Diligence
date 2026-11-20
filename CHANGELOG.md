@@ -2,6 +2,15 @@
 
 ## Non publié
 
+### Relecture avant publication
+
+- Tout l'historique git a été relu : aucun secret, aucune trace du poste de
+  travail, aucun nom réel ; tous les commits portent l'adresse noreply de
+  GitHub.
+- Deux renvois pointaient encore vers l'ancien `proxy/nginx.conf` (README et
+  `frontend/nginx.conf`) : ils nomment son remplaçant,
+  `proxy/default.conf.template`.
+
 ### Déploiement sur Azure ou AWS (Terraform)
 
 - **`infra/azure/`** déploie l'application sur Azure, en services managés :
@@ -292,8 +301,8 @@
   durabilité). Chaque section a une description et chaque
   question une consigne « où chercher ». Un test vérifie qu'il s'importe.
 - Les commentaires du code et les tests ne nomment plus de questionnaire réel.
-  Le mot « snapshot » ne sert plus à choisir l'icône d'un type de DD : un type
-  ainsi nommé prend l'icône par défaut.
+  L'icône d'un type de DD ne se devine plus d'après le nom d'un questionnaire
+  réel : un tel type prend l'icône par défaut.
 
 ### Frontend : pages découpées (1/2)
 
