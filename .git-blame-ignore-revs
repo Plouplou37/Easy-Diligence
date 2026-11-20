@@ -3,4 +3,6 @@
 #   git config blame.ignoreRevsFile .git-blame-ignore-revs
 
 # Formatage automatique du backend (ruff format), sans changement de logique
-85b67f57aca131c2b1d7658711af13a213fda15a
+9a713fa74a2c29d90db3690eead3cbb5e55efb74
+# Frontend formaté par Prettier (115 fichiers, build identique)
+d19b51d9935d7b1f6942172adf7560eafb26b1bc

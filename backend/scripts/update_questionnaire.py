@@ -36,14 +36,12 @@ import json
 import re
 import sys
 
-sys.path.insert(0, ".")
+from sqlalchemy import or_
 
-from sqlalchemy import or_  # noqa: E402
-
-from app.core.database import SessionLocal  # noqa: E402
-from app.models.answer import DDAnswer  # noqa: E402
-from app.models.dd_types import DDType  # noqa: E402
-from app.models.questions import DDQuestion, DDSection  # noqa: E402
+from app.core.database import SessionLocal
+from app.models.answer import DDAnswer
+from app.models.dd_types import DDType
+from app.models.questions import DDQuestion, DDSection
 
 # "A.01" -- the reviewer's own numbering on every reference question. Where both
 # sides have it, it proves the alignment far better than the rank does: a

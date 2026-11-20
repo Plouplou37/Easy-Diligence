@@ -12,12 +12,10 @@ The whole import runs in one transaction: nothing is written if any step fails.
 
 import sys
 
-sys.path.insert(0, ".")
-
-from app.core.database import SessionLocal  # noqa: E402
-from app.models.dd_types import DEFAULT_DD_TYPE_ICON, DDType  # noqa: E402
-from app.models.questions import DDQuestion, DDSection  # noqa: E402
-from app.services.file_parser import DDTypeFileParser  # noqa: E402
+from app.core.database import SessionLocal
+from app.models.dd_types import DEFAULT_DD_TYPE_ICON, DDType
+from app.models.questions import DDQuestion, DDSection
+from app.services.file_parser import DDTypeFileParser
 
 
 def import_questionnaire(path: str, code: str, name: str, owner_id):
