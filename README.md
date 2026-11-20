@@ -189,6 +189,19 @@ Quatre services (`docker-compose.yml`) :
 La base et le backend ne sont joignables que depuis les autres services, pas
 depuis la machine.
 
+## Déployer sur le cloud
+
+Le dossier [`infra/`](infra/) contient le code Terraform pour déployer
+l'application en services managés, au choix :
+- **Azure** ([`infra/azure/`](infra/azure/README.md)) : Container Apps,
+  PostgreSQL Flexible Server, Key Vault. Le HTTPS est fourni par Azure ;
+- **AWS** ([`infra/aws/`](infra/aws/README.md)) : ECS Fargate, RDS
+  PostgreSQL, Secrets Manager, derrière un load balancer. Le HTTPS demande un
+  nom de domaine.
+
+Chaque README donne les commandes dans l'ordre. Rien n'est déployé sans
+`terraform apply`.
+
 ## Fonctionnalités
 
 - **Questionnaires** : création et édition dans l'interface, ou import d'un
@@ -382,7 +395,8 @@ aussi les couches du frontend.
   Enfin, elle construit et démarre toute l'application avec docker compose,
   puis l'utilise à travers le proxy : l'application et l'une de ses routes,
   les en-têtes de sécurité, l'API, la création du premier administrateur et
-  sa connexion.
+  sa connexion. Le code Terraform (`infra/azure`, `infra/aws`) est vérifié
+  (`terraform fmt`, `terraform validate`), sans rien déployer.
 
 ## Structure du dépôt
 
@@ -414,6 +428,7 @@ frontend/             application React (Vite, Tailwind)
   nginx.conf          le service des fichiers de l'application
 proxy/                le point d'entrée : nginx devant le frontend et le backend
 docker-compose.yml    les quatre services (proxy, frontend, backend, db)
+infra/                le déploiement Terraform : azure/ et aws/
 examples/             questionnaire d'exemple au format d'import
 docs/ARCHITECTURE.md  conception détaillée
 .github/workflows/    intégration continue

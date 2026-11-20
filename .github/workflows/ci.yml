@@ -122,6 +122,33 @@ jobs:
       - name: Build
         run: npm run build
 
+  # The deployment code (infra/): formatted and valid against the pinned
+  # providers. No state and no cloud account: nothing is planned nor deployed.
+  terraform:
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        cloud: [azure, aws]
+    defaults:
+      run:
+        working-directory: infra/${{ matrix.cloud }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: hashicorp/setup-terraform@v4.0.1
+        with:
+          terraform_version: "1.17.2"
+          terraform_wrapper: false
+
+      - name: Format
+        run: terraform fmt -check -recursive
+
+      - name: Init (no state, no cloud account)
+        run: terraform init -backend=false -input=false
+
+      - name: Validate
+        run: terraform validate
+
   # The whole application as docker compose runs it: the four images built,
   # started, and used through the proxy. Throwaway settings of this CI only.
   docker:

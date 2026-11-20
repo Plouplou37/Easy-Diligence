@@ -24,6 +24,15 @@ qu'un commit le dise.
 | `proxy` | `nginx:1.30.7-alpine` | `proxy/Dockerfile` |
 | `db` | `postgres:17.12-trixie` | `docker-compose.yml` |
 
+## Déploiement (Terraform)
+
+| Outil | Version | Figée dans |
+| --- | --- | --- |
+| Terraform | 1.17.2 (1.11 au moins) | `infra/*/versions.tf`, la CI |
+| Provider `azurerm` | 5.14 | `infra/azure/.terraform.lock.hcl` |
+| Provider `aws` | 6.73 | `infra/aws/.terraform.lock.hcl` |
+| Providers `random`, `time` | 3.9, 0.14 | les mêmes fichiers |
+
 Les dépendances sont déclarées dans `backend/pyproject.toml` et
 `frontend/package.json`, et leurs versions exactes figées dans `backend/uv.lock`
 et `frontend/package-lock.json`.

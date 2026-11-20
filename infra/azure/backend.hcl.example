@@ -1,0 +1,9 @@
+# Copy to backend.hcl (ignored by git), with the names chosen at the first step
+# of README.md, then: terraform init -backend-config=backend.hcl
+
+resource_group_name  = "rg-easydiligence-tfstate"
+storage_account_name = "easydiligencetfstate"
+container_name       = "tfstate"
+key                  = "easy-diligence-prod.tfstate"
+# Signed in with az login: no storage account key anywhere.
+use_azuread_auth = true

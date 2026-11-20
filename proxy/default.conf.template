@@ -1,0 +1,84 @@
+# The entry point, the only service reachable from outside. /api (and the API
+# documentation, when DOCS_ENABLED opens it) goes to the backend, everything
+# else to the frontend.
+#
+# Every rule about the traffic lives here: the size of what is sent, the time
+# allowed, the security headers. HTTPS ends in front of it: Azure's ingress
+# (infra/azure), or a proxy of its own later.
+#
+# A template, rendered when the container starts (/etc/nginx/templates of the
+# nginx image): ${BACKEND_UPSTREAM}, ${FRONTEND_UPSTREAM} and ${TRUSTED_PROXIES}
+# come from the environment. proxy/Dockerfile sets them for docker compose,
+# infra/azure and infra/aws for the clouds. ${NGINX_LOCAL_RESOLVERS} is the
+# container's own DNS server, which the nginx image reads from /etc/resolv.conf.
+
+# The scheme the client used: the one a trusted proxy in front tells, else ours.
+map $http_x_forwarded_proto $forwarded_proto {
+    default $http_x_forwarded_proto;
+    ""      $scheme;
+}
+
+server {
+    listen 80;
+    server_tokens off;
+
+    # The services are looked up again at every request, not once at start:
+    # a backend recreated by an update (new address) is reached at once,
+    # without restarting the proxy.
+    resolver ${NGINX_LOCAL_RESOLVERS} valid=10s ipv6=off;
+
+    # Documents sent to the vector stores: MAX_UPLOAD_SIZE (100 MB), and the
+    # form around them.
+    client_max_body_size 110m;
+
+    # The client's address. Behind a proxy we trust (Azure's ingress), it is
+    # read in X-Forwarded-For from the right, past the trusted hops: an
+    # address the client wrote there itself is never the one kept. With
+    # nothing trusted in front (docker compose), it is the connection's.
+    set_real_ip_from ${TRUSTED_PROXIES};
+    real_ip_header X-Forwarded-For;
+    real_ip_recursive on;
+
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "DENY" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+    proxy_http_version 1.1;
+    # The upstream's own name, not the public one: Azure's internal ingress
+    # routes on it (the public name would lead back here).
+    proxy_set_header Host $proxy_host;
+    proxy_set_header X-Forwarded-Host $host;
+    proxy_set_header X-Forwarded-Proto $forwarded_proto;
+    # Set, not appended: what the login limits count is this address only.
+    proxy_set_header X-Forwarded-For $remote_addr;
+    proxy_set_header X-Real-IP $remote_addr;
+
+    # The proxy's own health, whatever the state of the services behind it.
+    location = /healthz {
+        access_log off;
+        return 200 "ok\n";
+    }
+
+    # A variable in proxy_pass is what makes nginx resolve at request time
+    # (through the resolver above); the request URI goes on unchanged.
+    location /api/ {
+        set $backend ${BACKEND_UPSTREAM};
+        proxy_pass $backend;
+        # A regeneration, or summaries written on the spot, wait on OpenAI for
+        # minutes.
+        proxy_read_timeout 600s;
+        proxy_send_timeout 600s;
+        # Uploads go on to the backend as they come, not spooled to disk first.
+        proxy_request_buffering off;
+    }
+
+    location ~ ^/(docs|redoc|openapi\.json)$ {
+        set $backend ${BACKEND_UPSTREAM};
+        proxy_pass $backend;
+    }
+
+    location / {
+        set $frontend ${FRONTEND_UPSTREAM};
+        proxy_pass $frontend;
+    }
+}

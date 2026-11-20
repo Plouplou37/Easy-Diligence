@@ -2,6 +2,29 @@
 
 ## Non publié
 
+### Déploiement sur Azure ou AWS (Terraform)
+
+- **`infra/azure/`** déploie l'application sur Azure, en services managés :
+  Container Apps pour les trois conteneurs (seul le proxy est public, en
+  HTTPS), PostgreSQL Flexible Server privé, Key Vault, Container Registry,
+  identité managée, réseau virtuel, Log Analytics.
+- **`infra/aws/`** fait de même sur AWS : ECS Fargate dans des sous-réseaux
+  privés, un load balancer en HTTPS (avec un domaine et son certificat), RDS
+  PostgreSQL, Secrets Manager, ECR, Cloud Map, CloudWatch.
+- Chaque dossier a son README : les commandes dans l'ordre, de la création du
+  stockage de l'état jusqu'au premier administrateur, puis les mises à jour.
+  La clé OpenAI se dépose à la main et ne passe jamais par Terraform. Rien
+  n'est déployé sans `terraform apply`.
+- La CI vérifie le code Terraform des deux dossiers à chaque pull request.
+- **Le proxy** devient un modèle rendu au démarrage, pour servir dans Docker
+  comme dans les deux clouds :
+  - **il retrouve les services à chaque requête.** Avant, il gardait leur
+    adresse de départ : après une mise à jour qui recréait le backend, il
+    répondait en erreur 502 jusqu'à son propre redémarrage ;
+  - **il lit l'adresse du client derrière l'entrée d'un cloud**, sans
+    qu'un client puisse la choisir ;
+  - **il a son propre contrôle de santé** (`/healthz`).
+
 ### README et ménage
 
 - Le README commence par un guide de lancement pas à pas : ce qu'il faut,
