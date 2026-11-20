@@ -196,10 +196,8 @@ def test_a_row_inserted_in_sql_gets_the_defaults(db):
             "VALUES ('sql@example.com', 'sql', 'x')"
         )
     )
-    row = db.execute(
-        text("SELECT role, is_active, is_verified, created_at, updated_at FROM users")
-    ).one()
-    assert (row.role, row.is_active, row.is_verified) == ("analyst", 1, 0)
+    row = db.execute(text("SELECT role, is_active, created_at, updated_at FROM users")).one()
+    assert (row.role, row.is_active) == ("analyst", 1)
     assert row.created_at is not None
     assert row.updated_at is None  # NULL until the first change
 

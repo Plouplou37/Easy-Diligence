@@ -83,25 +83,26 @@ class DDAnswer(SQLModel, table=True):
             postgresql_where=text("is_current"),
             sqlite_where=text("is_current"),
         ),
-        CheckConstraint(
-            "confidence_score IS NULL OR (confidence_score >= 0 AND confidence_score <= 1)",
-            name="confidence_range",
-        ),
         CheckConstraint("tokens_used >= 0", name="tokens_non_negative"),
     )
 
+    # What the answer is: the answer of a run (execution_id) to a question.
+    # Everything below down to the codes follows from these two, and is filled
+    # in one place only, engine/answers.new_answer.
     id: int | None = Field(default=None, primary_key=True)
-    session_id: int = Field(foreign_key="dd_sessions.id", ondelete="CASCADE")
     execution_id: int = Field(foreign_key="dd_executions.id", ondelete="CASCADE")
+    question_id: int = Field(foreign_key="dd_questions.id", index=True)
 
-    # Codes copied from the question at answer time (required).
+    # Copies of the run's session and DD type and of the question's section,
+    # kept for the dashboard's indexes and the filters of the review page.
+    session_id: int = Field(foreign_key="dd_sessions.id", ondelete="CASCADE")
+    dd_type_id: int | None = Field(default=None, foreign_key="dd_types.id", index=True)
+    section_id: int | None = Field(default=None, foreign_key="dd_sections.id", index=True)
+
+    # The codes as they read when the question was answered: a copy at answer
+    # time, which a later change of code does not reach.
     section_code: str = Field(max_length=50)
     question_code: str = Field(max_length=50)
-
-    # References to the questionnaire
-    section_id: int | None = Field(default=None, foreign_key="dd_sections.id", index=True)
-    question_id: int = Field(foreign_key="dd_questions.id", index=True)
-    dd_type_id: int | None = Field(default=None, foreign_key="dd_types.id", index=True)
 
     # Version control fields
     version: int = defaulted_field(1)
@@ -116,7 +117,6 @@ class DDAnswer(SQLModel, table=True):
     # Answer content
     answer_text: str | None = Field(default=None, sa_type=Text)
     sources: Any | None = Field(default=None, sa_type=JSONType)  # documents and web references
-    confidence_score: float | None = Field(default=None)  # no longer filled; kept for history
 
     # Processing metadata
     tokens_used: int = defaulted_field(0)
@@ -205,7 +205,6 @@ class AnswerResponse(SQLModel):
     question_code: str | None = None
     answer_text: str | None
     sources: Any | None = None
-    confidence_score: float | None
     tokens_used: int = 0
     status: AnswerStatus
 

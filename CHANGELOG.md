@@ -2,6 +2,30 @@
 
 ## Non publié
 
+### Colonnes mortes et copies (migration 0003)
+
+- **On ne peut plus supprimer une session pendant un traitement**, ni une
+  fois terminée. La garde existait, mais elle lisait un statut de session qui
+  restait à « created » pour toujours : elle ne se déclenchait jamais, et la
+  tâche de fond continuait d'écrire sur des lignes supprimées. Le statut
+  d'une session se lit désormais sur ses exécutions, côté serveur comme dans
+  l'interface. Si le serveur refuse, son message s'affiche.
+- La colonne `dd_sessions.status` disparaît, avec le champ `status` des
+  réponses `/session/…` et le filtre `status` de la liste des sessions.
+- Les types de DD d'une session passent dans une table de liaison
+  (`session_dd_types`). L'API renvoie `dd_types: [{id, code, name}]`, dans
+  l'ordre choisi à la création, au lieu de `dd_types_json`. Un type renommé
+  apparaît sous son nouveau nom, et un type qu'une session a choisi ne peut
+  plus être supprimé (409).
+- Supprimer une question ou une section qui a des réponses renvoie un 409,
+  au lieu d'une erreur 500 sur la clé étrangère.
+- Le score de confiance disparaît : la colonne, son champ dans l'API et
+  `average_confidence` dans les statistiques de la page de revue. Il ne
+  mesurait rien (une valeur fixe de 0,8, puis plus rien) et valait toujours 0
+  en moyenne.
+- `is_verified` disparaît des comptes et `validator_id` des exécutions : rien
+  ne les remplissait.
+
 ### CI : les tests aussi sur PostgreSQL
 
 - La CI relance toute la suite de tests sur son PostgreSQL jetable, avec un

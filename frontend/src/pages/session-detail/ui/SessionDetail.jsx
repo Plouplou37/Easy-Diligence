@@ -132,7 +132,7 @@ const SessionDetail = () => {
         actions={
           <>
             {anyFinished && <ExportPdfButton sessionId={sessionId} />}
-            <DeleteSessionButton session={session} sessionId={sessionId} />
+            <DeleteSessionButton session={session} sessionId={sessionId} status={overall.status} />
           </>
         }
       />

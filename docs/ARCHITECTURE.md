@@ -51,6 +51,12 @@ du frontend. Pour installer et lancer l'application, voir le
     Elle corrige d'abord les données qui les violent, et s'arrête sans rien
     changer devant celles qui demandent une décision.
     `scripts/audit_integrity.py` les liste avant de migrer.
+  - La migration `0003_dead_columns` retire les colonnes mortes
+    (`dd_sessions.status`, `dd_answers.confidence_score`,
+    `dd_executions.validator_id`, `users.is_verified`). Elle remplace aussi la
+    copie JSON `dd_sessions.dd_types_json` par la table `session_dd_types` :
+    un code qui ne correspond à aucun type de DD est laissé de côté, et compté
+    dans le journal.
   - `db/schema.sql` est le même schéma en un seul script SQL, régénéré avec
     `alembic upgrade head --sql`.
   - `alembic check` vérifie que les migrations correspondent aux modèles.
@@ -81,8 +87,7 @@ du frontend. Pour installer et lancer l'application, voir le
   - les énumérations, stockées en texte avec une contrainte `CHECK` plutôt qu'en
     type `ENUM` natif : ajouter un membre ne demande pas d'`ALTER TYPE`. On
     stocke la **valeur**, en minuscules (`needs_review`) :
-    `enum_type(…, store_values=True)`. Seul `dd_sessions.status` stocke encore
-    le nom ;
+    `enum_type(…, store_values=True)` ;
   - les colonnes obligatoires avec une valeur par défaut (`defaulted_field`) :
     NOT NULL, et la valeur par défaut est posée **par la base** aussi, pour
     qu'une insertion en SQL direct la reçoive.
@@ -131,14 +136,30 @@ du frontend. Pour installer et lancer l'application, voir le
   (`management_company_name`, `management_company_website`, facultatifs). Les
   distinguer permet au moteur de savoir de laquelle une question parle.
 - `DDSession` (`models/session.py`) : une DD sur un fonds (`company_id`,
-  `created_by`, `assigned_to`, `dd_types_json`).
+  `created_by`, `assigned_to`). **Une session n'a pas de statut à elle** :
+  son état est celui de ses exécutions. Le frontend le calcule
+  (`getSessionStatus`), et la garde de suppression le lit par la même règle.
+- `SessionDDType` (`session_dd_types`) : les types de DD choisis à la création
+  d'une session, dans l'ordre choisi (`position`). C'est un lien, pas une
+  copie : un type renommé apparaît sous son nouveau nom, et un type qu'une
+  session a choisi ne peut pas être supprimé (`RESTRICT`, puis 409 dans
+  `delete_dd_type`). L'API l'expose dans `SessionResponse.dd_types`
+  (`[{id, code, name}]`).
 - `DDExecution` (`models/execution.py`) : l'exécution d'**un** type de DD dans une
   session, une seule par couple. Statuts (`ExecutionStatus`) : `not_started`,
   `in_progress`, `generated`, `failed`, `paused`, etc. Elle porte le
   `conversation_id`.
-- `DDAnswer` (`models/answer.py`) : une réponse, versionnée par `version` et
-  `is_current`, avec `status`, `response_id` et `sources` (JSON). L'historique va
-  dans `DDAnswerHistory`.
+- `DDAnswer` (`models/answer.py`) : la réponse d'une exécution (`execution_id`)
+  à une question (`question_id`), versionnée par `version` et `is_current`, avec
+  `status`, `response_id` et `sources` (JSON). L'historique va dans
+  `DDAnswerHistory`.
+  - **Copies** : `session_id`, `dd_type_id` et `section_id` se déduisent de
+    l'exécution et de la question. Ils sont gardés pour les index du tableau
+    de bord et les filtres de la page de revue. `section_code` et
+    `question_code` sont une **copie au moment de la réponse** : un code
+    changé ensuite n'atteint pas les anciennes réponses. Une seule fonction
+    les remplit : `engine/answers.new_answer`.
+  - Une question ou une section qui a des réponses ne se supprime pas (409).
 - `DDResponse` et `DDMessage` : les réponses et messages bruts d'OpenAI, chaînés
   par `previous_response_id`.
 - `VectorStore` et `SessionVectorStore` (`models/vector_store.py`) : les vector
@@ -146,6 +167,20 @@ du frontend. Pour installer et lancer l'application, voir le
 - `DDSummary` (`models/summary.py`) : les résumés générés, par section ou pour un
   type de DD entier.
 - `DDSummaryBatch` : le suivi des synthèses envoyées à la Batch API.
+
+### Supprimer une session
+
+- Seul son créateur peut la supprimer, et la suppression emporte tout : les
+  exécutions, les réponses et leur historique, les liens vers ses types de
+  DD et ses assignations de vector stores.
+- **Pas pendant un traitement** : la tâche de fond continuerait d'écrire sur
+  des lignes supprimées.
+- **Pas une fois terminée** : quand chaque type de DD choisi (ou, sans choix,
+  chaque type lancé) a fini (`generated`, `under_review`, `validated`,
+  `finalized`), la DD est gardée.
+- `services/sessions._deletion_refusal` le vérifie à partir des exécutions,
+  et le bouton du frontend se verrouille sur le statut calculé par la même
+  règle. Si le serveur refuse, son message s'affiche.
 
 ### Règles de cycle de vie
 

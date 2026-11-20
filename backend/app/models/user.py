@@ -39,7 +39,6 @@ class User(SQLModel, table=True):
     phone: str | None = Field(default=None, max_length=50)
     role: str = defaulted_field("analyst", sa_type=String(50))  # a Role
     is_active: bool = defaulted_field(True)
-    is_verified: bool = defaulted_field(False)
     last_login: datetime | None = Field(default=None, sa_type=TIMESTAMP)
     created_at: datetime = timestamp_field(nullable=False)
     # NULL until the first change.
@@ -129,7 +128,6 @@ class UserResponse(UserBase):
 
     id: int
     is_active: bool
-    is_verified: bool
     created_at: datetime
     updated_at: datetime | None
     last_login: datetime | None
@@ -187,7 +185,6 @@ class UserListItem(BaseModel):
     company: str | None
     role: str
     is_active: bool
-    is_verified: bool
     last_login: datetime | None
     created_at: datetime
 

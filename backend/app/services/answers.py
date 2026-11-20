@@ -226,12 +226,10 @@ def page_stats(answers: list[AnswerResponse]) -> dict[str, Any]:
     """Figures on a page of answers, for the review page."""
     count = len(answers)
     validated = sum(1 for a in answers if a.validation_status == "approved")
-    confidence = sum(a.confidence_score or 0 for a in answers) / count if count else 0
     return {
         "total_answers": count,
         "answers_with_content": sum(1 for a in answers if a.answer_text),
         "validated_answers": validated,
-        "average_confidence": round(confidence, 2),
         "validation_rate": round(validated / count * 100, 2) if count else 0,
     }
 

@@ -147,6 +147,18 @@ def engine(request):
 
 
 @pytest.fixture
+def dd_types_json(engine):
+    """dd_sessions.dd_types_json, which migration 0003 removes, put back for a
+    test of what reads it on a database not migrated yet. Ask for it first: on
+    PostgreSQL, ALTER TABLE waits for the locks of the sessions opened before."""
+    with engine.begin() as connection:
+        connection.execute(text("ALTER TABLE dd_sessions ADD COLUMN dd_types_json TEXT"))
+    yield
+    with engine.begin() as connection:
+        connection.execute(text("ALTER TABLE dd_sessions DROP COLUMN dd_types_json"))
+
+
+@pytest.fixture
 def session_factory(engine, monkeypatch):
     """Sessions on the test database, also for code that opens its own
     (the engine and the background tasks go through database.SessionLocal)."""

@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.sql import func
 
 from app.core.database import get_db
+from app.engine.answers import new_answer
 from app.engine.openai_client import OpenAIProcessor
 from app.engine.rate_limiter import RateLimiter
 from app.models.answer import AnswerStatus, DDAnswer, ErrorType
@@ -764,14 +765,9 @@ class DDProcessor:
                 logger.info(f"Marked {len(old_answers)} old answers as is_current=False")
 
             # Create failed answer record with error information
-            failed_answer = DDAnswer(
-                session_id=self.session_id,
-                execution_id=self.execution.id,
-                dd_type_id=self.execution.dd_type_id,
-                section_code=question.section.section_code,
-                question_code=question.question_code,
-                section_id=question.section.id,
-                question_id=question.id,
+            failed_answer = new_answer(
+                self.execution,
+                question,
                 status=AnswerStatus.FAILED,
                 retry_count=retry_count,
                 error_type=error_type,
@@ -851,18 +847,12 @@ class DDProcessor:
             logger.info(f"Marked {len(old_answers)} old answers as is_current=False")
 
         # Create answer record (metadata only, content will be in history)
-        answer = DDAnswer(
-            session_id=self.session_id,
-            execution_id=self.execution.id,  # Link to execution
-            dd_type_id=self.execution.dd_type_id,  # DD type ID
-            section_code=question.section.section_code,  # Required legacy field
-            question_code=question.question_code,  # Required legacy field
-            section_id=question.section.id,
-            question_id=question.id,
+        answer = new_answer(
+            self.execution,
+            question,
             answer_text=result["answer"],
             sources=sources_data,
             tokens_used=result["tokens_used"],
-            confidence_score=result.get("confidence_score"),
             response_id=response_record.response_id,  # ISSUE #7 FIX: Store response_id for context chain tracking
             status=AnswerStatus.COMPLETED,  # Mark as completed since AI successfully generated answer
             version=1,
@@ -1044,7 +1034,6 @@ class DDProcessor:
         answer.answer_text = result["answer"]
         answer.sources = sources_data
         answer.tokens_used = result.get("tokens_used")
-        answer.confidence_score = result.get("confidence_score")
         answer.response_id = response_record.response_id
         answer.status = AnswerStatus.NEEDS_REVIEW
         answer.edited_by = None

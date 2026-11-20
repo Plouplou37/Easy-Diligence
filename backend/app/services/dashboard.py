@@ -10,8 +10,8 @@ Read-only. In particular the summary batches are read from
 OpenAI and writes to the database, which a dashboard must never fan out.
 """
 
-import json
-from collections.abc import Iterable, Mapping
+from collections import defaultdict
+from collections.abc import Iterable
 from datetime import datetime
 from typing import Any
 
@@ -25,7 +25,7 @@ from app.models.base import relation
 from app.models.dd_types import DDType
 from app.models.execution import DDExecution
 from app.models.questions import DDQuestion, DDSection
-from app.models.session import DDSession
+from app.models.session import DDSession, SessionDDType
 from app.models.summary import DDSummary, DDSummaryBatch
 from app.models.user import User
 from app.services.authz import filter_sessions_for_user
@@ -56,14 +56,6 @@ def _iso(value: datetime | None) -> str | None:
     return value.isoformat() if value else None
 
 
-def _selected_codes(dd_types_json: str | None) -> list[str]:
-    """Codes stored on the session at creation (`[{"code", "name"}]`)."""
-    try:
-        return [t["code"] for t in json.loads(dd_types_json or "[]") if t.get("code")]
-    except (ValueError, TypeError, AttributeError, KeyError):
-        return []
-
-
 def build_dashboard_rows(
     sessions: Iterable,
     executions: Iterable,
@@ -72,7 +64,7 @@ def build_dashboard_rows(
     summaries: Iterable,
     batches: Iterable,
     question_totals: dict[int, int],
-    dd_types_by_code: Mapping[str, Any],
+    selections: Iterable,
 ) -> dict:
     """Assemble the dashboard payload from the rows of the grouped queries.
 
@@ -83,6 +75,8 @@ def build_dashboard_rows(
     - answered_counts: (session_id, dd_type_id, distinct answered questions)
     - summaries: (session_id, dd_type_id, has_synthesis, synthesis_updated_at, last_updated)
     - batches: (session_id, dd_type_id, status, updated_at)
+    - selections: (session_id, dd_type_id, code, name, is_active), the DD
+      types chosen at creation
     """
     per_dd: dict[tuple, dict] = {}
 
@@ -135,6 +129,10 @@ def build_dashboard_rows(
         e["batch_status"] = status
         e["_activity"] = _latest(e["_activity"], updated_at)
 
+    chosen: dict[Any, list[tuple]] = defaultdict(list)
+    for session_id, dd_type_id, code, name, is_active in selections:
+        chosen[session_id].append((dd_type_id, code, name, is_active))
+
     totals = {"sessions": 0, "to_review": 0, "running": 0, "syntheses_ready": 0}
     rows = []
     for session in sessions:
@@ -143,13 +141,10 @@ def build_dashboard_rows(
 
         # DD types chosen at creation but never started have no execution row:
         # they still belong on the dashboard, as "not started".
-        for code in _selected_codes(session.dd_types_json):
-            dd_type = dd_types_by_code.get(code)
-            if dd_type is not None and dd_type.id not in runs:
-                runs[dd_type.id] = entry(session.id, dd_type.id)
-                runs[dd_type.id].update(
-                    code=dd_type.code, name=dd_type.name, is_active=dd_type.is_active
-                )
+        for dd_type_id, code, name, is_active in chosen[session.id]:
+            if dd_type_id not in runs:
+                runs[dd_type_id] = entry(session.id, dd_type_id)
+                runs[dd_type_id].update(code=code, name=name, is_active=is_active)
 
         dd_rows = []
         last_activity = session.created_at
@@ -281,13 +276,20 @@ def dashboard(db: Session, user: User) -> dict[str, Any]:
         .all()
     )
 
-    selected = {code for s in sessions for code in _selected_codes(s.dd_types_json)}
-    dd_types_by_code = (
-        {t.code: t for t in db.query(DDType).filter(col(DDType.code).in_(selected)).all()}
-        if selected
-        else {}
+    selections = (
+        db.query(
+            col(SessionDDType.session_id),
+            col(SessionDDType.dd_type_id),
+            col(DDType.code),
+            col(DDType.name),
+            col(DDType.is_active),
+        )
+        .join(DDType, col(DDType.id) == col(SessionDDType.dd_type_id))
+        .filter(col(SessionDDType.session_id).in_(ids))
+        .order_by(col(SessionDDType.session_id), col(SessionDDType.position))
+        .all()
     )
-    dd_type_ids = {row[1] for row in executions} | {t.id for t in dd_types_by_code.values()}
+    dd_type_ids = {row[1] for row in executions} | {row[1] for row in selections}
     question_totals: dict[int, int] = (
         {
             row[0]: row[1]
@@ -309,5 +311,5 @@ def dashboard(db: Session, user: User) -> dict[str, Any]:
         summaries,
         batches,
         question_totals,
-        dd_types_by_code,
+        selections,
     )

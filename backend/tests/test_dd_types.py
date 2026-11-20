@@ -5,9 +5,11 @@ import json
 
 import pytest
 
+from app.engine.answers import new_answer
 from app.models.dd_types import DDType
 from app.models.execution import DDExecution
 from app.models.questions import DDQuestion, DDSection
+from app.models.session import SessionDDType
 
 QUESTIONNAIRE = [
     {"section": "General", "questions": [{"text": "Name?", "ref": "A.01"}, "Launch date?"]},
@@ -91,6 +93,17 @@ def test_a_dd_type_that_has_run_cannot_be_deleted(
     assert response.status_code == 409
 
 
+def test_a_dd_type_a_session_has_chosen_cannot_be_deleted(
+    db, client, analyst, make_dd_type, make_dd_session, auth_headers
+):
+    dd_type = make_dd_type(analyst)
+    session = make_dd_session(analyst)
+    db.add(SessionDDType(session_id=session.id, dd_type_id=dd_type.id, position=0))
+    db.commit()
+    response = client.delete(f"/api/dd-types/{dd_type.code}", headers=auth_headers(analyst))
+    assert response.status_code == 409
+
+
 # --- Sections and questions ----------------------------------------------------------
 
 
@@ -98,6 +111,31 @@ def test_a_dd_type_that_has_run_cannot_be_deleted(
 def own_type(analyst, make_dd_type):
     """A questionnaire of the analyst: sections A and B, questions A.01, A.02, B.01, B.02."""
     return make_dd_type(analyst, sections=2, questions=2)
+
+
+def test_a_question_or_section_with_answers_cannot_be_deleted(
+    db, client, analyst, own_type, make_dd_session, auth_headers
+):
+    """The answers keep pointing at the questions they were written for: the
+    deletion is a conflict, not a 500 on the foreign key."""
+    headers = auth_headers(analyst)
+    section = next(s for s in own_type.sections if s.section_code == "A")
+    question = section.questions[0]
+    execution = DDExecution(session_id=make_dd_session(analyst).id, dd_type_id=own_type.id)
+    db.add(execution)
+    db.flush()
+    db.add(new_answer(execution, question, answer_text="An answer"))
+    db.commit()
+
+    assert (
+        client.delete(f"/api/questions/questions/{question.id}", headers=headers).status_code == 409
+    )
+    assert (
+        client.delete(f"/api/questions/sections/{section.id}", headers=headers).status_code == 409
+    )
+    # A question without answers still goes.
+    other = section.questions[1]
+    assert client.delete(f"/api/questions/questions/{other.id}", headers=headers).status_code == 200
 
 
 def test_a_new_section_takes_the_next_letter_and_place(db, client, analyst, own_type, auth_headers):

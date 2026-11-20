@@ -19,6 +19,7 @@ from app.core.exceptions import (
 from app.models.base import relation, stored_id
 from app.models.dd_types import DEFAULT_DD_TYPE_ICON, DDType, DDTypeCreate, DDTypeUpdate
 from app.models.questions import DDQuestion, DDSection
+from app.models.session import SessionDDType
 from app.models.user import User
 from app.services.authz import (
     assert_dd_type_ownership,
@@ -197,11 +198,15 @@ def validate_dd_type(db: Session, dd_type: DDType) -> DDType:
 
 
 def delete_dd_type(db: Session, dd_type: DDType) -> None:
-    """Delete a DD type and its structure, unless it is a system type or has
-    been run (deactivate it then)."""
+    """Delete a DD type and its structure, unless it is a system type, has
+    been run, or a session has chosen it (deactivate it then)."""
     if dd_type.is_system:
         raise PermissionDeniedError("Cannot delete system DD type")
-    if dd_type.executions:
+    chosen = (
+        db.query(SessionDDType).filter(col(SessionDDType.dd_type_id) == dd_type.id).first()
+        is not None
+    )
+    if dd_type.executions or chosen:
         raise ConflictError("Cannot delete DD type that is in use. Set to inactive instead.")
     db.delete(dd_type)
     db.commit()

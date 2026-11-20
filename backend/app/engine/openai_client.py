@@ -876,7 +876,7 @@ class OpenAIProcessor:
                 # surfaced as "Confidence: 80%" on every answer and in the Excel
                 # export -- a number that looked like an assessment but measured
                 # nothing. The model states its confidence in prose instead
-                # (see the system prompt). The DB column is kept for history.
+                # (see the system prompt). The column is gone (migration 0003).
                 "processing_time": time.time(),
                 "messages": messages,
                 "full_response": response.model_dump() if hasattr(response, "model_dump") else {},
