@@ -178,6 +178,14 @@ Les tests n'ont besoin ni de base ni de clé OpenAI. Leurs réglages sont fixés
 dans `pyproject.toml` (section `[tool.pytest.ini_options]`, via pytest-env) et
 priment sur `backend/.env` : un test ne peut pas atteindre une vraie base.
 
+Une seule exception, réservée à la CI : avec la variable `TEST_POSTGRES_URL`,
+les tests tournent sur le PostgreSQL jetable de la CI. Le schéma y est créé
+par les migrations, et les tables sont vidées avant chaque test. Seul
+`tests/conftest.py` lit cette variable, et il refuse tout hôte autre que
+`localhost` ou `127.0.0.1`. Les tests marqués `postgres`, qui vérifient ce que
+seul PostgreSQL connaît (index partiels, contraintes `CHECK`, JSONB, fuseaux
+horaires), ne tournent que là.
+
 Chaque test a sa propre base SQLite en mémoire, créée à partir des modèles.
 `tests/conftest.py` fournit cette base, un client d'API, des utilisateurs et
 leurs en-têtes d'authentification, des données de départ (sociétés, types de
@@ -196,7 +204,8 @@ aussi les couches du frontend.
   formatage, les types, les tests et l'audit du backend, puis le lint, le
   formatage et le build du frontend. Elle joue aussi les migrations sur un
   PostgreSQL 17 jetable : montée, `alembic check`, descente complète puis
-  remontée, et `db/schema.sql` à jour.
+  remontée, et `db/schema.sql` à jour. Elle relance enfin les tests sur ce
+  PostgreSQL. Un test en échec apparaît en annotation sur la pull request.
 
 ## Structure du dépôt
 

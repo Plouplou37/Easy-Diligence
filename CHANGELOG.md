@@ -2,6 +2,20 @@
 
 ## Non publié
 
+### CI : les tests aussi sur PostgreSQL
+
+- La CI relance toute la suite de tests sur son PostgreSQL jetable, avec un
+  schéma créé par les migrations, comme en production. Les tests
+  restaient jusqu'ici sur SQLite, qui ne vérifie ni les index partiels, ni
+  les fuseaux horaires, ni JSONB. En local, rien ne change.
+- Des tests propres à PostgreSQL vérifient que les index uniques sont bien
+  partiels, que les contraintes `CHECK` refusent un statut inconnu et que les
+  dates portent leur fuseau.
+- Un test en échec apparaît en annotation de la pull request.
+- Les sociétés, les synthèses et les assignations de vector stores sont
+  listées dans un ordre stable, et les réponses créées au même instant aussi :
+  PostgreSQL ne garantit aucun ordre sans `ORDER BY`.
+
 ### Intégrité de la base (migration 0002)
 
 - **La base garantit elle-même ce que le code supposait** : une seule

@@ -43,7 +43,10 @@ Guide court pour un agent qui travaille sur Easy Diligence. Le reste est dans :
   les deux dossiers sont ignorés par git.
 - **Ne jamais lancer de test contre une vraie base.** Les réglages de test de
   `pyproject.toml` (pytest-env) imposent une base SQLite en mémoire et une
-  fausse clé OpenAI : ne pas les retirer.
+  fausse clé OpenAI : ne pas les retirer. Seule exception : la CI relance les
+  tests sur son PostgreSQL jetable, via `TEST_POSTGRES_URL`. Cette variable
+  n'est lue que par `tests/conftest.py`, qui refuse tout hôte autre que la
+  machine elle-même. Ne jamais la définir ailleurs que dans la CI.
 - **Schéma de la base** : toute modification passe par le modèle
   (`app/models/`), puis par une migration Alembic générée avec
   `uv run alembic revision --autogenerate`, **relue**, puis par la régénération
@@ -88,6 +91,9 @@ npm run lint
 npm run format:check   # npm run format pour corriger
 ```
 
+- La CI lance aussi `pytest` une seconde fois, sur PostgreSQL, avec les tests
+  marqués `postgres` (sautés en local). Un échec y apparaît en annotation de
+  la pull request.
 - Ruff et mypy passent sur tout le backend. **Ne pas ajouter de `# noqa`**, ni
   de module dans la liste `ignore_errors` de mypy (`pyproject.toml`) : ces
   exceptions marquent l'ancien code, et chacune disparaît quand son module est

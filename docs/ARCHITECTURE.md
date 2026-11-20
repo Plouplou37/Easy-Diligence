@@ -59,8 +59,19 @@ du frontend. Pour installer et lancer l'application, voir le
   - **La CI vérifie les migrations sur un vrai PostgreSQL 17** (service jetable
     du job `backend`, identifiants propres à la CI) : `upgrade head`, `check`,
     `downgrade base` puis de nouveau `upgrade head` (chaque descente est
-    jouée), et `db/schema.sql` comparé à un script régénéré. Les tests, eux,
-    restent sur SQLite : `DATABASE_URL` n'est posé que pour ces étapes.
+    jouée), et `db/schema.sql` comparé à un script régénéré. `DATABASE_URL`
+    n'est posé que pour ces étapes.
+  - **Les tests tournent deux fois en CI** : sur SQLite, comme en local, puis
+    sur ce PostgreSQL, avec `TEST_POSTGRES_URL`. Cette variable n'est lue que
+    par `tests/conftest.py`, qui exige un hôte local. Le schéma est alors créé
+    par `alembic upgrade head`, comme en production, et non par
+    `create_all`. Les tables sont vidées (`TRUNCATE … RESTART IDENTITY`) avant
+    chaque test, et une attente de verrou de plus de 10 s fait échouer le test
+    au lieu de bloquer la CI. Les tests marqués `postgres` (`test_postgres.py`)
+    ne tournent que là.
+  - **Les listes ont un ordre stable** (`ORDER BY` jusqu'à l'identifiant).
+    SQLite rend les lignes dans l'ordre d'insertion, PostgreSQL non, et
+    `now()` donne la même heure à toutes les lignes d'une transaction.
 - **Les modèles** (`models/`) sont en SQLModel : chaque table est à la fois un
   modèle SQLAlchemy et un modèle Pydantic. `models/base.py` fixe :
   - une **convention de nommage** des contraintes, pour que les migrations

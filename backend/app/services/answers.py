@@ -214,9 +214,9 @@ def list_answers(
             filters["include_history"] = False
 
     if session is not None:
-        query = query.order_by(col(DDAnswer.created_at))
+        query = query.order_by(col(DDAnswer.created_at), col(DDAnswer.id))
     else:
-        query = query.order_by(col(DDAnswer.created_at).desc())
+        query = query.order_by(col(DDAnswer.created_at).desc(), col(DDAnswer.id).desc())
 
     total = query.count()
     return paginate_query(query, params).all(), total, filters
