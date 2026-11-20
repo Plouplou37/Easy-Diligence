@@ -4,12 +4,14 @@ import os
 import re
 import time
 from concurrent.futures import ThreadPoolExecutor
+from datetime import UTC, datetime, timedelta
 from io import BytesIO
 from typing import Any
 
 from openai import OpenAI
 
 from app.core.config import settings
+from app.engine.errors import ResponseError
 
 logger = logging.getLogger(__name__)
 
@@ -163,13 +165,18 @@ def is_reasoning_model(model: str) -> bool:
 
 class OpenAIProcessor:
     def __init__(self):
-        self.client = OpenAI(api_key=settings.openai_api_key.get_secret_value())
+        # No retry in the SDK: the engine has the only retry policy
+        # (engine/errors.py), so that retry_count counts the real calls and a
+        # question never goes past MAX_ATTEMPTS calls.
+        self.client = OpenAI(api_key=settings.openai_api_key.get_secret_value(), max_retries=0)
         self.model = settings.openai_model
         self.is_reasoning_model = is_reasoning_model(self.model)
         self.web_search_tool = "web_search" if self.is_reasoning_model else "web_search_preview"
         logger.info(
-            f"OpenAI model: {self.model} (reasoning={self.is_reasoning_model}, "
-            f"web tool={self.web_search_tool})"
+            "OpenAI model: %s (reasoning=%s, web tool=%s)",
+            self.model,
+            self.is_reasoning_model,
+            self.web_search_tool,
         )
 
     def _apply_model_params(
@@ -220,7 +227,7 @@ class OpenAIProcessor:
     def create_vector_store(self, name: str, expires_after_days: int | None = None) -> str:
         """Create a vector store for document analysis with optional expiration policy"""
         try:
-            params = {"name": name}
+            params: dict[str, Any] = {"name": name}
 
             # Add expiration policy if specified
             if expires_after_days:
@@ -229,7 +236,7 @@ class OpenAIProcessor:
             vector_store = self.client.vector_stores.create(**params)
             return vector_store.id
         except Exception as e:
-            logger.error(f"Error creating vector store: {e}")
+            logger.error("Error creating vector store: %s", e)
             raise
 
     def upload_file(self, file_content: bytes, filename: str) -> str:
@@ -237,10 +244,10 @@ class OpenAIProcessor:
         try:
             file_tuple = (filename, BytesIO(file_content))
             file_obj = self.client.files.create(file=file_tuple, purpose="assistants")
-            logger.info(f"Uploaded file {filename} with ID {file_obj.id}")
+            logger.info("Uploaded file %s with ID %s", filename, file_obj.id)
             return file_obj.id
         except Exception as e:
-            logger.error(f"Error uploading file {filename}: {e}")
+            logger.error("Error uploading file %s: %s", filename, e)
             raise
 
     def add_file_to_vector_store(
@@ -248,18 +255,18 @@ class OpenAIProcessor:
     ) -> dict[str, Any]:
         """Add a file to an existing vector store with optional chunking strategy"""
         try:
-            params = {"vector_store_id": vector_store_id, "file_id": file_id}
+            params: dict[str, Any] = {"vector_store_id": vector_store_id, "file_id": file_id}
 
             if chunking_strategy:
                 params["chunking_strategy"] = chunking_strategy
-                logger.info(f"Adding file {file_id} to vector store with custom chunking strategy")
+                logger.info("Adding file %s to vector store with custom chunking strategy", file_id)
             else:
-                logger.debug(f"Adding file {file_id} to vector store with auto chunking")
+                logger.debug("Adding file %s to vector store with auto chunking", file_id)
 
             self.client.vector_stores.files.create(**params)
             return {"status": "success", "file_id": file_id, "vector_store_id": vector_store_id}
         except Exception as e:
-            logger.error(f"Error adding file to vector store: {e}")
+            logger.error("Error adding file to vector store: %s", e)
             raise
 
     def wait_for_file_indexed(
@@ -280,14 +287,14 @@ class OpenAIProcessor:
                 if status == "completed":
                     return True
                 if status == "failed":
-                    logger.warning(f"File {file_id} failed to index in {vector_store_id}")
+                    logger.warning("File %s failed to index in %s", file_id, vector_store_id)
                     return False
             except Exception as e:
-                logger.warning(f"Error polling file {file_id} status: {e}")
+                logger.warning("Error polling file %s status: %s", file_id, e)
                 return False
             time.sleep(interval)
             elapsed += interval
-        logger.warning(f"File {file_id} not indexed within {timeout}s (continuing anyway)")
+        logger.warning("File %s not indexed within %ss (continuing anyway)", file_id, timeout)
         return False
 
     def build_question_request(
@@ -352,7 +359,7 @@ class OpenAIProcessor:
                 "search_context_size": "medium",
             }
         )
-        logger.debug(f"Added {len(tools)} tools to request")
+        logger.debug("Added %s tools to request", len(tools))
 
         if tools:
             request_params["tools"] = tools
@@ -368,13 +375,13 @@ class OpenAIProcessor:
         # An unknown value falls back to the default, never to "auto".
         if tool_choice is not None:
             request_params["tool_choice"] = tool_choice
-            logger.debug(f"Using caller-supplied tool_choice: {tool_choice}")
+            logger.debug("Using caller-supplied tool_choice: %s", tool_choice)
         else:
             choice = (settings.tool_choice or "web_search").strip().lower()
             if choice not in ("auto", "web_search", "none"):
                 logger.warning(
-                    f"Unknown TOOL_CHOICE setting {settings.tool_choice!r}; "
-                    f"falling back to 'web_search'"
+                    "Unknown TOOL_CHOICE setting %r; falling back to 'web_search'",
+                    settings.tool_choice,
                 )
                 choice = "web_search"
             if choice == "web_search":
@@ -382,7 +389,7 @@ class OpenAIProcessor:
             elif choice == "auto":
                 request_params["tool_choice"] = "auto"
             # "none": send no tool_choice, leaving the API to its own default
-            logger.debug(f"Using configured tool_choice: {choice}")
+            logger.debug("Using configured tool_choice: %s", choice)
 
         # Add previous_response_id for context chaining if available
         if previous_response_id:
@@ -390,7 +397,10 @@ class OpenAIProcessor:
             logger.debug("Added previous_response_id for context chaining")
 
         logger.debug(
-            f"Request params: model={request_params['model']}, input_messages={len(request_params['input'])}, tools={len(tools)}"
+            "Request params: model=%s, input_messages=%s, tools=%s",
+            request_params["model"],
+            len(request_params["input"]),
+            len(tools),
         )
         return request_params
 
@@ -432,27 +442,27 @@ class OpenAIProcessor:
             discarded_tokens = 0
             if self._cites_documents_with_markers(response):
                 logger.warning(
-                    f"Response {response.id} cites documents with markers despite "
-                    f"the prompt: its text may have holes, asking again once"
+                    "Response %s cites documents with markers despite the prompt: its text may have holes, asking again once",
+                    response.id,
                 )
                 discarded_tokens = response.usage.total_tokens if response.usage else 0
                 response = self.client.responses.create(**request_params)
                 if self._cites_documents_with_markers(response):
                     logger.warning(
-                        f"Response {response.id} cites documents with markers again: "
-                        f"kept, its text may have holes"
+                        "Response %s cites documents with markers again: kept, its text may have holes",
+                        response.id,
                     )
 
             # Comprehensive response validation
             if response is None:
-                raise ValueError("OpenAI API returned None response")
+                raise ResponseError("OpenAI API returned None response")
 
             logger.info("OpenAI API response received successfully")
 
-            # ISSUE #24 Phase 1: Validate response status and model
-            # Check if response completed successfully
+            # An incomplete response (failed, cut short) is no answer: it is
+            # raised as a ResponseError, which the engine retries.
             response_status = getattr(response, "status", "unknown")
-            logger.info(f"Response status: {response_status}")
+            logger.info("Response status: %s", response_status)
 
             if response_status != "completed":
                 error_details = ""
@@ -462,35 +472,36 @@ class OpenAIProcessor:
                     error_type = getattr(response.error, "type", "unknown")
                     error_message = getattr(response.error, "message", "No error message")
                     error_details = f" Error: {error_type} - {error_message}"
-                    logger.error(f"OpenAI API Error: {error_type} - {error_message}")
+                    logger.error("OpenAI API Error: %s - %s", error_type, error_message)
 
                 # Extract incomplete details if available
                 if hasattr(response, "incomplete_details") and response.incomplete_details:
                     incomplete_reason = getattr(response.incomplete_details, "reason", "unknown")
                     error_details += f" Incomplete: {incomplete_reason}"
-                    logger.warning(f"Response incomplete: {incomplete_reason}")
+                    logger.warning("Response incomplete: %s", incomplete_reason)
 
-                raise RuntimeError(
+                raise ResponseError(
                     f"OpenAI response not completed. Status: {response_status}.{error_details}"
                 )
 
             # Verify correct model was used
             response_model = getattr(response, "model", "unknown")
-            logger.info(f"Response generated by model: {response_model}")
+            logger.info("Response generated by model: %s", response_model)
 
             if response_model != self.model:
-                logger.warning(f"Model mismatch! Requested: {self.model}, Got: {response_model}")
-            logger.debug(f"Response ID: {getattr(response, 'id', 'unknown')}")
-            logger.debug(f"Response type: {type(response)}")
-            logger.debug(f"Has output_text: {hasattr(response, 'output_text')}")
-            logger.debug(f"Has output: {hasattr(response, 'output')}")
+                logger.warning("Model mismatch! Requested: %s, Got: %s", self.model, response_model)
+            logger.debug("Response ID: %s", getattr(response, "id", "unknown"))
+            logger.debug("Response type: %s", type(response))
+            logger.debug("Has output_text: %s", hasattr(response, "output_text"))
+            logger.debug("Has output: %s", hasattr(response, "output"))
 
             if hasattr(response, "output_text"):
                 logger.debug(
-                    f"output_text length: {len(response.output_text) if response.output_text else 0}"
+                    "output_text length: %s",
+                    len(response.output_text) if response.output_text else 0,
                 )
             if hasattr(response, "output") and response.output:
-                logger.debug(f"output items count: {len(response.output)}")
+                logger.debug("output items count: %s", len(response.output))
 
             # Log token usage if available (including cache info)
             if hasattr(response, "usage") and response.usage:
@@ -502,7 +513,7 @@ class OpenAIProcessor:
                 output_tokens = getattr(usage, "output_tokens", 0)
 
                 # Log full usage object for debugging
-                logger.debug(f"Full usage object: {usage}")
+                logger.debug("Full usage object: %s", usage)
 
                 # Check for cached tokens in various possible locations
                 cached_tokens = 0
@@ -512,7 +523,7 @@ class OpenAIProcessor:
                 # Try input_tokens_details (standard location)
                 if hasattr(usage, "input_tokens_details"):
                     details = usage.input_tokens_details
-                    logger.debug(f"input_tokens_details: {details}")
+                    logger.debug("input_tokens_details: %s", details)
 
                     if hasattr(details, "cached_tokens"):
                         cached_tokens = details.cached_tokens
@@ -556,14 +567,14 @@ class OpenAIProcessor:
             response_dict = response.model_dump() if hasattr(response, "model_dump") else {}
 
             # Debug logging for response structure (only when needed)
-            logger.debug(f"Response dict keys: {list(response_dict.keys())}")
+            logger.debug("Response dict keys: %s", list(response_dict.keys()))
             if "output" in response_dict and response_dict["output"]:
-                logger.debug(f"Output array length: {len(response_dict['output'])}")
+                logger.debug("Output array length: %s", len(response_dict["output"]))
 
             # Use simple method first - direct text access
             if hasattr(response, "output_text") and response.output_text:
                 answer_text = response.output_text
-                logger.debug(f"Extracted answer using output_text: {len(answer_text)} chars")
+                logger.debug("Extracted answer using output_text: %s chars", len(answer_text))
 
             # Extract sources from detailed output structure
             try:
@@ -579,7 +590,7 @@ class OpenAIProcessor:
                             vs_ids = tool.get("vector_store_ids", [])
                             if vs_ids:
                                 vector_store_ids_from_response.extend(vs_ids)
-                                logger.debug(f"Found vector store IDs in response: {vs_ids}")
+                                logger.debug("Found vector store IDs in response: %s", vs_ids)
 
                 if "output" in response_dict and response_dict["output"] is not None:
                     # Ensure response.output is iterable (list)
@@ -589,7 +600,7 @@ class OpenAIProcessor:
                         else []
                     )
                     logger.debug(
-                        f"Processing {len(output_list)} output items for source extraction"
+                        "Processing %s output items for source extraction", len(output_list)
                     )
 
                     # First pass: collect all file citations
@@ -618,29 +629,33 @@ class OpenAIProcessor:
                                                 if file_id and filename:
                                                     file_citations[file_id] = filename
                                                     logger.debug(
-                                                        f"Collected file citation: {file_id} -> {filename}"
+                                                        "Collected file citation: %s -> %s",
+                                                        file_id,
+                                                        filename,
                                                     )
 
-                    logger.debug(f"Collected {len(file_citations)} file citations for fallback")
+                    logger.debug("Collected %s file citations for fallback", len(file_citations))
 
                     for i, output_item in enumerate(output_list):
                         if output_item is None:
-                            logger.debug(f"Output item {i}: NULL item, skipping")
+                            logger.debug("Output item %s: NULL item, skipping", i)
                             continue
 
                         # Handle dict format responses (main path)
                         if isinstance(output_item, dict):
                             item_type = output_item.get("type", None)
-                            logger.debug(f"Processing output item {i}: type='{item_type}'")
+                            logger.debug("Processing output item %s: type='%s'", i, item_type)
 
                             # Log tool calls for debugging but don't create sources from them
                             if item_type == "file_search_call":
-                                logger.info(f"Found file search tool call: {output_item.get('id')}")
+                                logger.info(
+                                    "Found file search tool call: %s", output_item.get("id")
+                                )
                                 # Don't create source - actual citations come from message annotations
 
                             elif item_type == "web_search_call":
                                 action = output_item.get("action", {})
-                                logger.info(f"Found web search tool call: {action.get('query')}")
+                                logger.info("Found web search tool call: %s", action.get("query"))
                                 # Don't create source - actual citations come from message annotations
 
                             # Handle message output - extract sources from annotations
@@ -648,7 +663,7 @@ class OpenAIProcessor:
                                 content = output_item.get("content", [])
                                 if content and isinstance(content, (list, tuple)):
                                     logger.debug(
-                                        f"Processing message with {len(content)} content items"
+                                        "Processing message with %s content items", len(content)
                                     )
 
                                     for _j, content_item in enumerate(content):
@@ -662,7 +677,7 @@ class OpenAIProcessor:
                                         if not annotations_list:
                                             continue
 
-                                        logger.info(f"Found {len(annotations_list)} citations")
+                                        logger.info("Found %s citations", len(annotations_list))
 
                                         for annotation in annotations_list:
                                             if not isinstance(annotation, dict):
@@ -674,7 +689,7 @@ class OpenAIProcessor:
                                             if ann_type == "url_citation":
                                                 url = annotation.get("url", "")
                                                 title = annotation.get("title", "")
-                                                logger.info(f"Found web citation: {url}")
+                                                logger.info("Found web citation: %s", url)
                                                 sources.append(
                                                     {
                                                         "type": "web_search",
@@ -692,7 +707,7 @@ class OpenAIProcessor:
                                                 file_id = annotation.get("file_id", "")
                                                 filename = annotation.get("filename", "")
                                                 index = annotation.get("index", 0)
-                                                logger.info(f"Found file citation: {filename}")
+                                                logger.info("Found file citation: %s", filename)
                                                 sources.append(
                                                     {
                                                         "type": "file_search",
@@ -702,10 +717,10 @@ class OpenAIProcessor:
                                                     }
                                                 )
 
-                logger.info(f"Source extraction complete: Found {len(sources)} sources")
+                logger.info("Source extraction complete: Found %s sources", len(sources))
 
             except Exception as e:
-                logger.error(f"Error extracting sources from response output: {e}")
+                logger.error("Error extracting sources from response output: %s", e)
                 # Continue without sources - we still have the answer text
 
             # Extract actual messages from OpenAI response output and build answer_text
@@ -786,7 +801,7 @@ class OpenAIProcessor:
                         )
 
                         logger.info(
-                            f"EXTRACTED MESSAGE ID: {message_id}, content length: {len(content)}"
+                            "EXTRACTED MESSAGE ID: %s, content length: %s", message_id, len(content)
                         )
 
             # Done after every extraction path above, and before the emptiness
@@ -814,7 +829,7 @@ class OpenAIProcessor:
             # Structure sources as a proper dict for better organization
             # Ensure sources is a list to avoid issues
             if not isinstance(sources, list):
-                logger.warning(f"Sources is not a list! Type: {type(sources)}, Value: {sources}")
+                logger.warning("Sources is not a list! Type: %s, Value: %s", type(sources), sources)
                 sources = []
 
             # Without citation markers there are no file_citation annotations:
@@ -833,12 +848,13 @@ class OpenAIProcessor:
                     and CONSULTED_LABEL.rstrip(":").lower() not in answer_text.lower()
                 ):
                     logger.warning(
-                        f"Response {response.id}: documents were searched but the "
-                        f"answer has no '{CONSULTED_LABEL}' line, no document source kept"
+                        "Response %s: documents were searched but the answer has no '%s' line, no document source kept",
+                        response.id,
+                        CONSULTED_LABEL,
                     )
                 sources.extend(consulted)
 
-            structured_sources = {
+            structured_sources: dict[str, Any] = {
                 "files": [
                     s for s in sources if isinstance(s, dict) and s.get("type") == "file_search"
                 ],
@@ -851,7 +867,9 @@ class OpenAIProcessor:
             # CRITICAL: Ensure structured_sources is always a dict
             if not isinstance(structured_sources, dict):
                 logger.error(
-                    f"structured_sources is not a dict! Type: {type(structured_sources)}, Value: {structured_sources}"
+                    "structured_sources is not a dict! Type: %s, Value: %s",
+                    type(structured_sources),
+                    structured_sources,
                 )
                 structured_sources = {"files": [], "web": [], "total_count": 0}
 
@@ -861,9 +879,12 @@ class OpenAIProcessor:
                 structured_sources = {"files": [], "web": [], "total_count": 0}
 
             logger.info(
-                f"Final sources: {structured_sources['total_count']} total ({len(structured_sources['files'])} files, {len(structured_sources['web'])} web)"
+                "Final sources: %s total (%s files, %s web)",
+                structured_sources["total_count"],
+                len(structured_sources["files"]),
+                len(structured_sources["web"]),
             )
-            logger.debug(f"Sources structure: {structured_sources}")
+            logger.debug("Sources structure: %s", structured_sources)
 
             return {
                 "answer": answer_text,
@@ -882,18 +903,17 @@ class OpenAIProcessor:
                 "full_response": response.model_dump() if hasattr(response, "model_dump") else {},
             }
 
-        except Exception as e:
-            logger.error(f"Error processing question with OpenAI API: {str(e)}")
-            logger.error(f"Error type: {type(e).__name__}")
-
-            # Log request details for debugging
+        except Exception:
+            # The error goes up as it is: the engine classifies it by its class
+            # (engine/errors.py), and logs it.
             if "request_params" in locals():
-                logger.error(f"Request model: {request_params.get('model', 'unknown')}")
-                logger.error(f"Request input length: {len(request_params.get('input', ''))}")
-                logger.error(f"Request tools count: {len(request_params.get('tools', []))}")
-
-            # Re-raise the exception with more context
-            raise RuntimeError(f"Failed to process question with OpenAI API: {str(e)}") from e
+                logger.debug(
+                    "Failed request: model %s, %s input messages, %s tools",
+                    request_params.get("model", "unknown"),
+                    len(request_params.get("input", "")),
+                    len(request_params.get("tools", [])),
+                )
+            raise
 
     def _build_system_prompt(
         self, company_info: dict[str, Any] | None = None, has_documents: bool = True
@@ -1050,7 +1070,7 @@ Format your answers like a professional analyst responding to specific due dilig
 
         response = self.client.responses.create(**request_params)
         if response is None:
-            raise RuntimeError("OpenAI API returned None response for summary")
+            raise ResponseError("OpenAI API returned None response for summary")
 
         text = getattr(response, "output_text", None)
         if text:
@@ -1061,7 +1081,7 @@ Format your answers like a professional analyst responding to specific due dilig
             response_dict = response.model_dump() if hasattr(response, "model_dump") else {}
             return self.extract_output_text(response_dict)
         except Exception as e:
-            logger.error(f"Failed to extract summary text: {e}")
+            logger.error("Failed to extract summary text: %s", e)
             return ""
 
     # === Batch API (summaries only) ==========================================
@@ -1109,7 +1129,10 @@ Format your answers like a professional analyst responding to specific due dilig
             metadata={"description": description[:512]} if description else None,
         )
         logger.info(
-            f"Submitted summary batch {batch.id} ({len(requests)} requests, status={batch.status})"
+            "Submitted summary batch %s (%s requests, status=%s)",
+            batch.id,
+            len(requests),
+            batch.status,
         )
         return {
             "batch_id": batch.id,
@@ -1140,7 +1163,7 @@ Format your answers like a professional analyst responding to specific due dilig
         through 'cancelling', which is why that status counts as pending.
         """
         batch = self.client.batches.cancel(batch_id)
-        logger.info(f"Cancel requested for summary batch {batch.id} (status={batch.status})")
+        logger.info("Cancel requested for summary batch %s (status=%s)", batch.id, batch.status)
         counts = getattr(batch, "request_counts", None)
         return {
             "batch_id": batch.id,
@@ -1169,7 +1192,7 @@ Format your answers like a professional analyst responding to specific due dilig
             try:
                 record = json.loads(line)
             except json.JSONDecodeError as e:
-                logger.error(f"Unparsable batch output line: {e}")
+                logger.error("Unparsable batch output line: %s", e)
                 continue
 
             custom_id = record.get("custom_id")
@@ -1177,13 +1200,13 @@ Format your answers like a professional analyst responding to specific due dilig
                 continue
 
             if record.get("error"):
-                logger.error(f"Batch request {custom_id} errored: {record['error']}")
+                logger.error("Batch request %s errored: %s", custom_id, record["error"])
                 continue
 
             response = record.get("response") or {}
             if response.get("status_code") != 200:
                 logger.error(
-                    f"Batch request {custom_id} returned status {response.get('status_code')}"
+                    "Batch request %s returned status %s", custom_id, response.get("status_code")
                 )
                 continue
 
@@ -1196,9 +1219,9 @@ Format your answers like a professional analyst responding to specific due dilig
     def get_vector_store_info(self, vector_store_id: str) -> dict[str, Any]:
         """Get detailed information about a vector store including expiration"""
         try:
-            logger.info(f"Retrieving vector store info for: {vector_store_id}")
+            logger.info("Retrieving vector store info for: %s", vector_store_id)
             vector_store = self.client.vector_stores.retrieve(vector_store_id)
-            logger.debug(f"Raw vector store object: {vector_store}")
+            logger.debug("Raw vector store object: %s", vector_store)
 
             # Extract expiration information safely
             expires_at = None
@@ -1217,18 +1240,16 @@ Format your answers like a professional analyst responding to specific due dilig
                         and hasattr(vector_store, "last_active_at")
                         and vector_store.last_active_at
                     ):
-                        import datetime
-
                         try:
-                            last_active = datetime.datetime.fromtimestamp(
-                                vector_store.last_active_at
+                            last_active = datetime.fromtimestamp(
+                                vector_store.last_active_at, tz=UTC
                             )
-                            expires_at = last_active + datetime.timedelta(days=expires_after_days)
+                            expires_at = last_active + timedelta(days=expires_after_days)
                         except (ValueError, OSError) as dt_error:
-                            logger.warning(f"Error calculating expires_at: {dt_error}")
+                            logger.warning("Error calculating expires_at: %s", dt_error)
             except Exception as exp_error:
                 logger.warning(
-                    f"Error processing expiration info for {vector_store_id}: {exp_error}"
+                    "Error processing expiration info for %s: %s", vector_store_id, exp_error
                 )
 
             # Handle file_counts safely - it can be an object or dict
@@ -1236,7 +1257,7 @@ Format your answers like a professional analyst responding to specific due dilig
             try:
                 file_counts_obj = getattr(vector_store, "file_counts", None)
                 logger.debug(
-                    f"File counts object: {file_counts_obj} (type: {type(file_counts_obj)})"
+                    "File counts object: %s (type: %s)", file_counts_obj, type(file_counts_obj)
                 )
 
                 if file_counts_obj:
@@ -1268,7 +1289,7 @@ Format your answers like a professional analyst responding to specific due dilig
                             )
             except Exception as file_count_error:
                 logger.warning(
-                    f"Error processing file_counts for {vector_store_id}: {file_count_error}"
+                    "Error processing file_counts for %s: %s", vector_store_id, file_count_error
                 )
                 file_counts_dict = {"total": 0}
 
@@ -1285,12 +1306,12 @@ Format your answers like a professional analyst responding to specific due dilig
                 "created_at": getattr(vector_store, "created_at", None),
             }
 
-            logger.debug(f"Processed vector store info for {vector_store_id}: {result}")
+            logger.debug("Processed vector store info for %s: %s", vector_store_id, result)
             return result
 
         except Exception as e:
-            logger.error(f"Error retrieving vector store info for {vector_store_id}: {e}")
-            logger.error(f"Exception type: {type(e)}")
+            logger.error("Error retrieving vector store info for %s: %s", vector_store_id, e)
+            logger.error("Exception type: %s", type(e))
             raise
 
     def update_vector_store_name(self, vector_store_id: str, name: str) -> bool:
@@ -1299,7 +1320,7 @@ Format your answers like a professional analyst responding to specific due dilig
             self.client.vector_stores.update(vector_store_id, name=name)
             return True
         except Exception as e:
-            logger.error(f"Error updating vector store name: {e}")
+            logger.error("Error updating vector store name: %s", e)
             raise
 
     def list_vector_store_files(self, vector_store_id: str) -> list[dict[str, Any]]:
@@ -1323,7 +1344,7 @@ Format your answers like a professional analyst responding to specific due dilig
                         else None,
                     }
                 except Exception as file_error:
-                    logger.warning(f"Could not get details for file {file_obj.id}: {file_error}")
+                    logger.warning("Could not get details for file %s: %s", file_obj.id, file_error)
                     return {
                         "id": file_obj.id,
                         "filename": f"File {file_obj.id}",
@@ -1338,7 +1359,7 @@ Format your answers like a professional analyst responding to specific due dilig
             with ThreadPoolExecutor(max_workers=8) as pool:
                 return list(pool.map(fetch_file_details, files.data))
         except Exception as e:
-            logger.error(f"Error listing vector store files: {e}")
+            logger.error("Error listing vector store files: %s", e)
             raise
 
     def remove_file_from_vector_store(self, vector_store_id: str, file_id: str) -> bool:
@@ -1347,7 +1368,7 @@ Format your answers like a professional analyst responding to specific due dilig
             self.client.vector_stores.files.delete(vector_store_id=vector_store_id, file_id=file_id)
             return True
         except Exception as e:
-            logger.error(f"Error removing file from vector store: {e}")
+            logger.error("Error removing file from vector store: %s", e)
             raise
 
     def delete_vector_store(self, vector_store_id: str) -> bool:
@@ -1356,7 +1377,7 @@ Format your answers like a professional analyst responding to specific due dilig
             self.client.vector_stores.delete(vector_store_id)
             return True
         except Exception as e:
-            logger.error(f"Error deleting vector store: {e}")
+            logger.error("Error deleting vector store: %s", e)
             raise
 
     def delete_file(self, file_id: str) -> bool:
@@ -1365,7 +1386,7 @@ Format your answers like a professional analyst responding to specific due dilig
             self.client.files.delete(file_id)
             return True
         except Exception as e:
-            logger.error(f"Error deleting file: {e}")
+            logger.error("Error deleting file: %s", e)
             raise
 
     def get_file(self, file_id: str) -> dict[str, Any]:
@@ -1383,5 +1404,5 @@ Format your answers like a professional analyst responding to specific due dilig
                 "status": getattr(file_obj, "status", "unknown"),
             }
         except Exception as e:
-            logger.error(f"Error retrieving file {file_id}: {e}")
+            logger.error("Error retrieving file %s: %s", file_id, e)
             raise

@@ -1,0 +1,122 @@
+{
+  "gpt-4o": {
+    "model": "gpt-4o",
+    "input": [
+      {
+        "role": "system",
+        "content": [
+          {
+            "type": "input_text",
+            "text": "You are a due diligence expert analyzing company information and documents.\n\nFUND UNDER REVIEW: Example Asia Fund (https://example.com)\nMANAGEMENT COMPANY: Example Fund Management\nOverview: A fictitious long-only Asian equity fund.\n\nScope rule: questions marked 'Level: Fund' are about Example Asia Fund itself (its prospectus, share classes, performance, portfolio). Questions marked 'Level: Management Company' are about Example Fund Management as a firm (its teams, governance, processes, resources). When a question carries no marker, infer the level from its wording. Search and cite accordingly: never answer about one entity when the question is about the other, and never assume the two share a name.\n\nResearch rule -- for EVERY question, use BOTH research tools before answering, to gather as much information as possible and give the most relevant answer. They are complementary and neither is enough on its own:\n- Search the provided documents (file_search). The fund's own materials -- prospectus, factsheets, presentations, DDQ -- are the primary source for facts about the fund.\n- Search the web (web_search). Regulator registries, exchange filings, press coverage and the manager's website corroborate the documents and cover what they do not describe, in particular the management company's public footprint.\nCombine what both return. When a question says where to look, start there, but still check the other source. Say which source supports each key fact, and flag any contradiction between the documents and public sources.\n\nCitation format -- the document search tool's citation markers must NOT appear anywhere in your answer. Name documents in plain words in the text instead (for example: \"the Private Placement Memorandum states...\"). End the answer with one last line \"Documents consulted:\" followed by the exact file names of the documents you relied on, as they appear in the search results, separated by semicolons; write \"Documents consulted: none\" if no document supported the answer. Web sources keep their usual links.\n\nYour task is to provide accurate, detailed answers to due diligence questions based on the provided documents and context.\n\nGuidelines:\n- Be thorough and analytical in your responses\n- Cite specific sources when possible\n- If information is not available, clearly state this\n- Provide confidence levels where appropriate\n- Focus on factual, objective analysis\n- Consider regulatory and compliance implications\n\nCRITICAL Formatting Requirements:\nFormat your answers like a professional analyst responding to specific due diligence questions.\n"
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "input_text",
+            "text": "[Section: Investment strategy]\nHow the fund invests, and within which limits.\n\nWhat is the fund's investment strategy?\n\nWhere to look: Prospectus, section 3; latest factsheet."
+          }
+        ]
+      }
+    ],
+    "store": true,
+    "truncation": "auto",
+    "include": [
+      "file_search_call.results",
+      "web_search_call.action.sources"
+    ],
+    "temperature": 0.1,
+    "max_output_tokens": 4000,
+    "tools": [
+      {
+        "type": "file_search",
+        "vector_store_ids": [
+          "vs_example"
+        ],
+        "max_num_results": 20,
+        "ranking_options": {
+          "ranker": "auto",
+          "score_threshold": 0.2
+        }
+      },
+      {
+        "type": "web_search_preview",
+        "user_location": {
+          "type": "approximate"
+        },
+        "search_context_size": "medium"
+      }
+    ],
+    "tool_choice": {
+      "type": "web_search_preview"
+    },
+    "previous_response_id": "resp_previous"
+  },
+  "gpt-5": {
+    "model": "gpt-5",
+    "input": [
+      {
+        "role": "system",
+        "content": [
+          {
+            "type": "input_text",
+            "text": "You are a due diligence expert analyzing company information and documents.\n\nFUND UNDER REVIEW: Example Asia Fund (https://example.com)\nMANAGEMENT COMPANY: Example Fund Management\nOverview: A fictitious long-only Asian equity fund.\n\nScope rule: questions marked 'Level: Fund' are about Example Asia Fund itself (its prospectus, share classes, performance, portfolio). Questions marked 'Level: Management Company' are about Example Fund Management as a firm (its teams, governance, processes, resources). When a question carries no marker, infer the level from its wording. Search and cite accordingly: never answer about one entity when the question is about the other, and never assume the two share a name.\n\nResearch rule -- for EVERY question, use BOTH research tools before answering, to gather as much information as possible and give the most relevant answer. They are complementary and neither is enough on its own:\n- Search the provided documents (file_search). The fund's own materials -- prospectus, factsheets, presentations, DDQ -- are the primary source for facts about the fund.\n- Search the web (web_search). Regulator registries, exchange filings, press coverage and the manager's website corroborate the documents and cover what they do not describe, in particular the management company's public footprint.\nCombine what both return. When a question says where to look, start there, but still check the other source. Say which source supports each key fact, and flag any contradiction between the documents and public sources.\n\nCitation format -- the document search tool's citation markers must NOT appear anywhere in your answer. Name documents in plain words in the text instead (for example: \"the Private Placement Memorandum states...\"). End the answer with one last line \"Documents consulted:\" followed by the exact file names of the documents you relied on, as they appear in the search results, separated by semicolons; write \"Documents consulted: none\" if no document supported the answer. Web sources keep their usual links.\n\nYour task is to provide accurate, detailed answers to due diligence questions based on the provided documents and context.\n\nGuidelines:\n- Be thorough and analytical in your responses\n- Cite specific sources when possible\n- If information is not available, clearly state this\n- Provide confidence levels where appropriate\n- Focus on factual, objective analysis\n- Consider regulatory and compliance implications\n\nCRITICAL Formatting Requirements:\nFormat your answers like a professional analyst responding to specific due diligence questions.\n"
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "input_text",
+            "text": "[Section: Investment strategy]\nHow the fund invests, and within which limits.\n\nWhat is the fund's investment strategy?\n\nWhere to look: Prospectus, section 3; latest factsheet."
+          }
+        ]
+      }
+    ],
+    "store": true,
+    "truncation": "auto",
+    "include": [
+      "file_search_call.results",
+      "web_search_call.action.sources"
+    ],
+    "max_output_tokens": 25000,
+    "reasoning": {
+      "effort": "low"
+    },
+    "extra_body": {
+      "context_management": [
+        {
+          "type": "compaction",
+          "compact_threshold": 200000
+        }
+      ]
+    },
+    "tools": [
+      {
+        "type": "file_search",
+        "vector_store_ids": [
+          "vs_example"
+        ],
+        "max_num_results": 20,
+        "ranking_options": {
+          "ranker": "auto",
+          "score_threshold": 0.2
+        }
+      },
+      {
+        "type": "web_search",
+        "user_location": {
+          "type": "approximate"
+        },
+        "search_context_size": "medium"
+      }
+    ],
+    "tool_choice": {
+      "type": "web_search"
+    },
+    "previous_response_id": "resp_previous"
+  }
+}

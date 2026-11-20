@@ -434,7 +434,7 @@ def regenerate_answer(
         client.wait_for_file_indexed(store_id, file_id, timeout=30)
         extra_source = {"type": "file_search", "file_id": file_id, "filename": filename}
 
-    processor = DDProcessor(answer.session_id, dd_type.code)
+    processor = DDProcessor(stored_id(execution), dd_type.id, dd_type.code)
     return processor.regenerate_single_answer(
         db,
         answer,

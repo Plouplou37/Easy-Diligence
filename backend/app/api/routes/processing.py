@@ -12,6 +12,7 @@ from app.core.database import get_db
 from app.engine.processor import DDProcessor
 from app.models.base import stored_id
 from app.models.dd_types import DDType
+from app.models.execution import DDExecution
 from app.models.session import DDSession
 from app.services import processing
 
@@ -25,10 +26,11 @@ def _schedule(
     db: Session,
     session: DDSession,
     dd_type: DDType,
+    execution: DDExecution,
     resume: bool,
 ) -> None:
     context = processing.run_context(db, session, dd_type)
-    processor = DDProcessor(stored_id(session), dd_type.code)
+    processor = DDProcessor(stored_id(execution), stored_id(dd_type), dd_type.code)
     run = processor.resume_processing if resume else processor.start_processing
     background_tasks.add_task(
         processing.run_in_background,
@@ -49,7 +51,7 @@ def start_dd_processing(
 ):
     """Start answering every question of a DD type."""
     execution = processing.start(db, session, dd_type)
-    _schedule(background_tasks, db, session, dd_type, resume=False)
+    _schedule(background_tasks, db, session, dd_type, execution, resume=False)
     return {
         "message": f"Started {dd_type.code} processing",
         "session_id": session.id,
@@ -82,7 +84,7 @@ def resume_dd_processing(
 ):
     """Go on with a run: unanswered and failed questions, same conversation."""
     execution = processing.resume(db, session, dd_type)
-    _schedule(background_tasks, db, session, dd_type, resume=True)
+    _schedule(background_tasks, db, session, dd_type, execution, resume=True)
     return {
         "message": f"Resumed {dd_type.code} processing",
         "session_id": session.id,

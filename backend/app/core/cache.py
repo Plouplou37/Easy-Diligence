@@ -83,7 +83,7 @@ class CacheService:
             self.memory_cache = None
             logger.info("Redis cache enabled")
         except (redis.RedisError, ConnectionError, AttributeError) as e:
-            logger.warning(f"Redis not available, using in-memory cache fallback: {e}")
+            logger.warning("Redis not available, using in-memory cache fallback: %s", e)
             self.redis_client = None
             self.redis_available = False
             self.memory_cache = InMemoryCache()
@@ -98,7 +98,7 @@ class CacheService:
                     return json.loads(cached_data)
                 return None
             except (redis.RedisError, json.JSONDecodeError) as e:
-                logger.error(f"Cache get error: {e}")
+                logger.error("Cache get error: %s", e)
                 return None
         elif self.memory_cache:
             return self.memory_cache.get(key)
@@ -113,7 +113,7 @@ class CacheService:
                 serialized_value = json.dumps(value, default=str)
                 return self.redis_client.setex(key, ttl, serialized_value)
             except (redis.RedisError, json.JSONDecodeError, ValueError) as e:
-                logger.error(f"Cache set error: {e}")
+                logger.error("Cache set error: %s", e)
                 return False
         elif self.memory_cache:
             return self.memory_cache.set(key, value, ttl)
@@ -125,7 +125,7 @@ class CacheService:
             try:
                 return bool(self.redis_client.delete(key))
             except redis.RedisError as e:
-                logger.error(f"Cache delete error: {e}")
+                logger.error("Cache delete error: %s", e)
                 return False
         elif self.memory_cache:
             return self.memory_cache.delete(key)
@@ -140,7 +140,7 @@ class CacheService:
                     return self.redis_client.delete(*keys)
                 return 0
             except redis.RedisError as e:
-                logger.error(f"Cache delete pattern error: {e}")
+                logger.error("Cache delete pattern error: %s", e)
                 return 0
         elif self.memory_cache:
             return self.memory_cache.delete_pattern(pattern)
@@ -152,7 +152,7 @@ class CacheService:
             try:
                 return self.redis_client.flushdb()
             except redis.RedisError as e:
-                logger.error(f"Cache flush error: {e}")
+                logger.error("Cache flush error: %s", e)
                 return False
         elif self.memory_cache:
             return self.memory_cache.flush_all()

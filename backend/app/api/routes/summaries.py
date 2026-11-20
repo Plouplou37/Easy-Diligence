@@ -9,7 +9,6 @@ event loop of its own, on the worker thread, so those calls block that thread
 and not the server (they used to block it, every 15 s while a batch ran).
 """
 
-import asyncio
 from typing import Any
 
 from fastapi import APIRouter, Depends
@@ -62,7 +61,7 @@ def generate_summaries(
     db: Session = Depends(get_db),
 ):
     """Write the section summaries and the DD type synthesis now."""
-    summaries = asyncio.run(generate_summaries_for_dd_type(db, session, dd_type.code))
+    summaries = generate_summaries_for_dd_type(db, session, dd_type.code)
     return [summaries_service.to_response(s) for s in summaries]
 
 
@@ -96,7 +95,7 @@ def get_summary_batch_status(
     Polled by the page. Collecting here rather than in a background task is on
     purpose: a batch runs for up to 24 h, longer than a process is sure to live.
     """
-    row, info = asyncio.run(collect_section_summaries_batch(db, session, dd_type.code))
+    row, info = collect_section_summaries_batch(db, session, dd_type.code)
     return _batch_response(row, info)
 
 

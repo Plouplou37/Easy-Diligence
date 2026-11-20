@@ -200,9 +200,64 @@ du frontend. Pour installer et lancer l'application, voir le
 
 ## Le moteur de réponses
 
-`engine/processor.py` (`DDProcessor`) orchestre un traitement : `start_processing`,
-`resume_processing` et `_process_single_question`. `engine/openai_client.py`
-(`OpenAIProcessor.process_question`) fait l'appel à OpenAI.
+`engine/processor.py` (`DDProcessor`) orchestre un traitement : `start_processing`
+et `resume_processing` passent par la même boucle (`_run`), la reprise ne
+faisant que choisir les questions. `engine/openai_client.py`
+(`OpenAIProcessor.process_question`) fait l'appel à OpenAI. `engine/errors.py`
+classe les erreurs, et `engine/answers.new_answer` crée une ligne de réponse.
+Le service crée l'exécution et la passe `in_progress`
+(`services/processing.py`) ; le moteur reçoit son identifiant, celui du type
+de DD et son code.
+
+### Une transaction par question
+
+- L'appel à OpenAI se fait **hors de toute transaction**. Le moteur termine sa
+  lecture avant l'appel, et aucune transaction ne reste ouverte pendant les
+  15 secondes qu'il dure.
+- Ensuite, **une seule transaction** écrit tout ce que la question a produit :
+  la réponse brute (`DDResponse`) et ses messages, l'ancienne réponse mise de
+  côté (`is_current = false`), la nouvelle réponse et la première version de
+  son historique. Un seul commit, et un rollback en cas d'erreur : un échec
+  entre l'appel et l'écriture laisse la question telle qu'elle était.
+- Même règle pour un échec (la réponse en échec remplace la courante) et pour
+  une régénération (la nouvelle version, sa ligne d'historique, la réponse
+  brute).
+
+### Erreurs et relances
+
+- **Le classement suit la classe de l'exception** levée par le SDK `openai`,
+  jamais son texte (`errors.classify`) :
+
+  | Exception | Type | Relancée |
+  | --- | --- | --- |
+  | `RateLimitError` | `rate_limit` | oui |
+  | `APITimeoutError` | `timeout` | oui |
+  | `APIConnectionError` | `network_error` | oui |
+  | `BadRequestError` (`context_length_exceeded`) | `context_overflow` | non |
+  | autre `BadRequestError`, `UnprocessableEntityError` | `validation_error` | non |
+  | `AuthenticationError`, `PermissionDeniedError` | `api_error` | non |
+  | `InternalServerError`, autre erreur 5xx | `api_error` | oui |
+  | `ResponseError` (réponse vide ou incomplète) | `api_error` | oui |
+  | le reste | `unknown` | oui |
+
+- **Une seule politique de relance, celle du moteur** : le SDK est créé avec
+  `max_retries=0`. Le moteur fait au plus 3 appels par question
+  (`MAX_ATTEMPTS`). Il attend le délai qu'OpenAI demande (`Retry-After`),
+  sinon un backoff exponentiel selon le type, plafonné à 60 s. `retry_count`
+  compte les vraies relances. Avant, le SDK relançait lui aussi deux fois sous
+  chaque essai, soit jusqu'à neuf appels pour une question.
+- **Disjoncteur** : une erreur globale (`rate_limit`, `network_error`,
+  `api_error`), que toutes les questions rencontreraient, arrête le traitement
+  dès la première (`CIRCUIT_BREAKER_THRESHOLD = 1`). Le traitement finit
+  `failed`, et « Resume » repart de là.
+- **L'utilisateur ne lit jamais le texte d'OpenAI** : `error_message` reçoit
+  un message écrit pour lui, déduit du type (`errors.MESSAGES`), et
+  `/session/{id}/status` le renvoie dans `last_error`. Le détail technique
+  ne va que dans les journaux (`logger.exception`).
+- **Statut final**, décidé à un seul endroit (`_final_status`) : interrompu
+  par une pause, le traitement reste `paused` ; avec au moins une question en
+  échec, il finit `failed` ; sinon `generated`. Une erreur du traitement
+  lui-même (et non d'une question) le termine `failed`.
 
 ### Un appel, deux outils
 
@@ -323,7 +378,7 @@ cassé.
 - **Limitation de débit** (`engine/rate_limiter.py`) : toutes les pauses sont
   désactivées par défaut. Les quotas d'un compte OpenAI courant sont très
   au-dessus de ce qu'un traitement consomme, et les erreurs 429 sont couvertes
-  par le backoff exponentiel et le disjoncteur de `DDProcessor`. Les variables
+  par les relances et le disjoncteur du moteur (« Erreurs et relances »). Les variables
   `INTER_QUESTION_DELAY_SECONDS`, `BATCH_SLEEP_MINUTES` et
   `HIGH_TOKEN_SLEEP_SECONDS` restent comme soupape.
 - **Durée.** Compter environ 15 secondes par question.
@@ -332,8 +387,14 @@ cassé.
 
 - **Pause** : passe `execution.status` à `paused`. La boucle le vérifie **entre
   deux questions**, l'arrêt n'est donc pas instantané.
-- **Reprise** : conserve le `conversation_id`, saute les réponses déjà faites et
-  retente celles qui ont échoué.
+- **Reprise** : conserve le `conversation_id`, saute les questions dont la
+  réponse courante est bonne et retente les autres (sans réponse, ou en
+  échec).
+- Le moteur ne remet pas lui-même le statut à `in_progress` : c'est le service
+  qui le fait. Une pause cliquée avant que la tâche de fond démarre n'est donc
+  plus écrasée. En fin de traitement, le statut final ne s'écrit que si le
+  traitement est encore `in_progress` : une pause arrivée après la dernière
+  question reste.
 - **Un changement de statut est un seul `UPDATE` conditionnel**
   (`services/processing._switch`) : `… WHERE id = … AND status IN (…)`, et le
   nombre de lignes touchées dit qui l'a emporté. Deux clics, ou deux onglets,
@@ -461,13 +522,18 @@ Les fonctions communes sont dans **`services/authz.py`** : `user_is_admin`,
 `POST /answers/{id}/regenerate` (`api/routes/answers.py`,
 `DDProcessor.regenerate_single_answer`) crée une nouvelle version au statut
 `needs_review`. Le contexte envoyé au modèle comprend les réponses précédentes.
-Le bouton se trouve sur chaque réponse (`AnswerCard`).
+Le bouton se trouve sur chaque réponse (`AnswerCard`). Si OpenAI échoue
+malgré les relances, la requête répond par le message écrit pour
+l'utilisateur (`ExternalServiceError`), et la réponse reste telle quelle.
 
 ### Synthèses
 
 `engine/summarizer.py` rédige d'abord un résumé par section, en parallèle, puis
 une synthèse par type de DD (3 à 4 pages) à partir de ces résumés. Ce sont des
-appels de rédaction pure, sans outils. Le stockage est dans `dd_summaries` et
+appels de rédaction pure, sans outils. Le module est synchrone : seuls les
+appels à OpenAI des résumés de section partent en parallèle, dans un
+`ThreadPoolExecutor` (8 au plus). Les écritures en base restent dans le
+thread de la requête, et les routes restent en `def`. Le stockage est dans `dd_summaries` et
 l'API dans `api/routes/summaries.py` :
 - `POST /summaries/session/{id}/dd/{ddType}/generate` ;
 - `GET /summaries/session/{id}` ;

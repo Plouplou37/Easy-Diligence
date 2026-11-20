@@ -15,7 +15,10 @@ Guide court pour un agent qui travaille sur Easy Diligence. Le reste est dans :
     `deps.py` (dépendances communes) ;
   - `core/` : le transverse (config, database, sécurité, cache, e-mail) ;
   - `engine/` : le moteur de réponses (`openai_client.py`, `processor.py`,
-    `summarizer.py`) ;
+    `summarizer.py`, `errors.py` pour le classement des erreurs, `answers.py`
+    pour la création d'une réponse). Les prompts et les paramètres envoyés à
+    OpenAI sont figés par `tests/test_question_request.py` : un changement
+    voulu réécrit `tests/data/question_request.json` ;
   - `services/` : la logique métier et les accès à la base (sessions, réponses,
     traitement, vector stores, droits, authentification, import). Une route lit
     la requête, appelle un service et répond ;
@@ -94,10 +97,10 @@ npm run format:check   # npm run format pour corriger
 - La CI lance aussi `pytest` une seconde fois, sur PostgreSQL, avec les tests
   marqués `postgres` (sautés en local). Un échec y apparaît en annotation de
   la pull request.
-- Ruff et mypy passent sur tout le backend. **Ne pas ajouter de `# noqa`**, ni
-  de module dans la liste `ignore_errors` de mypy (`pyproject.toml`) : ces
-  exceptions marquent l'ancien code, et chacune disparaît quand son module est
-  repris.
+- Ruff et mypy passent sur tout le backend, moteur compris. **Ne pas ajouter de
+  `# noqa`**, ni de `# type: ignore`, ni de section `ignore_errors` à mypy
+  (`pyproject.toml`). Les journaux passent leurs valeurs en arguments
+  (`logger.info("… %s", x)`), jamais en f-string : ruff le vérifie (`G004`).
 - `npm run lint` passe sans aucun avertissement (`--max-warnings 0`), et la CI
   le vérifie. Pas de `eslint-disable` : corriger le code.
 - **Frontend** : une confirmation passe par `useConfirm()`, une fenêtre par
