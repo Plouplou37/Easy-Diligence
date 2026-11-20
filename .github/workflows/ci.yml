@@ -121,3 +121,53 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  # The whole application as docker compose runs it: the four images built,
+  # started, and used through the proxy. Throwaway settings of this CI only.
+  docker:
+    runs-on: ubuntu-24.04
+    env:
+      ADMIN_PASSWORD: Ci-Throwaway-Passw0rd
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Configuration
+        run: |
+          cp .env.template .env
+          sed -i "s/^POSTGRES_PASSWORD=$/POSTGRES_PASSWORD=ci-throwaway/" .env
+          sed -i "s/^OPENAI_API_KEY=$/OPENAI_API_KEY=sk-test-not-a-real-key/" .env
+          sed -i "s/^JWT_SECRET_KEY=$/JWT_SECRET_KEY=$(openssl rand -hex 32)/" .env
+
+      - name: Build and start
+        run: docker compose up -d --build --wait --wait-timeout 180
+
+      - name: The application, through the proxy
+        run: |
+          curl -fsS http://localhost:8080/ | grep -q 'id="root"'
+          # A route of the application, not a file: index.html all the same.
+          curl -fsS http://localhost:8080/session/EXAMPLE | grep -q 'id="root"'
+          headers=$(curl -fsS -D - -o /dev/null http://localhost:8080/)
+          echo "$headers" | grep -qi '^x-content-type-options: nosniff'
+          echo "$headers" | grep -qi '^x-frame-options: deny'
+
+      - name: The API, through the proxy
+        run: |
+          status=$(curl -s -o /dev/null -w '%{http_code}' -X POST http://localhost:8080/api/auth/login \
+            -H 'Content-Type: application/json' -d '{"email":"nobody@example.com","password":"x"}')
+          test "$status" = 401
+
+      - name: First administrator, then a login
+        run: |
+          printf '%s\n%s\n' "$ADMIN_PASSWORD" "$ADMIN_PASSWORD" \
+            | docker compose exec -T backend python -m app.cli create-admin admin@example.com "Admin Example"
+          curl -fsS -X POST http://localhost:8080/api/auth/login \
+            -H 'Content-Type: application/json' \
+            -d "{\"email\":\"admin@example.com\",\"password\":\"$ADMIN_PASSWORD\"}" | grep -q access_token
+
+      - name: Logs
+        if: failure()
+        run: docker compose logs
+
+      - name: Stop
+        if: always()
+        run: docker compose down -v

@@ -2,6 +2,27 @@
 
 ## Non publié
 
+### Docker Compose
+
+- **L'application se lance avec Docker** : `cp .env.template .env`, remplir
+  trois valeurs, puis `docker compose up -d --build`. Il ne faut plus installer
+  ni Python, ni Node, ni PostgreSQL.
+- Quatre services : un **proxy** nginx, seul point d'entrée (port 8080), devant
+  le **frontend** (fichiers statiques), le **backend** (qui applique les
+  migrations à chaque démarrage) et **PostgreSQL 17**. La base et le backend
+  ne sont pas joignables depuis la machine.
+- Le proxy porte les règles du trafic : 110 Mo par envoi, 10 minutes pour les
+  appels qui attendent OpenAI, en-têtes de sécurité. L'adresse du client qu'il
+  transmet ne peut pas être choisie par le client : les limites de connexion
+  par adresse IP tiennent.
+- Le README décrit le premier démarrage, la création du premier
+  administrateur, les journaux, la mise à jour, la sauvegarde et la
+  restauration de la base, l'accès à la base depuis la machine et la bannière
+  des PDF.
+- Les versions des images sont figées (`VERSION.md`).
+- La CI démarre toute l'application à chaque pull request et s'en sert à
+  travers le proxy, jusqu'à créer un administrateur et se connecter.
+
 ### Moteur de réponses repris
 
 - **Une question en échec affiche un message écrit pour l'utilisateur**, au
