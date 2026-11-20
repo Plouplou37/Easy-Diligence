@@ -36,7 +36,7 @@ def list_summaries(
     query = db.query(DDSummary).filter(col(DDSummary.session_id) == session.id)
     if dd_type:
         query = query.filter(col(DDSummary.dd_type_id) == get_dd_type_by_code(db, dd_type, user).id)
-    return query.all()
+    return query.order_by(col(DDSummary.id)).all()
 
 
 def edit_summary(db: Session, summary_id: int, text: str, user: User) -> DDSummary:

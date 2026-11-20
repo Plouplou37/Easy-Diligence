@@ -1,6 +1,7 @@
 """Companies under review: the fund, and the company that manages it."""
 
 from sqlalchemy.orm import Session
+from sqlmodel import col
 
 from app.core.exceptions import NotFoundError
 from app.models.base import stored_id
@@ -15,7 +16,8 @@ from app.services.authz import (
 
 def list_companies(db: Session, user: User, skip: int = 0, limit: int = 100) -> list[Company]:
     """The companies the user may see: theirs and the shared ones (an admin's: all)."""
-    return filter_companies_for_user(db.query(Company), user).offset(skip).limit(limit).all()
+    query = filter_companies_for_user(db.query(Company), user).order_by(col(Company.id))
+    return query.offset(skip).limit(limit).all()
 
 
 def get_company(db: Session, company_id: int, user: User) -> Company:

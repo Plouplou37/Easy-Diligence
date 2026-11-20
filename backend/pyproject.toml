@@ -152,6 +152,7 @@ markers = [
     "api: API tests",
     "auth: authentication tests",
     "db: tests that need a database",
+    "postgres: checks only PostgreSQL can show; skipped on SQLite (TEST_POSTGRES_URL)",
 ]
 # Test settings, set by pytest-env before anything is imported. Environment
 # variables win over backend/.env, so a test can never reach a real database

@@ -14,9 +14,9 @@ jobs:
     defaults:
       run:
         working-directory: backend
-    # A real PostgreSQL for the migrations: the tests run on SQLite, and nothing
-    # else checks what is PostgreSQL's own (JSONB, partial indexes, NULLS NOT
-    # DISTINCT, CHECK constraints). Throwaway credentials of this CI only.
+    # A real PostgreSQL, for the migrations and a second run of the tests:
+    # SQLite does not check what is PostgreSQL's own (JSONB, partial indexes,
+    # CHECK constraints, time zones). Throwaway credentials of this CI only.
     services:
       postgres:
         image: postgres:17
@@ -53,7 +53,7 @@ jobs:
       - name: Types
         run: uv run mypy app
 
-      - name: Tests
+      - name: Tests (SQLite)
         run: uv run pytest
 
       # DATABASE_URL is set for these steps only: the tests keep their SQLite
@@ -82,6 +82,15 @@ jobs:
         run: |
           uv run alembic upgrade head --sql > "$RUNNER_TEMP/schema.sql"
           diff -u db/schema.sql "$RUNNER_TEMP/schema.sql"
+
+      # The whole suite again, on the schema the migrations build, plus the
+      # tests marked `postgres`. TEST_POSTGRES_URL is read by tests/conftest.py
+      # only, which refuses any host but this machine: the tests empty every
+      # table.
+      - name: Tests (PostgreSQL)
+        env:
+          TEST_POSTGRES_URL: postgresql+psycopg://ci:ci@localhost:5432/easy_diligence_ci
+        run: uv run pytest
 
       - name: Known vulnerabilities
         run: uv run pip-audit --skip-editable

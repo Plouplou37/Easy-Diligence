@@ -267,6 +267,7 @@ def list_assignments(db: Session, session: DDSession) -> list[dict[str, Any]]:
         .join(VectorStore, col(SessionVectorStore.vector_store_id) == col(VectorStore.id))
         .outerjoin(DDType, col(SessionVectorStore.dd_type_id) == col(DDType.id))
         .filter(col(SessionVectorStore.session_id) == session.id)
+        .order_by(col(SessionVectorStore.id))
         .all()
     )
     return [

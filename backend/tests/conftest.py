@@ -4,14 +4,22 @@ Every test gets its own in-memory SQLite database. The API client, the engine
 and the background tasks all run on it, and OpenAI is replaced by fakes. The
 settings come from pyproject.toml (pytest-env): no test can reach a real
 database or a real OpenAI key.
+
+The one exception is the CI's: with TEST_POSTGRES_URL set, which only the CI
+does, the suite runs on its throwaway PostgreSQL instead (see `engine`).
 """
 
 import itertools
+import os
+from pathlib import Path
 
 import pytest
+from alembic import command
+from alembic.config import Config
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy import Engine, create_engine, event, text
+from sqlalchemy.engine import make_url
+from sqlalchemy.orm import Session, close_all_sessions, sessionmaker
 from sqlalchemy.pool import StaticPool
 from sqlmodel import SQLModel
 
@@ -37,9 +45,92 @@ _sequence = itertools.count(1)
 
 # --- Database ---------------------------------------------------------------
 
+# Set by the CI only (.github/workflows/ci.yml), never in backend/.env: this
+# file reads it, the application does not.
+TEST_POSTGRES_URL = os.environ.get("TEST_POSTGRES_URL")
+# The tests empty every table: only a database on this machine will do.
+LOCAL_HOSTS = ("localhost", "127.0.0.1")
+BACKEND = Path(__file__).resolve().parents[1]
+
+
+def pytest_configure(config):
+    if TEST_POSTGRES_URL:
+        url = make_url(TEST_POSTGRES_URL)
+        if url.get_backend_name() != "postgresql" or url.host not in LOCAL_HOSTS:
+            raise pytest.UsageError(
+                "TEST_POSTGRES_URL must be a PostgreSQL on localhost or 127.0.0.1: "
+                "the tests empty every table of that database."
+            )
+
+
+def pytest_collection_modifyitems(config, items):
+    """Tests marked `postgres` check what only PostgreSQL has: skipped on SQLite."""
+    if TEST_POSTGRES_URL:
+        return
+    skip = pytest.mark.skip(reason="PostgreSQL only (TEST_POSTGRES_URL)")
+    for item in items:
+        if "postgres" in item.keywords:
+            item.add_marker(skip)
+
+
+def pytest_terminal_summary(terminalreporter):
+    """On GitHub Actions, each failure is also an annotation of the run: shown
+    on the pull request, and readable without the log."""
+    if os.environ.get("GITHUB_ACTIONS") != "true":
+        return
+
+    def escape(value: str, *, in_property: bool = False) -> str:
+        value = value.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+        return value.replace(":", "%3A").replace(",", "%2C") if in_property else value
+
+    database = "postgresql" if TEST_POSTGRES_URL else "sqlite"
+    stats = terminalreporter.stats
+    for report in stats.get("failed", []) + stats.get("error", []):
+        nodeid = getattr(report, "nodeid", "") or "collection"
+        path, line, name = getattr(report, "location", None) or (nodeid, None, nodeid)
+        path = path.replace("\\", "/")
+        detail = "\n".join(report.longreprtext.strip().splitlines()[-40:])
+        terminalreporter.write_line(
+            f"::error file={escape(f'backend/{path}', in_property=True)},"
+            f"line={(line or 0) + 1},"
+            f"title={escape(f'{name} ({database})', in_property=True)}::{escape(detail)}"
+        )
+
+
+@pytest.fixture(scope="session")
+def postgres_engine():
+    """The CI's PostgreSQL, its schema built by the migrations, not by
+    create_all: the tests then run on the schema production gets."""
+    engine = create_engine(
+        TEST_POSTGRES_URL,
+        # A test waiting on a lock fails, rather than hanging the CI.
+        connect_args={"options": "-c lock_timeout=10s -c statement_timeout=60s"},
+    )
+    config = Config()
+    config.set_main_option("script_location", str(BACKEND / "alembic"))
+    with engine.begin() as connection:
+        config.attributes["connection"] = connection
+        command.upgrade(config, "head")
+    yield engine
+    engine.dispose()
+
+
+def _empty(engine: Engine) -> None:
+    close_all_sessions()  # a session left open would hold its locks
+    tables = ", ".join(table.name for table in SQLModel.metadata.sorted_tables)
+    with engine.begin() as connection:
+        connection.execute(text(f"TRUNCATE {tables} RESTART IDENTITY CASCADE"))
+
 
 @pytest.fixture
-def engine():
+def engine(request):
+    if TEST_POSTGRES_URL:
+        engine = request.getfixturevalue("postgres_engine")
+        _empty(engine)  # each test starts from empty tables, ids from 1
+        yield engine
+        close_all_sessions()
+        return
+
     engine = create_engine(
         "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
     )
