@@ -4,6 +4,8 @@ OpenAI is replaced by FakeEngine. The background task runs inside the request
 (the test client waits for it), on the test database.
 """
 
+import httpx
+import openai
 import pytest
 
 import app.engine.processor as processor_module
@@ -13,13 +15,22 @@ from app.models.message import DDMessage
 from app.models.response import DDResponse
 
 
+def openai_error(cls, status, message="invalid request", headers=None, **body):
+    """An error of the OpenAI SDK, as the client raises it."""
+    request = httpx.Request("POST", "https://api.openai.com/v1/responses")
+    response = httpx.Response(status, request=request, headers=headers)
+    return cls(message, response=response, body=body or None)
+
+
 class FakeEngine:
     """Stands in for OpenAIProcessor.process_question. Answers every question,
-    except the call numbers listed in fail_on; on_call runs before answering."""
+    except the call numbers listed in fail_on, or given an error to raise in
+    `errors`; on_call runs before answering."""
 
     def __init__(self):
         self.calls = []
         self.fail_on = set()
+        self.errors = {}
         self.on_call = None
 
     def process_question(
@@ -30,7 +41,10 @@ class FakeEngine:
         if self.on_call:
             self.on_call(number)
         if number in self.fail_on:
-            raise ValueError("invalid request")  # a validation error: not retried
+            # A validation error: not retried, and local to the question.
+            raise openai_error(openai.BadRequestError, 400)
+        if number in self.errors:
+            raise self.errors[number]
         return {
             "response_id": f"resp_{number}",
             "previous_response_id": previous_response_id,
@@ -202,3 +216,84 @@ def test_a_private_dd_type_of_someone_else_cannot_be_run(
     )
     assert response.status_code == 404
     assert engine_client.calls == []
+
+
+# --- The engine's own rules ----------------------------------------------------
+
+
+def test_a_failed_write_leaves_the_question_as_it_was(db, run, engine_client, monkeypatch):
+    """One transaction per question: when storing the answer fails, nothing of
+    it is kept -- no raw response -- and the old answer stays current."""
+    engine_client.fail_on = {1}
+    run("start")
+    old = _answers(db, is_current=True, status=AnswerStatus.FAILED)[0]
+    responses = db.query(DDResponse).count()
+
+    def broken_history(**_fields):
+        raise RuntimeError("the history row could not be written")
+
+    monkeypatch.setattr(processor_module, "DDAnswerHistory", broken_history)
+    engine_client.fail_on = set()
+    run("resume")
+
+    assert len(engine_client.calls) == 4  # OpenAI did answer the question again
+    db.expire_all()
+    assert db.query(DDResponse).count() == responses
+    current = db.query(DDAnswer).filter_by(question_id=old.question_id, is_current=True).one()
+    assert (current.id, current.status) == (old.id, AnswerStatus.FAILED)
+    assert _execution(db).status == ExecutionStatus.FAILED
+
+
+def test_a_rate_limit_is_retried_after_the_delay_openai_asks(db, run, engine_client, monkeypatch):
+    slept = []
+    monkeypatch.setattr(processor_module.time, "sleep", slept.append)
+    engine_client.errors = {
+        1: openai_error(openai.RateLimitError, 429, headers={"retry-after": "7"})
+    }
+    run("start")
+
+    assert slept == [7.0]
+    assert len(engine_client.calls) == 4  # the first question twice
+    answers = _answers(db, is_current=True)
+    assert [a.status for a in answers] == [AnswerStatus.COMPLETED] * 3
+    assert [a.retry_count for a in answers] == [1, 0, 0]
+    assert _execution(db).status == ExecutionStatus.GENERATED
+
+
+def test_a_refused_key_stops_the_run_at_once(db, run, engine_client):
+    """A global error that no retry can fix: the circuit breaker stops the run
+    after the first question instead of failing every one of them."""
+    engine_client.errors = {1: openai_error(openai.AuthenticationError, 401)}
+    run("start")
+
+    assert len(engine_client.calls) == 1
+    assert [a.error_type for a in _answers(db)] == [ErrorType.API_ERROR]
+    assert _execution(db).status == ExecutionStatus.FAILED
+
+
+def test_the_text_of_an_openai_error_never_reaches_the_browser(
+    client, analyst, auth_headers, run, engine_client
+):
+    engine_client.errors = {
+        1: openai_error(
+            openai.AuthenticationError, 401, "Incorrect API key provided: sk-EXAMPLE-1234"
+        )
+    }
+    run("start")
+
+    body = client.get(f"/api/session/{run.session.id}/status", headers=auth_headers(analyst))
+    assert "sk-EXAMPLE-1234" not in body.text
+    assert "Incorrect API key" not in body.text
+    assert "check the OpenAI key" in body.json()["progress"][0]["last_error"]
+
+
+def test_a_run_that_cannot_go_on_ends_failed(
+    db, client, analyst, make_dd_type, make_dd_session, auth_headers, engine_client
+):
+    """An error of the run itself, not of a question (here: no question at
+    all), ends it failed, whether started or resumed."""
+    dd_type = make_dd_type(questions=0)
+    session = make_dd_session(analyst)
+    url = f"/api/processing/session/{session.id}/dd/{dd_type.code}/start"
+    assert client.post(url, headers=auth_headers(analyst)).status_code == 200
+    assert _execution(db).status == ExecutionStatus.FAILED

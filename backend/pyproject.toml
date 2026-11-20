@@ -89,6 +89,7 @@ select = [
     "B",  # flake8-bugbear
     "C4", # flake8-comprehensions
     "UP", # pyupgrade
+    "G004", # logging with an f-string: arguments go as %s, formatted only if logged
 ]
 ignore = [
     "E501",  # line length: left to the formatter
@@ -122,17 +123,6 @@ warn_unused_configs = true
 warn_redundant_casts = true
 no_implicit_optional = true
 plugins = ["pydantic.mypy"]
-
-# Not checked yet: older modules, left out until they are reworked into
-# services. The models themselves are typed (SQLModel). New modules never go
-# in this list.
-[[tool.mypy.overrides]]
-module = [
-    "app.engine.openai_client",
-    "app.engine.processor",
-    "app.engine.summarizer",
-]
-ignore_errors = true
 
 # --- Pytest -----------------------------------------------------------------------
 

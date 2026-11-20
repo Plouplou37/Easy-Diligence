@@ -2,6 +2,38 @@
 
 ## Non publié
 
+### Moteur de réponses repris
+
+- **Une question en échec affiche un message écrit pour l'utilisateur**, au
+  lieu du texte brut d'OpenAI. Par exemple : « OpenAI rate limit reached. Use
+  Resume in a few minutes. » Le détail reste dans les journaux du serveur.
+- **Une question coûte au plus 3 appels à OpenAI**, contre 9 auparavant : le
+  SDK ne relance plus de lui-même, seul le moteur le fait. Il attend le délai
+  qu'OpenAI demande en cas de limite de débit, et ne relance pas ce qu'un
+  nouvel essai ne réglerait pas (requête refusée, clé refusée). `retry_count`
+  compte les vraies relances.
+- **Les erreurs sont classées par leur type**, et non plus en cherchant des
+  mots dans leur texte. Un message contenant « invalid » n'arrête plus les
+  relances, et un dépassement de contexte n'est plus relancé pour rien.
+- **Une clé ou un quota refusé arrête le traitement dès la première
+  question**, au lieu d'échouer sur chacune.
+- **Une question s'écrit en une seule transaction** : la réponse brute, ses
+  messages, l'ancienne réponse mise de côté, la nouvelle et son historique.
+  Une panne au milieu ne laisse plus de question sans réponse courante.
+- **Démarrage et reprise passent par la même boucle**, et le statut final se
+  décide à un seul endroit. Une erreur fatale termine toujours le traitement
+  `failed` (un démarrage le remettait à `not_started`). Une pause cliquée
+  juste après « Start » n'est plus écrasée par le démarrage du traitement.
+- **Une régénération qui échoue côté OpenAI** répond par un message lisible
+  (502) au lieu d'une erreur 500.
+- **Les synthèses** : le module est synchrone (les routes lançaient des
+  coroutines qui appelaient la base de façon synchrone). Seuls les appels des
+  résumés de section partent en parallèle, dans des threads, et la base reste
+  dans le thread de la requête.
+- La date d'expiration d'un vector store porte son fuseau (UTC).
+- Le moteur est vérifié par mypy, et ses journaux passent leurs valeurs en
+  arguments. Un test fige les paramètres envoyés à OpenAI pour une question.
+
 ### Colonnes mortes et copies (migration 0003)
 
 - **On ne peut plus supprimer une session pendant un traitement**, ni une

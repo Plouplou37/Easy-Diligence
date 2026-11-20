@@ -70,5 +70,5 @@ class RateLimiter:
         """
         self.questions_processed += 1
         for reason, seconds in self._pending_delays(tokens_used):
-            logger.info(f"Pause de {seconds:.0f}s ({reason})")
+            logger.info("Pause de %.0fs (%s)", seconds, reason)
             time.sleep(seconds)
