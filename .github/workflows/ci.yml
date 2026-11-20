@@ -150,19 +150,20 @@ jobs:
           echo "$headers" | grep -qi '^x-content-type-options: nosniff'
           echo "$headers" | grep -qi '^x-frame-options: deny'
 
+      # The login is an OAuth2 form (username carries the email), not JSON.
       - name: The API, through the proxy
         run: |
-          status=$(curl -s -o /dev/null -w '%{http_code}' -X POST http://localhost:8080/api/auth/login \
-            -H 'Content-Type: application/json' -d '{"email":"nobody@example.com","password":"x"}')
+          status=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/api/auth/login \
+            --data-urlencode "username=nobody@example.com" --data-urlencode "password=not-the-one")
           test "$status" = 401
 
       - name: First administrator, then a login
         run: |
           printf '%s\n%s\n' "$ADMIN_PASSWORD" "$ADMIN_PASSWORD" \
             | docker compose exec -T backend python -m app.cli create-admin admin@example.com "Admin Example"
-          curl -fsS -X POST http://localhost:8080/api/auth/login \
-            -H 'Content-Type: application/json' \
-            -d "{\"email\":\"admin@example.com\",\"password\":\"$ADMIN_PASSWORD\"}" | grep -q access_token
+          curl -fsS http://localhost:8080/api/auth/login \
+            --data-urlencode "username=admin@example.com" --data-urlencode "password=$ADMIN_PASSWORD" \
+            | grep -q access_token
 
       - name: Logs
         if: failure()
