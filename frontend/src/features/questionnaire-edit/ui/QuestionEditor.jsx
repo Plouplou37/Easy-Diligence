@@ -35,18 +35,19 @@ const QuestionEditor = ({ question, onChange, onSave, onCancel }) => {
 
         <div>
           <label htmlFor="question-context" className={field.label}>
-            Sources potentielles / Où chercher
+            Where to look
           </label>
           <textarea
             id="question-context"
             value={question.context_prompt || ''}
             onChange={event => onChange({ ...question, context_prompt: event.target.value })}
-            placeholder="Prospectus ; Factsheets ; DDQ ; site du gérant..."
+            placeholder="Prospectus; factsheets; DDQ; the manager's website..."
             rows={3}
             className="form-input w-full px-3 py-2 text-sm"
           />
           <p className={field.help}>
-            Transmis au modèle avec la question, sous « Where to look ». Modifiable à tout moment.
+            Sent to the model with the question, under “Where to look”. It can be changed at any
+            time.
           </p>
         </div>
 

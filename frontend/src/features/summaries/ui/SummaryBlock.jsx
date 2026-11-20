@@ -21,10 +21,10 @@ const SummaryBlock = ({ title, summary, onSaved }) => {
     try {
       await summariesAPI.update(summary.id, text);
       setEditing(false);
-      toast.success('Résumé enregistré.');
+      toast.success('Summary saved.');
       onSaved?.();
     } catch {
-      toast.error('Échec de l’enregistrement.');
+      toast.error('Failed to save the summary.');
     } finally {
       setSaving(false);
     }
@@ -39,7 +39,7 @@ const SummaryBlock = ({ title, summary, onSaved }) => {
         <div className={sectionHeader.hairline} />
         {!editing && (
           <Button onClick={() => setEditing(true)} variant="secondary" size="sm" icon={PencilIcon}>
-            Éditer
+            Edit
           </Button>
         )}
       </div>
@@ -55,7 +55,7 @@ const SummaryBlock = ({ title, summary, onSaved }) => {
           />
           <div className="flex space-x-2">
             <Button onClick={save} variant="success" icon={CheckIcon} disabled={saving}>
-              {saving ? 'Enregistrement…' : 'Enregistrer'}
+              {saving ? 'Saving…' : 'Save'}
             </Button>
             <Button
               onClick={() => setEditing(false)}
@@ -63,7 +63,7 @@ const SummaryBlock = ({ title, summary, onSaved }) => {
               icon={XMarkIcon}
               disabled={saving}
             >
-              Annuler
+              Cancel
             </Button>
           </div>
         </div>
@@ -71,7 +71,7 @@ const SummaryBlock = ({ title, summary, onSaved }) => {
         <div className="overflow-x-auto">
           <div className="prose prose-sm max-w-none text-sm text-content">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>
-              {summary.summary_text || '_(vide)_'}
+              {summary.summary_text || '_(empty)_'}
             </ReactMarkdown>
           </div>
         </div>

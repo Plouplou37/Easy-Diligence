@@ -29,7 +29,7 @@ const RegenerateModal = ({ isOpen, onClose, onSubmit, loading }) => {
   const handleFileChange = e => {
     const selected = e.target.files?.[0] || null;
     if (selected && selected.size > MAX_SIZE) {
-      setError('Le fichier dépasse 50 Mo.');
+      setError('The file is larger than 50 MB.');
       e.target.value = '';
       return;
     }
@@ -40,7 +40,7 @@ const RegenerateModal = ({ isOpen, onClose, onSubmit, loading }) => {
   const handleSubmit = async () => {
     const url = referenceUrl.trim();
     if (url && !/^https?:\/\//i.test(url)) {
-      setError('Le lien doit commencer par http:// ou https://');
+      setError('The link must start with http:// or https://');
       return;
     }
     setError('');
@@ -53,40 +53,47 @@ const RegenerateModal = ({ isOpen, onClose, onSubmit, loading }) => {
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="Régénérer la réponse" size="md">
+    <Modal isOpen={isOpen} onClose={handleClose} title="Regenerate the answer" size="md">
       <div className="space-y-4">
         <p className="text-sm text-content-muted">
-          Tous les champs sont optionnels. Sans rien remplir, la réponse est simplement régénérée
-          comme avant.
+          Every field is optional. With none filled in, the answer is simply generated again.
         </p>
 
         <div>
-          <label className={field.label}>Consigne (optionnel)</label>
+          <label htmlFor="regenerate-instruction" className={field.label}>
+            Instruction (optional)
+          </label>
           <textarea
+            id="regenerate-instruction"
             value={instruction}
             onChange={e => setInstruction(e.target.value)}
             rows={4}
             disabled={loading}
-            placeholder="Ex. : concentre-toi sur les frais de gestion et cite les chiffres exacts."
+            placeholder="E.g. focus on the management fees and quote the exact figures."
             className="form-input w-full px-3 py-2 text-sm"
           />
         </div>
 
         <div>
-          <label className={field.label}>Lien de référence (optionnel)</label>
+          <label htmlFor="regenerate-link" className={field.label}>
+            Reference link (optional)
+          </label>
           <input
+            id="regenerate-link"
             type="url"
             value={referenceUrl}
             onChange={e => setReferenceUrl(e.target.value)}
             disabled={loading}
-            placeholder="https://exemple.com/page"
+            placeholder="https://example.com/page"
             className="form-input w-full px-3 py-2 text-sm"
           />
-          <p className={field.help}>Consulté par l’IA via la recherche web.</p>
+          <p className={field.help}>The AI reads it through its web search.</p>
         </div>
 
         <div>
-          <label className={field.label}>Fichier joint (optionnel)</label>
+          <label htmlFor="regenerate-file" className={field.label}>
+            Attached file (optional)
+          </label>
           {file ? (
             <div className="flex items-center justify-between form-surface px-3 py-2 text-sm">
               <span className="flex items-center text-content-secondary truncate">
@@ -98,12 +105,14 @@ const RegenerateModal = ({ isOpen, onClose, onSubmit, loading }) => {
                 onClick={() => setFile(null)}
                 disabled={loading}
                 className="ml-2 text-content-muted hover:text-content transition-colors"
+                aria-label="Remove the file"
               >
                 <XMarkIcon className="h-4 w-4" />
               </button>
             </div>
           ) : (
             <input
+              id="regenerate-file"
               type="file"
               accept={ACCEPTED}
               onChange={handleFileChange}
@@ -112,8 +121,8 @@ const RegenerateModal = ({ isOpen, onClose, onSubmit, loading }) => {
             />
           )}
           <p className={field.help}>
-            Ajouté aux documents de la session et aux sources de la réponse (PDF, Word, Excel, CSV,
-            TXT — max 50 Mo).
+            Added to the session’s documents and to the answer’s sources (PDF, Word, Excel, CSV,
+            TXT, up to 50 MB).
           </p>
         </div>
 
@@ -121,7 +130,7 @@ const RegenerateModal = ({ isOpen, onClose, onSubmit, loading }) => {
 
         <div className="flex justify-end space-x-2 pt-2">
           <Button onClick={handleClose} variant="secondary" disabled={loading}>
-            Annuler
+            Cancel
           </Button>
           <Button
             onClick={handleSubmit}
@@ -129,7 +138,7 @@ const RegenerateModal = ({ isOpen, onClose, onSubmit, loading }) => {
             icon={ArrowPathRoundedSquareIcon}
             disabled={loading}
           >
-            {loading ? 'Régénération…' : 'Régénérer'}
+            {loading ? 'Regenerating…' : 'Regenerate'}
           </Button>
         </div>
       </div>

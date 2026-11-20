@@ -9,9 +9,9 @@ import SummaryBlock from './SummaryBlock';
 
 // OpenAI's raw statuses read as jargon on screen ("in_progress").
 const BATCH_STATUS_LABELS = {
-  validating: 'en validation',
-  in_progress: 'en cours de traitement',
-  finalizing: 'en finalisation',
+  validating: 'being validated',
+  in_progress: 'in progress',
+  finalizing: 'being finalized',
 };
 
 const isGlobal = summary => summary.section_id === null || summary.section_id === undefined;
@@ -24,21 +24,21 @@ const BatchBanner = ({ batch, pending, cancelling, onCancel }) => {
 
   let text;
   if (batch.status === 'cancelling') {
-    text = 'Annulation en cours… Les boutons se réactiveront dès qu’OpenAI l’aura confirmée.';
+    text = 'Cancelling… The buttons come back once OpenAI confirms it.';
   } else if (pending) {
     // No count before OpenAI has one: validation used to show "0/0".
     const count =
-      batch.total > 0 ? ` — ${batch.completed ?? 0}/${batch.total} résumés de section` : '';
+      batch.total > 0 ? ` — ${batch.completed ?? 0}/${batch.total} section summaries` : '';
     text =
-      `Batch ${BATCH_STATUS_LABELS[batch.status] || batch.status}${count}. Le résultat peut prendre ` +
-      'jusqu’à 24 h ; cette page se met à jour toute seule, et rien n’est perdu si tu la quittes.';
+      `Batch ${BATCH_STATUS_LABELS[batch.status] || batch.status}${count}. The result can take ` +
+      'up to 24 h; this page updates itself, and nothing is lost if you leave it.';
   } else if (batch.status === 'cancelled') {
-    text = 'Batch annulé : aucun résumé n’a été produit. Tu peux relancer la synthèse.';
+    text = 'Batch cancelled: no summary was produced. You can generate the synthesis again.';
   } else if (batch.status === 'collected') {
     const sections = typeof batch.sections === 'number' ? ` (${batch.sections} sections)` : '';
-    text = `Résumés de section produits en batch${sections}, synthèse générée.`;
+    text = `Section summaries produced by batch${sections}, synthesis generated.`;
   } else {
-    text = `Batch terminé sans résultat (${batch.status})${batch.message ? ` — ${batch.message}` : ''}.`;
+    text = `Batch ended without a result (${batch.status})${batch.message ? ` — ${batch.message}` : ''}.`;
   }
 
   return (
@@ -47,7 +47,7 @@ const BatchBanner = ({ batch, pending, cancelling, onCancel }) => {
       {/* Hidden once cancelling: a second request would only be refused. */}
       {pending && batch.status !== 'cancelling' && (
         <Button onClick={onCancel} variant="danger" size="sm" disabled={cancelling}>
-          {cancelling ? 'Annulation…' : 'Annuler le batch'}
+          {cancelling ? 'Cancelling…' : 'Cancel the batch'}
         </Button>
       )}
     </div>
@@ -64,10 +64,10 @@ const SynthesisTab = ({ sessionId, ddTypeCode, ddTypeName }) => {
     return (
       <div className={`${panel.base} ${emptyState.wrapper}`}>
         <DocumentTextIcon className={emptyState.icon} />
-        <h3 className={emptyState.title}>Sélectionne un type de DD</h3>
+        <h3 className={emptyState.title}>Select a DD type</h3>
         <p className={emptyState.text}>
-          La synthèse se génère par type de DD. Ouvre la revue pour un type de DD précis pour
-          générer ou consulter sa synthèse.
+          The synthesis is written per DD type. Open the review of one DD type to generate or read
+          its synthesis.
         </p>
       </div>
     );
@@ -81,11 +81,11 @@ const SynthesisTab = ({ sessionId, ddTypeCode, ddTypeName }) => {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-medium text-content">
-            Synthèse — {ddTypeName || ddTypeCode}
+            Synthesis — {ddTypeName || ddTypeCode}
           </h2>
           <p className="text-sm text-content-muted">
-            Résumé par section + synthèse globale (repris dans le PDF). Basé sur les réponses
-            actuelles.
+            A summary per section and an overall synthesis (both in the PDF report), written from
+            the current answers.
           </p>
         </div>
         {/* While OpenAI still holds the job, neither path may be relaunched: the
@@ -99,10 +99,10 @@ const SynthesisTab = ({ sessionId, ddTypeCode, ddTypeName }) => {
             disabled={generating || batchPending}
           >
             {generating
-              ? 'Génération…'
+              ? 'Generating…'
               : summaries.length > 0
-                ? 'Régénérer la synthèse'
-                : 'Générer la synthèse'}
+                ? 'Regenerate the synthesis'
+                : 'Generate the synthesis'}
           </Button>
           {/* Same result at half price, but OpenAI has up to 24h to deliver it.
               Secondary on purpose: the immediate path stays the obvious one. */}
@@ -111,9 +111,9 @@ const SynthesisTab = ({ sessionId, ddTypeCode, ddTypeName }) => {
             variant="secondary"
             icon={ClockIcon}
             disabled={generating || batchPending}
-            title="Passe par l’API Batch d’OpenAI : moitié prix, mais le résultat peut mettre jusqu’à 24 h."
+            title="Goes through OpenAI's Batch API: half the price, but the result can take up to 24 h."
           >
-            Générer en batch (−50 %)
+            Generate by batch (−50%)
           </Button>
         </div>
       </div>
@@ -129,24 +129,24 @@ const SynthesisTab = ({ sessionId, ddTypeCode, ddTypeName }) => {
 
       {synthesis.loading ? (
         <div className="py-12 flex justify-center">
-          <LoadingSpinner size="lg" text="Chargement de la synthèse…" />
+          <LoadingSpinner size="lg" text="Loading the synthesis…" />
         </div>
       ) : summaries.length === 0 ? (
         <div className={`${emptyState.wrapper} border-2 border-dashed border-border rounded-lg`}>
           <DocumentTextIcon className={emptyState.icon} />
-          <h3 className={emptyState.title}>Aucune synthèse pour le moment</h3>
+          <h3 className={emptyState.title}>No synthesis yet</h3>
           <p className={emptyState.text}>
-            Clique sur « Générer la synthèse » pour la créer à partir des réponses actuelles.
+            Click “Generate the synthesis” to write it from the current answers.
           </p>
         </div>
       ) : (
         <>
           {global && (
-            <SummaryBlock title="Synthèse globale" summary={global} onSaved={synthesis.load} />
+            <SummaryBlock title="Overall synthesis" summary={global} onSaved={synthesis.load} />
           )}
           {sectionSummaries.length > 0 && (
             <div className="space-y-4">
-              <h3 className="eyebrow">Résumés par section</h3>
+              <h3 className="eyebrow">Section summaries</h3>
               {sectionSummaries.map(summary => (
                 <SummaryBlock
                   key={summary.id}

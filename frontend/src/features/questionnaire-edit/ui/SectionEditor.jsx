@@ -22,18 +22,18 @@ const SectionEditor = ({ show, section, onChange, onSave, onCancel }) => {
 
         <div>
           <label htmlFor="section-description" className={field.label}>
-            Contexte de la section
+            Section context
           </label>
           <textarea
             id="section-description"
             value={section.description || ''}
             onChange={event => onChange({ ...section, description: event.target.value })}
-            placeholder="Ce que couvre ce thème, à préciser au modèle..."
+            placeholder="What this theme covers, for the model..."
             rows={3}
             className="form-input w-full px-3 py-2 text-sm"
           />
           <p className={field.help}>
-            Facultatif. Transmis au modèle avec chaque question de la section.
+            Optional. Sent to the model with every question of the section.
           </p>
         </div>
 

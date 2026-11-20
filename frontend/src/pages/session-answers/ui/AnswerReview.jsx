@@ -8,8 +8,8 @@ import { AnswersBoard, useAnswerFilters } from '@/widgets/answers-board';
 import { useAnswers } from '../model/useAnswers';
 
 const TABS = [
-  { id: 'answers', label: 'Réponses' },
-  { id: 'synthesis', label: 'Synthèse' },
+  { id: 'answers', label: 'Answers' },
+  { id: 'synthesis', label: 'Synthesis' },
 ];
 
 /** The answers of one DD type of a session, and its synthesis. */

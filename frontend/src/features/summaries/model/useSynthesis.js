@@ -31,7 +31,7 @@ export const useSynthesis = (sessionId, ddTypeCode) => {
       const response = await summariesAPI.list(sessionId, ddTypeCode);
       setSummaries(Array.isArray(response.data) ? response.data : []);
     } catch {
-      toast.error('Échec du chargement de la synthèse.');
+      toast.error('Failed to load the synthesis.');
     } finally {
       setLoading(false);
     }
@@ -56,7 +56,7 @@ export const useSynthesis = (sessionId, ddTypeCode) => {
       previousBatchStatus.current = state?.status || null;
       if (state?.status === 'collected' && PENDING_BATCH_STATUSES.includes(was)) {
         await load();
-        toast.success('Synthèse générée (batch).');
+        toast.success('Synthesis generated (batch).');
       }
       return state;
     } catch (error) {
@@ -86,9 +86,9 @@ export const useSynthesis = (sessionId, ddTypeCode) => {
     try {
       await summariesAPI.generate(sessionId, ddTypeCode);
       await load();
-      toast.success('Synthèse générée.');
+      toast.success('Synthesis generated.');
     } catch (error) {
-      toast.error(errorMessage(error, 'Échec de la génération de la synthèse.'));
+      toast.error(errorMessage(error, 'Failed to generate the synthesis.'));
     } finally {
       setGenerating(false);
     }
@@ -100,9 +100,9 @@ export const useSynthesis = (sessionId, ddTypeCode) => {
       const response = await summariesAPI.generateBatch(sessionId, ddTypeCode);
       setBatch(response.data || null);
       previousBatchStatus.current = response.data?.status || null;
-      toast.success('Résumés de section mis en file (batch).');
+      toast.success('Section summaries queued (batch).');
     } catch (error) {
-      toast.error(errorMessage(error, 'Échec de la mise en file du batch.'));
+      toast.error(errorMessage(error, 'Failed to queue the batch.'));
     } finally {
       setGenerating(false);
     }
@@ -111,10 +111,10 @@ export const useSynthesis = (sessionId, ddTypeCode) => {
   const cancelBatch = async () => {
     // Irreversible: the requests not yet processed are dropped for good.
     const confirmed = await confirm({
-      title: 'Annuler le batch',
-      message: 'Annuler le batch ? Les résumés pas encore produits seront abandonnés.',
-      confirmLabel: 'Annuler le batch',
-      cancelLabel: 'Continuer le batch',
+      title: 'Cancel the batch',
+      message: 'Cancel the batch? The section summaries not produced yet will be dropped.',
+      confirmLabel: 'Cancel the batch',
+      cancelLabel: 'Keep it running',
       danger: true,
     });
     if (!confirmed) return;
@@ -126,16 +126,16 @@ export const useSynthesis = (sessionId, ddTypeCode) => {
         // 'cancelling': keep polling until OpenAI confirms 'cancelled'.
         setBatch(state);
         previousBatchStatus.current = state.status;
-        toast.success('Annulation demandée.');
+        toast.success('Cancellation requested.');
       } else {
         // Already over on OpenAI's side. Let the regular status call record it,
         // and collect the results if it turns out to have completed.
         previousBatchStatus.current = 'in_progress';
         await refreshBatch();
-        toast(state?.message || 'Le batch était déjà terminé.');
+        toast(state?.message || 'The batch had already finished.');
       }
     } catch (error) {
-      toast.error(errorMessage(error, 'Échec de l’annulation du batch.'));
+      toast.error(errorMessage(error, 'Failed to cancel the batch.'));
     } finally {
       setCancellingBatch(false);
     }

@@ -48,9 +48,9 @@ const AnswersBoard = ({ filters, updateAnswer, reload }) => {
       await answersAPI.regenerate(answerId, { instruction, referenceUrl, file });
       await reload();
       setRegenerateTarget(null);
-      toast.success('Réponse régénérée.');
+      toast.success('Answer regenerated.');
     } catch {
-      toast.error('Échec de la régénération. Réessayez.');
+      toast.error('Regeneration failed. Please try again.');
     } finally {
       setRegeneratingId(null);
     }
