@@ -1,2 +1,2 @@
 export { useVectorStoreAssignments } from './model/useVectorStoreAssignments';
-export { AssignAllSelect } from './ui/AssignAllSelect';
+export { StoreSelect } from './ui/StoreSelect';

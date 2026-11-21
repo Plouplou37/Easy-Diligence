@@ -8,18 +8,18 @@ import { errorMessage } from '@/shared/api';
 import { Button, PasswordInput } from '@/shared/ui';
 
 const LinkProblem = ({ children }) => (
-  <div className="alert alert-error space-y-2 text-sm">
-    <p className="flex items-start gap-2">
-      <ExclamationTriangleIcon className="w-5 h-5 shrink-0" />
-      <span>{children}</span>
-    </p>
-    <p>
-      Ask for a new one from the{' '}
-      <Link to="/login" className="text-link">
-        sign-in page
-      </Link>{' '}
-      (“Forgot your password?”).
-    </p>
+  <div className="alert alert-error flex items-start gap-2" role="alert">
+    <ExclamationTriangleIcon className="h-5 w-5 shrink-0" aria-hidden="true" />
+    <div className="space-y-1">
+      <p>{children}</p>
+      <p>
+        Ask for a new one from the{' '}
+        <Link to="/login" className="text-link underline underline-offset-2">
+          sign-in page
+        </Link>{' '}
+        (“Forgot your password?”).
+      </p>
+    </div>
   </div>
 );
 
@@ -63,31 +63,29 @@ export const ResetPasswordForm = ({ token }) => {
   };
 
   return (
-    <form className="space-y-6" onSubmit={submit} noValidate>
+    <form className="space-y-5" onSubmit={submit} noValidate>
       {refused && <LinkProblem>{refused}</LinkProblem>}
-      <div className="space-y-5">
-        <PasswordInput
-          id="new-password"
-          label="New password"
-          autoComplete="new-password"
-          required
-          leftIcon={LockClosedIcon}
-          value={form.next}
-          onChange={change('next')}
-          error={problems.next}
-          helperText={PASSWORD_RULE}
-        />
-        <PasswordInput
-          id="confirm-password"
-          label="Confirm new password"
-          autoComplete="new-password"
-          required
-          leftIcon={LockClosedIcon}
-          value={form.confirm}
-          onChange={change('confirm')}
-          error={problems.confirm}
-        />
-      </div>
+      <PasswordInput
+        id="new-password"
+        label="New password"
+        autoComplete="new-password"
+        required
+        leftIcon={LockClosedIcon}
+        value={form.next}
+        onChange={change('next')}
+        error={problems.next}
+        helperText={PASSWORD_RULE}
+      />
+      <PasswordInput
+        id="confirm-password"
+        label="Confirm the new password"
+        autoComplete="new-password"
+        required
+        leftIcon={LockClosedIcon}
+        value={form.confirm}
+        onChange={change('confirm')}
+        error={problems.confirm}
+      />
       <Button type="submit" loading={saving} variant="primary" size="lg" className="w-full">
         Change password
       </Button>

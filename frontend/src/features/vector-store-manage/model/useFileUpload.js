@@ -46,9 +46,8 @@ export const useFileUpload = (selectedStore, onUploadComplete) => {
         failed += 1;
       }
     }
-    if (succeeded > 0)
-      toast.success(`${succeeded} file${succeeded > 1 ? 's' : ''} uploaded successfully`);
-    if (failed > 0) toast.error(`${failed} file${failed > 1 ? 's' : ''} failed to upload`);
+    if (succeeded > 0) toast.success(`${succeeded} document${succeeded > 1 ? 's' : ''} uploaded`);
+    if (failed > 0) toast.error(`${failed} document${failed > 1 ? 's' : ''} could not be uploaded`);
     setUploadLoading(false);
     // The failed ones stay listed, so the user sees which.
     setStagedFiles(previous => previous.filter(file => file.status === 'error'));

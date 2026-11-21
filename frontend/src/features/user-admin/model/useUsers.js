@@ -87,7 +87,7 @@ export const useUsers = () => {
       title: 'Delete user',
       message:
         `Delete ${user.full_name || user.email} (@${user.username})? ` +
-        'An account that owns sessions or documents cannot be deleted: deactivate it instead. ' +
+        'An account that owns due diligences or documents cannot be deleted: deactivate it instead. ' +
         'This cannot be undone.',
       confirmLabel: 'Delete',
       danger: true,

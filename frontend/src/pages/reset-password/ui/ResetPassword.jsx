@@ -12,16 +12,15 @@ const ResetPassword = () => {
   return (
     <AuthShell
       title="Choose a new password"
-      subtitle={
-        <>
-          Or{' '}
-          <Link to="/login" className="text-link">
-            back to sign in
-          </Link>
-        </>
-      }
+      subtitle="The link of the e-mail works once, for 24 hours."
     >
       <ResetPasswordForm token={searchParams.get('token')} />
+      <p className="mt-6 border-t border-border pt-5 text-center text-sm text-content-secondary">
+        Remembered it?{' '}
+        <Link to="/login" className="text-link">
+          Back to sign in
+        </Link>
+      </p>
     </AuthShell>
   );
 };

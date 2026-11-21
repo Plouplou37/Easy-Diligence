@@ -23,10 +23,11 @@ export const ForgotPasswordModal = ({ isOpen, onClose, initialEmail = '' }) => {
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={close} title="Reset Password" size="sm">
+    <Modal isOpen={isOpen} onClose={close} title="Reset your password" size="sm">
       <form onSubmit={send}>
-        <p className="text-sm text-content-secondary mb-4">
-          Enter your email address: a link to choose a new password will be sent to it.
+        <p className="mb-5 text-sm text-content-secondary">
+          Enter your email address: a link to choose a new password is sent to it. The link works
+          once, for 24 hours.
         </p>
         <Input
           label="Email address"
@@ -38,12 +39,12 @@ export const ForgotPasswordModal = ({ isOpen, onClose, initialEmail = '' }) => {
           onChange={event => setEmail(event.target.value)}
           placeholder="you@example.com"
         />
-        <div className={`${modalStyles.footer} -mx-5 -mb-4 mt-4`}>
+        <div className={`${modalStyles.footer} -mx-5 -mb-4 mt-6`}>
           <Button type="button" variant="secondary" onClick={close}>
             Cancel
           </Button>
           <Button type="submit" variant="primary" loading={sending}>
-            Send Reset Link
+            Send the link
           </Button>
         </div>
       </form>

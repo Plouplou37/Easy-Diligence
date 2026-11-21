@@ -1,9 +1,23 @@
-import { getToneStyles } from '@/shared/lib/status';
+const ROLES = {
+  admin: { label: 'Admin', variant: 'info' },
+  analyst: { label: 'Analyst', variant: 'neutral' },
+};
 
-const ROLE_TONES = { admin: 'brand', analyst: 'info' };
+/** A role's label and its badge variant (shared/ui Badge). */
+export const roleOf = role =>
+  ROLES[role] || {
+    label: role ? role.replace(/^\w/, c => c.toUpperCase()) : '—',
+    variant: 'neutral',
+  };
 
-/** The badge classes of a role. */
-export const roleBadge = role => getToneStyles(ROLE_TONES[role] || 'neutral').badge;
+/** The account's initials: from its full name, else its username. */
+export const initialsOf = user =>
+  (user?.full_name || user?.username || '?')
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(part => part[0].toUpperCase())
+    .join('') || '?';
 
 /** A login or creation date, with its time; "Never" when there is none. */
 export const formatUserDate = value =>

@@ -1,13 +1,7 @@
 import { useState } from 'react';
-import {
-  AtSymbolIcon,
-  BriefcaseIcon,
-  CheckIcon,
-  EnvelopeIcon,
-  UserCircleIcon,
-} from '@heroicons/react/24/outline';
+import { PencilIcon } from '@heroicons/react/24/outline';
 import { useAuth } from '@/entities/viewer';
-import { Button, Input, panel, sectionHeader } from '@/shared/ui';
+import { Button, Input, panel } from '@/shared/ui';
 
 // What the user may change about themselves (UserUpdate in models/user.py).
 const editable = user => ({
@@ -17,17 +11,16 @@ const editable = user => ({
   phone: user?.phone || '',
 });
 
-const Detail = ({ label, icon: Icon, children }) => (
-  <div>
-    <p className="eyebrow mb-1">{label}</p>
-    <p className="text-sm text-content flex items-center">
-      {Icon && <Icon className="w-4 h-4 mr-2 text-content-muted" />}
-      {children}
-    </p>
+const Detail = ({ label, children }) => (
+  <div className="min-w-0">
+    <dt className="text-xs text-content-muted">{label}</dt>
+    <dd className="mt-0.5 break-words text-sm text-content">{children}</dd>
   </div>
 );
 
-/** The user's own account: read, or edited in place. */
+const NotGiven = () => <span className="text-content-muted">Not given</span>;
+
+/** The user's own account details: read, or edited in place. */
 export const ProfileDetails = () => {
   const { user, updateProfile } = useAuth();
   const [editing, setEditing] = useState(false);
@@ -53,64 +46,46 @@ export const ProfileDetails = () => {
   };
 
   return (
-    <form className={panel.base} onSubmit={save}>
-      <div className={panel.header}>
-        <div className="flex items-center justify-between gap-4">
-          <div className={`${sectionHeader.wrapper} flex-1 min-w-0`}>
-            <h2 className={sectionHeader.title}>Profile Information</h2>
-            <div className={sectionHeader.hairline} />
-          </div>
-          {editing ? (
-            <div className="flex space-x-2">
-              <Button type="submit" variant="success" icon={CheckIcon} loading={saving}>
-                Save
-              </Button>
-              <Button type="button" variant="secondary" onClick={cancel}>
-                Cancel
-              </Button>
-            </div>
-          ) : (
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => {
-                setForm(editable(user));
-                setEditing(true);
-              }}
-            >
-              Edit Profile
-            </Button>
-          )}
+    <form className={`${panel.base} overflow-hidden`} onSubmit={save}>
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4">
+        <div className="min-w-0">
+          <h2 className="text-base font-semibold text-content">Account details</h2>
+          <p className="mt-0.5 text-sm text-content-muted">
+            {editing ? 'Your username cannot change.' : 'How your team sees and reaches you.'}
+          </p>
         </div>
+        {!editing && (
+          <Button
+            type="button"
+            variant="secondary"
+            icon={PencilIcon}
+            onClick={() => {
+              setForm(editable(user));
+              setEditing(true);
+            }}
+          >
+            Edit
+          </Button>
+        )}
       </div>
 
       <div className={panel.body}>
-        <div className="flex items-center mb-6">
-          <UserCircleIcon className="h-20 w-20 text-content-muted" />
-          <div className="ml-4">
-            <h3 className="text-lg font-medium text-content">{user?.full_name}</h3>
-            <p className="text-sm text-content-secondary flex items-center">
-              <AtSymbolIcon className="w-3 h-3 mr-1" />
-              {user?.username}
-            </p>
-          </div>
-        </div>
-
         {editing ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
             <Input
-              label="Full Name"
+              label="Full name"
               name="full_name"
               value={form.full_name}
               onChange={change}
               autoComplete="name"
             />
             <Input
-              label="Email Address"
+              label="Email address"
               name="email"
               type="email"
               value={form.email}
               onChange={change}
+              autoComplete="email"
               required
             />
             <Input
@@ -118,47 +93,37 @@ export const ProfileDetails = () => {
               name="company"
               value={form.company}
               onChange={change}
-              placeholder="Your company name"
+              autoComplete="organization"
             />
             <Input
-              label="Phone Number"
+              label="Phone number"
               name="phone"
               type="tel"
               value={form.phone}
               onChange={change}
-              placeholder="Your phone number"
+              autoComplete="tel"
             />
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Detail label="Full Name">{user?.full_name || 'Not specified'}</Detail>
-            <Detail label="Email Address" icon={EnvelopeIcon}>
-              {user?.email}
-            </Detail>
-            <Detail label="Company" icon={BriefcaseIcon}>
-              {user?.company || 'Not specified'}
-            </Detail>
-            <Detail label="Phone Number">{user?.phone || 'Not specified'}</Detail>
-          </div>
+          <dl className="grid grid-cols-1 gap-5 md:grid-cols-2">
+            <Detail label="Full name">{user?.full_name || <NotGiven />}</Detail>
+            <Detail label="Email address">{user?.email}</Detail>
+            <Detail label="Company">{user?.company || <NotGiven />}</Detail>
+            <Detail label="Phone number">{user?.phone || <NotGiven />}</Detail>
+          </dl>
         )}
-
-        <div className="mt-6 pt-6 border-t border-border grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-          <div>
-            <span className="eyebrow">Account Type:</span>
-            <span className="ml-2 text-content">
-              {user?.role === 'admin' ? 'Administrator' : 'Analyst'}
-            </span>
-          </div>
-          {user?.created_at && (
-            <div>
-              <span className="eyebrow">Member Since:</span>
-              <span className="ml-2 text-content">
-                {new Date(user.created_at).toLocaleDateString()}
-              </span>
-            </div>
-          )}
-        </div>
       </div>
+
+      {editing && (
+        <div className={`${panel.footer} flex justify-end gap-2`}>
+          <Button type="button" variant="secondary" onClick={cancel}>
+            Cancel
+          </Button>
+          <Button type="submit" variant="primary" loading={saving}>
+            Save changes
+          </Button>
+        </div>
+      )}
     </form>
   );
 };

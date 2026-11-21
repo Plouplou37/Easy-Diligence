@@ -95,23 +95,26 @@ docker compose exec backend python -m app.cli create-admin <email address> "<Ful
 
 The application opens at **http://localhost:8080**, where you sign in with
 this address and password. The administrator then creates the other accounts
-from **User Management** ("Create user"), with a temporary password that each
-user changes in their profile.
+from **Users** (**New user**), with a temporary password that each user
+changes in their profile.
 
 ### 5. First due diligence
 
-1. **DD Types** > **Add DD Type** > **Import from File**: import the example
-   questionnaire, `examples/example_questionnaire.json` (18 example questions,
-   in 6 sections).
-2. **Vector Stores** > **Create Vector Store**, then upload the fund's
-   documents to it (prospectus, presentation, DDQ…).
-3. **New Session**: choose or create the fund, choose the questionnaire, then
-   **Create Session**.
-4. On the session page, attach the vector store (**Assign to all**), then
-   **Start** on the questionnaire's card. Allow about 15 seconds per question.
-   The card shows the progress, and the run can be paused and then resumed.
-5. Review the answers (**Review Answers**), write the synthesis
-   (**Synthesis**), then export the PDF report (**Export PDF**).
+1. **Questionnaires** > **New questionnaire** > **Import a file**: import the
+   example questionnaire, `examples/example_questionnaire.json` (18 example
+   questions, in 6 sections).
+2. **New due diligence**, a guided flow in four steps: the fund and its
+   management company; the documents (choose a collection, or create one and
+   upload the fund's documents: prospectus, presentation, DDQ…); the
+   questionnaire; a review. The panel on the right shows what the AI will
+   receive. **Create the due diligence** opens its page.
+3. On that page, check the documents in the left column (**Assign a
+   collection** if none was chosen), then **Start**. Allow about 15 seconds
+   per question. The page follows the progress, and the run can be paused
+   and then resumed; paused time is not counted.
+4. Review the answers (the question list in the centre, the answer on the
+   right: approve, edit, regenerate), write the synthesis (**Synthesis**),
+   then export the PDF report (**Export PDF**).
 
 ### Troubleshooting
 
@@ -304,7 +307,7 @@ uv run python -m app.cli create-admin <email address> "<Full Name>"
 ```
 
 The command asks for the password. After that, an administrator creates the
-other accounts from **User Management** ("Create user"), with their role and a
+other accounts from **Users** (**New user**), with their role and a
 temporary password that the administrator passes on to them, and that each
 user changes in their profile.
 
@@ -318,7 +321,7 @@ sections. To import it without going through the interface, run from
 uv run python scripts/import_questionnaire.py ../examples/example_questionnaire.json EXAMPLE "Example questionnaire"
 ```
 
-You can also import it from the **DD Types** page.
+You can also import it from the **Questionnaires** page.
 
 ### Production build
 
@@ -424,8 +427,8 @@ frontend/             React application (Vite, Tailwind)
   src/                Feature-Sliced Design, from top to bottom:
     app/              router, providers (theme, sign-in), global styles
     pages/            one page per route
-    widgets/          page blocks: layout, dashboard, DD type card,
-                      answers, vector stores
+    widgets/          page blocks: layout, dashboard, session workspace,
+                      questionnaire tree, documents
     features/         user actions: sign-in, session creation,
                       answer review, administration
     entities/         business objects: API calls, model, small components

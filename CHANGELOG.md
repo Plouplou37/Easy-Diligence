@@ -2,6 +2,33 @@
 
 ## Unreleased
 
+### New look, step 2: every page
+
+- **Names that say what things are**: "Due diligences" (the dashboard),
+  "New due diligence", "Documents" (the vector stores), "Questionnaires"
+  (the DD types), "Users". The routes do not change.
+- **The session page is a workspace in three columns**: on the left the
+  fund (every field the model reads), the documents, the questionnaires
+  and the sections; in the centre the questions, filtered by section,
+  status or text (or the synthesis); on the right the selected answer, its
+  sources and its actions. The answers page merges into it, and its old
+  address redirects there.
+- **Creating a due diligence is a guided flow in four steps**: fund and
+  management company, documents (choose a collection, or create one and
+  upload), questionnaires, review with an estimate of time and tokens. A
+  panel shows what the AI will receive, as the backend writes it; a new
+  fund is created only at the end.
+- **Every field the AI reads carries a violet "Sent to the AI" badge**
+  (`AiBadge`, shared): the fund's fields, a question's text, its section
+  and its "where to look" hint, the questionnaire's name.
+- **The dashboard**: figure tiles, one toolbar for search and filters, a
+  clean table (cards on a phone), a stuck run said in words.
+- **Documents**: two panes, collections on the left and the selected one
+  on the right, with a state per file. **Questionnaires**: a table with the
+  counts of sections and questions, an import in clear steps, read-only
+  rows for questionnaires one cannot edit. **Users**, **Profile**, **Sign
+  in**, **Reset password** and **Not found** restyled.
+
 ### New look, step 1: palette, typeface, shared components
 
 - A new palette, in the dark and light themes: a neutral ground, one blue

@@ -6,7 +6,7 @@ const Breadcrumb = ({ items }) => {
       <ol className="inline-flex flex-wrap items-center gap-1.5 text-sm text-content-muted">
         <li className="inline-flex items-center">
           <Link to="/" className="text-content-secondary hover:text-content transition-colors">
-            Dashboard
+            Due diligences
           </Link>
         </li>
         {items.map((item, index) => (

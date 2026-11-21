@@ -49,6 +49,14 @@ export const useSessionFilters = sessions => {
       .sort(COMPARE[sortBy] || COMPARE.activity);
   }, [sessions, term, status, reviewOnly, period, sortBy]);
 
+  // Search and filters back to "everything"; the sort stays.
+  const reset = () => {
+    setSearch('');
+    setStatus('all');
+    setPeriod('all');
+    setReviewOnly(false);
+  };
+
   return {
     search,
     setSearch,
@@ -60,7 +68,10 @@ export const useSessionFilters = sessions => {
     setSortBy,
     reviewOnly,
     setReviewOnly,
+    reset,
     filtered,
+    // The filters other than the search (counted on the phone's Filters button).
+    filterCount: [status !== 'all', period !== 'all', reviewOnly].filter(Boolean).length,
     active: Boolean(term) || status !== 'all' || period !== 'all' || reviewOnly,
   };
 };

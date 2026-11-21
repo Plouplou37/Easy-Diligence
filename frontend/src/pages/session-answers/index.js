@@ -1,1 +1,1 @@
-export { default as SessionAnswersPage } from './ui/AnswerReview';
+export { default as SessionAnswersPage } from './ui/SessionAnswersRedirect';
