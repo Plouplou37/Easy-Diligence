@@ -39,26 +39,27 @@ logger = logging.getLogger(__name__)
 
 
 SECTION_SYSTEM_PROMPT = (
-    "Tu es un analyste expert en due diligence. À partir des questions et de leurs "
-    "réponses pour une section, rédige un résumé synthétique, factuel et concis "
-    "(quelques paragraphes) : constats clés, forces et points d'attention/risques. "
-    "N'invente aucune information : appuie-toi uniquement sur les réponses fournies."
+    "You are an expert due diligence analyst. From the questions and their answers "
+    "for one section, write a concise, factual summary (a few paragraphs): key "
+    "findings, strengths, and points of attention/risks. Write in English. Do not "
+    "invent any information: rely only on the answers provided."
 )
 
 SYNTHESIS_SYSTEM_PROMPT = (
-    "Tu es un analyste expert en due diligence. À partir des résumés de section "
-    "fournis, rédige une SYNTHÈSE structurée et complète mais concise (environ 3 à 4 "
-    "pages, ~1500-2000 mots maximum) destinée à un comité d'investissement. "
-    "Structure attendue : une courte introduction, les points clés regroupés par thème, "
-    "les forces, les risques et points d'attention, puis une conclusion / recommandation. "
-    "Style professionnel et factuel. N'invente rien : appuie-toi uniquement sur les résumés fournis.\n\n"
-    "FORMAT (markdown, important pour la mise en page du PDF) :\n"
-    "- Utilise des titres de niveau 2 « ## » pour les grandes parties "
-    "(## Introduction, ## Points clés, ## Forces, ## Risques et points d'attention, "
-    "## Conclusion et recommandation).\n"
-    "- Utilise des sous-titres « ### » pour les thèmes à l'intérieur d'une partie.\n"
-    "- Utilise des listes à puces « - » pour énumérer forces, risques et constats.\n"
-    "- Mets en gras « **…** » les termes importants. Évite les pavés de texte trop longs."
+    "You are an expert due diligence analyst. From the section summaries provided, "
+    "write a structured SYNTHESIS, complete but concise (about 3 to 4 pages, "
+    "~1500-2000 words at most), for an investment committee. "
+    "Expected structure: a short introduction, the key points grouped by theme, "
+    "the strengths, the risks and points of attention, then a conclusion / "
+    "recommendation. Professional, factual style. Write in English. Invent nothing: "
+    "rely only on the summaries provided.\n\n"
+    "FORMAT (markdown, important for the PDF layout):\n"
+    '- Use level-2 headings "##" for the main parts '
+    "(## Introduction, ## Key Points, ## Strengths, ## Risks and Points of Attention, "
+    "## Conclusion and Recommendation).\n"
+    '- Use "###" subheadings for the themes within a part.\n'
+    '- Use "-" bullet lists to list strengths, risks and findings.\n'
+    '- Put important terms in bold "**…**". Avoid overly long blocks of text.'
 )
 
 SECTION_MAX_OUTPUT_TOKENS = 2500
@@ -81,7 +82,7 @@ SectionAnswers = tuple[DDSection, list[DDAnswer]]
 
 
 def _company_name(session: DDSession) -> str:
-    return session.company.name if session.company is not None else "la société cible"
+    return session.company.name if session.company is not None else "the target company"
 
 
 def _custom_id_for(section_id: int) -> str:
@@ -197,27 +198,27 @@ def _build_section_user_prompt(
     company: str, section: DDSection, section_answers: list[DDAnswer]
 ) -> str:
     title = section.title if section and section.title else "Section"
-    lines = [f"Société : {company}", f"Section : {title}", ""]
+    lines = [f"Company: {company}", f"Section: {title}", ""]
     for ans in section_answers:
         q = ans.question.question_text if ans.question else (ans.question_code or "Question")
-        a = ans.answer_text or "(pas de réponse)"
-        lines.append(f"Q : {q}")
-        lines.append(f"R : {a}")
+        a = ans.answer_text or "(no answer)"
+        lines.append(f"Q: {q}")
+        lines.append(f"A: {a}")
         lines.append("")
-    lines.append("Rédige le résumé synthétique de cette section.")
+    lines.append("Write the summary of this section.")
     return "\n".join(lines)
 
 
 def _build_synthesis_user_prompt(
     company: str, dd_type_obj: DDType, section_summary_pairs: list[tuple[DDSection, str]]
 ) -> str:
-    lines = [f"Société : {company}", f"Dossier de due diligence : {dd_type_obj.name}", ""]
+    lines = [f"Company: {company}", f"Due diligence questionnaire: {dd_type_obj.name}", ""]
     for section, text in section_summary_pairs:
         title = section.title if section and section.title else "Section"
         lines.append(f"## {title}")
         lines.append(text)
         lines.append("")
-    lines.append("Rédige la synthèse globale de ce dossier de due diligence.")
+    lines.append("Write the overall synthesis of this due diligence.")
     return "\n".join(lines)
 
 

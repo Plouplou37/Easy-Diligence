@@ -2,7 +2,7 @@
 # GitHub reads this file on its own. Locally, run once:
 #   git config blame.ignoreRevsFile .git-blame-ignore-revs
 
-# Formatage automatique du backend (ruff format), sans changement de logique
+# Backend formatted by ruff format, no change in logic
 9a713fa74a2c29d90db3690eead3cbb5e55efb74
-# Frontend formaté par Prettier (115 fichiers, build identique)
+# Frontend formatted by Prettier (115 files, identical build)
 d19b51d9935d7b1f6942172adf7560eafb26b1bc

@@ -1,7 +1,7 @@
 """The request sent to OpenAI for one question, frozen.
 
-The prompts and parameters were tuned and measured (docs/ARCHITECTURE.md, "Le
-moteur de réponses"): a rework of the engine must not move them by accident.
+The prompts and parameters were tuned and measured (docs/ARCHITECTURE.md, "The
+answering engine"): a rework of the engine must not move them by accident.
 The expected requests sit in tests/data/question_request.json, written once
 from the engine as it was; a deliberate change rewrites that file, and the
 diff shows exactly what goes to OpenAI differently.

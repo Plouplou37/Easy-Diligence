@@ -22,7 +22,7 @@ def import_questionnaire(path: str, code: str, name: str, owner_id):
     db = SessionLocal()
     try:
         if db.query(DDType).filter(DDType.code == code).first():
-            raise SystemExit(f"Le code '{code}' existe deja")
+            raise SystemExit(f"A DD type with code '{code}' already exists")
 
         with open(path, "rb") as handle:
             sections_data = DDTypeFileParser().parse_file(handle.read(), path)
@@ -31,7 +31,7 @@ def import_questionnaire(path: str, code: str, name: str, owner_id):
             code=code,
             name=name,
             # No description rather than a filesystem path: the card shows this
-            # to the analyst, and "Importe depuis ../example_questionnaire.json"
+            # to the analyst, and "Imported from ../example_questionnaire.json"
             # told them nothing about what the questionnaire covers.
             description=None,
             icon=DEFAULT_DD_TYPE_ICON,
@@ -49,9 +49,9 @@ def import_questionnaire(path: str, code: str, name: str, owner_id):
                 dd_type_id=dd_type.id,
                 section_code=section_data["section_code"],
                 title=section_data["title"],
-                # No placeholder: "Section for <title>" restated the title on 213
-                # of 217 rows. The description now reaches the model with the
-                # section heading, so empty beats tautological.
+                # No placeholder: "Section for <title>" only restated the title.
+                # The description now reaches the model with the section
+                # heading, so empty beats tautological.
                 description=section_data.get("description"),
                 order_index=section_data["order_index"],
             )

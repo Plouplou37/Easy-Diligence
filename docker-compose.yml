@@ -1,4 +1,4 @@
-# Easy Diligence: `docker compose up -d --build` (README, "Démarrage avec Docker").
+# Easy Diligence: `docker compose up -d --build` (README, "Running the application").
 #
 #   navigateur ──► proxy ──/api──► backend ──► db
 #                    └──── / ────► frontend

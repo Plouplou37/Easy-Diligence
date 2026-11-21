@@ -2,39 +2,39 @@
 
 **Easy Diligence 0.1.0**
 
-## Outils
+## Tools
 
-| Outil | Version | Figée dans |
+| Tool | Version | Pinned in |
 | --- | --- | --- |
 | Python | 3.12 | `backend/.python-version` |
-| uv | 0.9.17 ou plus récent | `backend/pyproject.toml` (`[tool.uv] required-version`) |
+| uv | 0.9.17 or newer | `backend/pyproject.toml` (`[tool.uv] required-version`) |
 | Node.js | 24 | `frontend/.nvmrc` |
 | PostgreSQL | 17 | |
-| Modèle OpenAI | `gpt-5.6-luna` | `.env.template` (`OPENAI_MODEL`) |
+| OpenAI model | `gpt-5.6-luna` | `.env.template` (`OPENAI_MODEL`) |
 
-## Images Docker
+## Docker images
 
-Figées à la version exacte, jamais `latest` : une image ne change pas sans
-qu'un commit le dise.
+Pinned to the exact version, never `latest`: an image does not change unless a
+commit says so.
 
-| Service | Image | Figée dans |
+| Service | Image | Pinned in |
 | --- | --- | --- |
-| `backend` | `python:3.12.16-slim-trixie`, avec uv `0.9.17` (`ghcr.io/astral-sh/uv`) | `backend/Dockerfile` |
-| `frontend` | `node:24.22.3-alpine` pour construire, `nginx:1.30.7-alpine` pour servir | `frontend/Dockerfile` |
+| `backend` | `python:3.12.16-slim-trixie`, with uv `0.9.17` (`ghcr.io/astral-sh/uv`) | `backend/Dockerfile` |
+| `frontend` | `node:24.22.3-alpine` to build, `nginx:1.30.7-alpine` to serve | `frontend/Dockerfile` |
 | `proxy` | `nginx:1.30.7-alpine` | `proxy/Dockerfile` |
 | `db` | `postgres:17.12-trixie` | `docker-compose.yml` |
 
-## Déploiement (Terraform)
+## Deployment (Terraform)
 
-| Outil | Version | Figée dans |
+| Tool | Version | Pinned in |
 | --- | --- | --- |
-| Terraform | 1.17.2 (1.11 au moins) | `infra/*/versions.tf`, la CI |
+| Terraform | 1.17.2 (1.11 at least) | `infra/*/versions.tf`, CI |
 | Provider `azurerm` | 5.14 | `infra/azure/.terraform.lock.hcl` |
 | Provider `aws` | 6.73 | `infra/aws/.terraform.lock.hcl` |
-| Providers `random`, `time` | 3.9, 0.14 | les mêmes fichiers |
+| Providers `random`, `time` | 3.9, 0.14 | the same files |
 
-Les dépendances sont déclarées dans `backend/pyproject.toml` et
-`frontend/package.json`, et leurs versions exactes figées dans `backend/uv.lock`
-et `frontend/package-lock.json`.
+The dependencies are declared in `backend/pyproject.toml` and
+`frontend/package.json`, and their exact versions pinned in `backend/uv.lock`
+and `frontend/package-lock.json`.
 
-Les changements d'une version à l'autre sont dans [`CHANGELOG.md`](CHANGELOG.md).
+The changes from one version to the next are in [`CHANGELOG.md`](CHANGELOG.md).
