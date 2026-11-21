@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### Makefile
+
+- A `Makefile` at the root gathers the everyday commands; `make` alone lists
+  them. With Docker: `up`, `down`, `ps`, `logs`, `build`, `build-backend` and
+  `build-frontend` (rebuild one image and restart its container), `admin`. By
+  hand: `install`, `dev-backend`, `dev-frontend`, `test`, `lint`, `format`,
+  `check` (what CI checks, from lint to the frontend build), `migrate`,
+  `migration`, `schema`.
+- Its commands run the same under sh (Linux, macOS, Git Bash) and under cmd
+  (make on Windows).
+
 ### Everything in English
 
 - The documentation is in English: `README.md`, `docs/ARCHITECTURE.md`,
