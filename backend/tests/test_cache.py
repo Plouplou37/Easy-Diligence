@@ -65,3 +65,17 @@ def test_cached_computes_once_then_serves_the_stored_value():
     assert len(calls) == 1
     assert cached("vector_stores:2", 60, compute) == [{"id": "vs_1"}]  # another key
     assert len(calls) == 2
+
+
+def test_cached_does_not_store_what_keep_refuses():
+    answers = iter([["incomplete"], ["complete"]])
+
+    def compute():
+        return next(answers)
+
+    def keep(value):
+        return value == ["complete"]
+
+    assert cached("vector_stores:1", 60, compute, keep) == ["incomplete"]
+    assert cached("vector_stores:1", 60, compute, keep) == ["complete"]
+    assert cached("vector_stores:1", 60, compute, keep) == ["complete"]  # now stored

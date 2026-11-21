@@ -109,12 +109,16 @@ def _describe_all(stores: list[VectorStore]) -> list[VectorStoreResponse]:
 
 def list_stores(db: Session, user: User) -> list[dict[str, Any]]:
     """The user's stores (an admin's: all), newest first, with their state at
-    OpenAI. Cached: listing asks OpenAI about every store."""
+    OpenAI. Cached: listing asks OpenAI about every store. Not when OpenAI could
+    not describe one of them: the next read asks again."""
 
     def compute() -> list[dict[str, Any]]:
         return [r.model_dump() for r in _describe_all(_visible_stores(db, user))]
 
-    return cached(f"vector_stores:{user.id}", CACHE_TTL, compute)
+    def complete(stores: list[dict[str, Any]]) -> bool:
+        return all(store["status"] != "error" for store in stores)
+
+    return cached(f"vector_stores:{user.id}", CACHE_TTL, compute, keep=complete)
 
 
 def purge_stale(db: Session, user: User) -> int:
@@ -188,7 +192,8 @@ def delete_store(db: Session, store: VectorStore) -> None:
 
 
 def list_files(store: VectorStore) -> list[dict[str, Any]]:
-    """The files of the store, from OpenAI. Cached."""
+    """The files of the store, from OpenAI. Cached, unless OpenAI did not give
+    the details of one of them (`details_missing`): the next read asks again."""
 
     def compute() -> list[dict[str, Any]]:
         try:
@@ -198,7 +203,10 @@ def list_files(store: VectorStore) -> list[dict[str, Any]]:
                 raise NotFoundError("Vector store no longer exists") from error
             raise
 
-    return cached(f"vector_store_files:{store.id}", CACHE_TTL, compute)
+    def complete(files: list[dict[str, Any]]) -> bool:
+        return not any(file.get("details_missing") for file in files)
+
+    return cached(f"vector_store_files:{store.id}", CACHE_TTL, compute, keep=complete)
 
 
 def add_file(store: VectorStore, content: bytes, filename: str) -> dict[str, Any]:

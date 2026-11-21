@@ -163,8 +163,17 @@ class CacheService:
 cache_service = CacheService()
 
 
-def cached(key: str, ttl: int, compute: Callable[[], Any]) -> Any:
+def cached(
+    key: str,
+    ttl: int,
+    compute: Callable[[], Any],
+    keep: Callable[[Any], bool] | None = None,
+) -> Any:
     """The value stored under `key`, or else `compute()`, stored for `ttl` seconds.
+
+    `keep`, when given, decides whether a computed value is stored: an
+    incomplete answer (OpenAI failing for one item) is served once, but the next
+    read asks again instead of showing it for the whole `ttl`.
 
     The value must be plain data (dicts, lists, strings, numbers): Redis keeps
     it as JSON, dates turned into strings.
@@ -173,7 +182,8 @@ def cached(key: str, ttl: int, compute: Callable[[], Any]) -> Any:
     if hit is not None:
         return hit
     value = compute()
-    cache_service.set(key, value, ttl)
+    if keep is None or keep(value):
+        cache_service.set(key, value, ttl)
     return value
 
 

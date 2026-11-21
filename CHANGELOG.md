@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Vector store files
+
+- When OpenAI lists a file but does not give its details, the row says so:
+  the name is greyed out, with a tooltip, and the size and date show "—"
+  instead of "NaN undefined" and "Invalid Date".
+- An incomplete answer from OpenAI (a file without details, a store it could
+  not describe) is no longer cached: the next display asks OpenAI again,
+  instead of showing the same gap for five minutes.
+
 ### Makefile
 
 - A `Makefile` at the root gathers the everyday commands; `make` alone lists
