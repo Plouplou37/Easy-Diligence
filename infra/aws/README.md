@@ -1,54 +1,54 @@
-# Déployer Easy Diligence sur AWS
+# Deploy Easy Diligence on AWS
 
-Le code Terraform de ce dossier crée tout ce qu'il faut pour faire tourner
-l'application sur AWS, en services managés. C'est l'équivalent d'`infra/azure/`,
-au choix.
+The Terraform code in this folder creates everything needed to run the
+application on AWS, using managed services. It is the equivalent of
+`infra/azure/`: use one or the other.
 
 ```
 Internet ─HTTPS─► load balancer ─► proxy (ECS) ──/api──► backend (ECS) ──► RDS PostgreSQL
                                      └──── / ────► frontend (ECS)
 ```
 
-| Ressource | Rôle |
+| Resource | Role |
 | --- | --- |
-| ECS sur Fargate | les trois conteneurs de `docker-compose.yml`, dans des sous-réseaux privés |
-| Application Load Balancer | la seule entrée publique : il termine le HTTPS (certificat ACM) et transmet au proxy |
-| RDS PostgreSQL 17 | la base, chiffrée, privée, sauvegardée automatiquement (7 jours par défaut) |
-| ECR | les images, une par service |
-| Secrets Manager | les secrets : l'URL de la base, la clé JWT, la clé OpenAI |
-| Cloud Map | les noms internes (`backend.<…>.internal`), par lesquels le proxy joint les deux autres |
-| VPC | deux zones ; sous-réseaux publics (load balancer, passerelle NAT) et privés (conteneurs, base) |
-| CloudWatch Logs | les journaux des conteneurs |
+| ECS on Fargate | the three containers from `docker-compose.yml`, in private subnets |
+| Application Load Balancer | the only public entry point: it terminates HTTPS (ACM certificate) and forwards to the proxy |
+| RDS PostgreSQL 17 | the database, encrypted, private, backed up automatically (7 days by default) |
+| ECR | the images, one per service |
+| Secrets Manager | the secrets: the database URL, the JWT key, the OpenAI key |
+| Cloud Map | the internal names (`backend.<…>.internal`) the proxy uses to reach the other two |
+| VPC | two zones; public subnets (load balancer, NAT gateway) and private subnets (containers, database) |
+| CloudWatch Logs | the container logs |
 
-Rien n'est déployé tant qu'on ne lance pas `terraform apply`. Les ressources
-sont payantes : aux tailles par défaut, compter une centaine de dollars par
-mois. La passerelle NAT, le load balancer et la base en font l'essentiel.
+Nothing is deployed until you run `terraform apply`. The resources cost
+money: at the default sizes, expect about a hundred dollars per month. The NAT
+gateway, the load balancer and the database make up most of it.
 
-**Différence avec Azure : le HTTPS demande un nom de domaine.** AWS ne fournit
-pas d'adresse HTTPS toute prête : il faut un domaine (par exemple
-`dd.example.com`) et son certificat ACM. Sans eux, l'application répond en HTTP
-sur l'adresse du load balancer, ce qui ne convient qu'à un essai : les mots de
-passe y circuleraient en clair.
+**Difference from Azure: HTTPS needs a domain name.** AWS does not provide a
+ready-made HTTPS address: you need a domain (for example `dd.example.com`) and
+its ACM certificate. Without them, the application answers over HTTP on the
+load balancer's address, which is only fit for a test: passwords would travel
+in clear text.
 
-## Ce qu'il faut
+## What you need
 
-- un compte AWS, et un utilisateur ou un rôle autorisé à créer ces ressources
-  (IAM compris) ;
-- **AWS CLI** v2, configurée (`aws configure` ou `aws sso login`), et le
-  **Session Manager plugin** pour `aws ecs execute-command` ;
-- **Terraform** 1.11 ou plus récent (version testée dans `VERSION.md`) ;
-- **Docker**, sur la machine qui construit les images ;
-- pour le HTTPS, un nom de domaine dont on peut modifier le DNS.
+- an AWS account, and a user or a role allowed to create these resources
+  (IAM included);
+- **AWS CLI** v2, configured (`aws configure` or `aws sso login`), and the
+  **Session Manager plugin** for `aws ecs execute-command`;
+- **Terraform** 1.11 or later (tested version in `VERSION.md`);
+- **Docker**, on the machine that builds the images;
+- for HTTPS, a domain name whose DNS you can edit.
 
-Toutes les commandes se lancent depuis ce dossier, `infra/aws/`. Les exemples
-utilisent la région `eu-west-3` (Paris).
+All commands are run from this folder, `infra/aws/`. The examples use the
+`eu-west-3` region (Paris).
 
-## Premier déploiement
+## First deployment
 
-### 1. Le bucket de l'état (une fois)
+### 1. The state bucket (once)
 
-L'état de Terraform vit dans un bucket S3, à créer une fois. Son nom est
-unique dans tout AWS : y mettre par exemple le numéro du compte.
+The Terraform state lives in an S3 bucket, created once. Its name is unique
+across all of AWS: put the account number in it, for example.
 
 ```bash
 BUCKET=easydiligence-tfstate-$(aws sts get-caller-identity --query Account --output text)
@@ -61,44 +61,44 @@ aws s3api put-public-access-block --bucket "$BUCKET" \
   BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true
 ```
 
-L'état contient des secrets (le mot de passe de la base, la clé JWT) : seuls
-ceux qui déploient doivent avoir accès à ce bucket.
+The state contains secrets (the database password, the JWT key): only the
+people who deploy should have access to this bucket.
 
-### 2. Le certificat (pour le HTTPS)
+### 2. The certificate (for HTTPS)
 
 ```bash
 aws acm request-certificate --region eu-west-3 \
   --domain-name dd.example.com --validation-method DNS
 ```
 
-ACM donne un enregistrement CNAME à créer dans le DNS du domaine
-(`aws acm describe-certificate --certificate-arn <arn>`) ; le certificat est
-validé quelques minutes après. Son ARN va dans `terraform.tfvars`.
+ACM gives a CNAME record to create in the domain's DNS
+(`aws acm describe-certificate --certificate-arn <arn>`); the certificate is
+validated a few minutes later. Its ARN goes in `terraform.tfvars`.
 
-### 3. Configurer
+### 3. Configure
 
 ```bash
-cp backend.hcl.example backend.hcl            # le bucket de l'étape 1
-cp terraform.tfvars.example terraform.tfvars  # le tag des images, le domaine
+cp backend.hcl.example backend.hcl            # the bucket from step 1
+cp terraform.tfvars.example terraform.tfvars  # the image tag, the domain
 terraform init -backend-config=backend.hcl
 ```
 
-`backend.hcl` et `terraform.tfvars` sont ignorés par git.
+`backend.hcl` and `terraform.tfvars` are ignored by git.
 
-### 4. Créer les dépôts d'images, puis y pousser les images
+### 4. Create the image repositories, then push the images to them
 
-Les services ont besoin de leurs images dès leur création : les dépôts
-viennent donc d'abord, seuls.
+The services need their images as soon as they are created: so the
+repositories come first, on their own.
 
 ```bash
 terraform apply -target=aws_ecr_repository.this
 ```
 
-Puis les trois images, construites pour Linux x86-64 (même sur un Mac à puce
-Apple), avec le tag de `terraform.tfvars` (`image_tag`) :
+Then the three images, built for Linux x86-64 (even on a Mac with Apple
+silicon), with the tag from `terraform.tfvars` (`image_tag`):
 
 ```bash
-TAG=2026-11-20   # le image_tag de terraform.tfvars
+TAG=2026-11-20   # the image_tag from terraform.tfvars
 REGISTRY=$(aws sts get-caller-identity --query Account --output text).dkr.ecr.eu-west-3.amazonaws.com
 aws ecr get-login-password --region eu-west-3 | docker login --username AWS --password-stdin "$REGISTRY"
 for service in backend frontend proxy; do
@@ -107,78 +107,75 @@ for service in backend frontend proxy; do
 done
 ```
 
-### 5. Tout créer
+### 5. Create everything
 
 ```bash
 terraform apply
 ```
 
-Compter une quinzaine de minutes : la base est la plus longue à créer. Au
-démarrage, le backend applique les migrations.
+Allow about fifteen minutes: the database takes the longest to create. At
+startup, the backend applies the migrations.
 
-### 6. Pointer le domaine
+### 6. Point the domain
 
-Dans le DNS du domaine, un enregistrement CNAME de `dd.example.com` vers
-l'adresse du load balancer : `terraform output load_balancer_dns_name`.
+In the domain's DNS, add a CNAME record from `dd.example.com` to the load
+balancer's address: `terraform output load_balancer_dns_name`.
 
-### 7. Déposer la clé OpenAI
+### 7. Set the OpenAI key
 
-Terraform crée le secret avec une valeur d'attente, et ne voit jamais la vraie
-clé :
+Terraform creates the secret with a placeholder value, and never sees the real
+key:
 
 ```bash
 aws secretsmanager put-secret-value \
   --secret-id "$(terraform output -raw openai_secret)" \
-  --secret-string "<la clé OpenAI>"
+  --secret-string "<the OpenAI key>"
 ```
 
-Puis redémarrer le backend, qui relit ses secrets à son démarrage :
+Then restart the backend, which reads its secrets again when it starts:
 
 ```bash
 aws ecs update-service --cluster "$(terraform output -raw cluster)" \
   --service backend --force-new-deployment
 ```
 
-### 8. Créer le premier administrateur
+### 8. Create the first administrator
 
-Un shell dans le conteneur du backend (ECS Exec), puis la commande de
-création :
+Open a shell in the backend container (ECS Exec), then run the creation
+command:
 
 ```bash
 CLUSTER=$(terraform output -raw cluster)
 TASK=$(aws ecs list-tasks --cluster "$CLUSTER" --service-name backend --query 'taskArns[0]' --output text)
 aws ecs execute-command --cluster "$CLUSTER" --task "$TASK" \
   --container backend --interactive --command sh
-# dans le conteneur :
-python -m app.cli create-admin <adresse e-mail> "<Prénom Nom>"
+# in the container:
+python -m app.cli create-admin <email address> "<Full Name>"
 ```
 
-La commande demande le mot de passe. L'application est à l'adresse donnée par
+The command asks for the password. The application is at the address given by
 `terraform output url`.
 
-## Mettre à jour
+## Updating
 
-À chaque nouvelle version : pousser les images sous un nouveau tag (étape 4,
-sans le `terraform apply -target`), mettre ce tag dans `terraform.tfvars`,
-puis `terraform apply`. L'ancien backend s'arrête avant que le nouveau
-démarre et applique les migrations : quelques instants d'indisponibilité de
-l'API.
+For each new version: push the images under a new tag (step 4, without the
+`terraform apply -target`), put this tag in `terraform.tfvars`, then run
+`terraform apply`. The old backend stops before the new one starts and applies
+the migrations: the API is unavailable for a few moments.
 
-## Bon à savoir
+## Good to know
 
-- **Délai des requêtes** : le load balancer et le proxy laissent 600 secondes
-  aux requêtes longues (régénération, synthèse rédigée en direct).
-- **Un seul backend** : il reste à une tâche, toujours allumée. Un traitement
-  en cours vit dans son processus : le partager entre tâches le couperait.
-- **Une seule passerelle NAT**, dans la première zone : si cette zone tombe,
-  les conteneurs ne joignent plus OpenAI. Une passerelle par zone coûte plus
-  cher.
-- **Bannière des PDF** : elle n'est pas montée ici. Il faudrait un volume EFS
-  monté dans le backend, et `BRAND_BANNER_PATH` dans `backend_env`.
-- **Les réglages du backend** (`.env.template`) passent par `backend_env` dans
-  `terraform.tfvars`, jamais un secret : ceux-là vont dans Secrets Manager.
-- **Tout supprimer** : la base est protégée contre la suppression. Mettre
-  d'abord `deletion_protection = false` dans `database.tf` et faire un
-  `terraform apply`, puis `terraform destroy`, qui garde un dernier
-  instantané de la base (`<nom>-db-final`). Les secrets restent récupérables
-  7 jours.
+- **Request timeout**: the load balancer and the proxy give long requests
+  600 seconds (regeneration, a summary written live).
+- **A single backend**: it stays at one task, always on. A run in progress
+  lives in its process: splitting it across tasks would cut the run off.
+- **A single NAT gateway**, in the first zone: if this zone goes down, the
+  containers can no longer reach OpenAI. One gateway per zone costs more.
+- **PDF banner**: it is not mounted here. It would take an EFS volume mounted
+  in the backend, and `BRAND_BANNER_PATH` in `backend_env`.
+- **Backend settings** (`.env.template`) go through `backend_env` in
+  `terraform.tfvars`, never a secret: secrets go in Secrets Manager.
+- **Delete everything**: the database is protected against deletion. First set
+  `deletion_protection = false` in `database.tf` and run `terraform apply`,
+  then `terraform destroy`, which keeps a final snapshot of the database
+  (`<name>-db-final`). The secrets can still be recovered for 7 days.

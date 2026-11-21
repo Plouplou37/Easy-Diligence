@@ -1,5 +1,6 @@
 import logging
 
+import openai
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -17,6 +18,7 @@ from app.core.exceptions import (
     TooManyRequestsError,
 )
 from app.core.logging_setup import configure_logging
+from app.engine.errors import operation_message
 
 configure_logging(settings.log_level)
 logger = logging.getLogger(__name__)
@@ -97,6 +99,19 @@ async def app_error_handler(_request: Request, exc: AppError) -> JSONResponse:
     if status_code >= 500:
         logger.error("%s: %s", type(exc).__name__, exc.message, exc_info=exc)
     return JSONResponse({"detail": exc.message}, status_code=status_code, headers=headers)
+
+
+@app.exception_handler(openai.OpenAIError)
+async def openai_error_handler(request: Request, exc: openai.OpenAIError) -> JSONResponse:
+    """An OpenAI call made for the request failed (a vector store, a file).
+
+    A 502 with a message chosen by the class of the error (engine/errors.py),
+    not the generic 500 that told the user nothing. OpenAI's own text, which
+    may quote the key, stays in the logs. Never a 401: the frontend would take
+    it for an expired session and log the user out.
+    """
+    logger.error("OpenAI error on %s %s", request.method, request.url.path, exc_info=exc)
+    return JSONResponse({"detail": operation_message(exc)}, status_code=502)
 
 
 app.include_router(api_router, prefix="/api")

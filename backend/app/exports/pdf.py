@@ -372,7 +372,7 @@ def build_report(
             continue
         story.append(PageBreak())
         story.append(
-            Paragraph(f"{esc('Synthèse')} &mdash; {esc(dd_map[dt_id]['name'])}", ddtype_style)
+            Paragraph(f"{esc('Synthesis')} &mdash; {esc(dd_map[dt_id]['name'])}", ddtype_style)
         )
         story.append(
             HRFlowable(width="100%", thickness=2, color=primary, spaceBefore=2, spaceAfter=14)

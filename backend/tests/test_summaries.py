@@ -66,7 +66,7 @@ class FakeSummaries:
         self.threads = {"Summary": set(), "Synthesis": set()}
 
     def generate_summary(self, system_prompt, user_prompt, max_output_tokens):
-        kind = "Synthesis" if "synthèse globale" in user_prompt else "Summary"
+        kind = "Synthesis" if "overall synthesis" in user_prompt else "Summary"
         self.threads[kind].add(threading.get_ident())
         return f"{kind} of {len(user_prompt)} characters"
 

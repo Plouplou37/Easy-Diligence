@@ -513,9 +513,9 @@ class DDProcessor:
         guided = bool(instruction or reference_url or extra_file_source)
         extras = []
         if instruction:
-            extras.append("Consigne supplémentaire de l'analyste : " + instruction)
+            extras.append("Additional instruction from the analyst: " + instruction)
         if reference_url:
-            extras.append("Source web à consulter en priorité : " + reference_url)
+            extras.append("Web source to check first: " + reference_url)
         question_text = self.compose_question_text(question) + (
             ("\n\n" + "\n".join(extras)) if extras else ""
         )

@@ -1,45 +1,45 @@
-# Déployer Easy Diligence sur Azure
+# Deploy Easy Diligence on Azure
 
-Le code Terraform de ce dossier crée tout ce qu'il faut pour faire tourner
-l'application sur Azure, en services managés :
+The Terraform code in this folder creates everything needed to run the
+application on Azure, using managed services:
 
 ```
-Internet ─HTTPS─► proxy (Container App, publique)
-                    ├── /     ► frontend (Container App, interne)
-                    └── /api  ► backend  (Container App, interne) ──► PostgreSQL (privé)
-                                    └── secrets lus dans Key Vault
+Internet ─HTTPS─► proxy (Container App, public)
+                    ├── /     ► frontend (Container App, internal)
+                    └── /api  ► backend  (Container App, internal) ──► PostgreSQL (private)
+                                    └── secrets read from Key Vault
 ```
 
-| Ressource | Rôle |
+| Resource | Role |
 | --- | --- |
-| Azure Container Apps | les trois conteneurs de `docker-compose.yml`. Seul le proxy est public, en HTTPS, sur une adresse `*.azurecontainerapps.io` |
-| Azure Database for PostgreSQL Flexible Server 17 | la base, sans adresse publique, sauvegardée automatiquement (7 jours par défaut) |
-| Azure Container Registry | les images, construites dans Azure (`az acr build`) : pas besoin de Docker sur le poste |
-| Key Vault | les secrets : l'URL de la base, la clé JWT, la clé OpenAI |
-| Identité managée | une identité pour les trois applications, qui tire les images et lit les secrets, sans mot de passe |
-| Réseau virtuel | les applications et la base, la base n'étant joignable que depuis lui |
-| Log Analytics | les journaux des conteneurs |
+| Azure Container Apps | the three containers from `docker-compose.yml`. Only the proxy is public, over HTTPS, on a `*.azurecontainerapps.io` address |
+| Azure Database for PostgreSQL Flexible Server 17 | the database, with no public address, backed up automatically (7 days by default) |
+| Azure Container Registry | the images, built in Azure (`az acr build`): no need for Docker on your computer |
+| Key Vault | the secrets: the database URL, the JWT key, the OpenAI key |
+| Managed identity | one identity for the three applications, which pulls the images and reads the secrets, with no password |
+| Virtual network | the applications and the database; the database can only be reached from inside it |
+| Log Analytics | the container logs |
 
-Rien n'est déployé tant qu'on ne lance pas `terraform apply`. Les ressources
-sont payantes : aux tailles par défaut (la plus petite base, trois petits
-conteneurs toujours allumés), compter quelques dizaines d'euros par mois, la
-base en tête.
+Nothing is deployed until you run `terraform apply`. The resources cost
+money: at the default sizes (the smallest database, three small containers
+that are always on), expect a few tens of euros per month, most of it for the
+database.
 
-## Ce qu'il faut
+## What you need
 
-- un abonnement Azure, avec le rôle **Owner** (ou **Contributor** et **User
-  Access Administrator**) : Terraform y crée des attributions de rôles ;
-- **Azure CLI** (`az`), connecté : `az login`, puis
-  `az account set --subscription <id>` ;
-- **Terraform** 1.11 ou plus récent (version testée dans `VERSION.md`).
+- an Azure subscription, with the **Owner** role (or **Contributor** and **User
+  Access Administrator**): Terraform creates role assignments in it;
+- **Azure CLI** (`az`), signed in: `az login`, then
+  `az account set --subscription <id>`;
+- **Terraform** 1.11 or later (tested version in `VERSION.md`).
 
-Toutes les commandes se lancent depuis ce dossier, `infra/azure/`.
+All commands are run from this folder, `infra/azure/`.
 
-## Premier déploiement
+## First deployment
 
-### 1. Préparer l'abonnement (une fois)
+### 1. Prepare the subscription (once)
 
-Les fournisseurs de ressources utilisés doivent être enregistrés :
+The resource providers used here must be registered:
 
 ```bash
 az provider register --namespace Microsoft.App
@@ -49,9 +49,9 @@ az provider register --namespace Microsoft.KeyVault
 az provider register --namespace Microsoft.OperationalInsights
 ```
 
-L'état de Terraform vit dans un compte de stockage, à créer une fois. Son nom
-est unique dans tout Azure : le changer au besoin (3 à 24 minuscules et
-chiffres).
+The Terraform state lives in a storage account, created once. Its name is
+unique across all of Azure: change it if needed (3 to 24 lowercase letters and
+digits).
 
 ```bash
 az group create --name rg-easydiligence-tfstate --location francecentral
@@ -61,65 +61,65 @@ az storage account create --name easydiligencetfstate \
   --allow-blob-public-access false --allow-shared-key-access false
 az storage container create --name tfstate \
   --account-name easydiligencetfstate --auth-mode login
-# Le droit d'y écrire, avec son propre compte :
+# The right to write to it, for your own account:
 az role assignment create --role "Storage Blob Data Contributor" \
   --assignee "$(az ad signed-in-user show --query id -o tsv)" \
   --scope "$(az storage account show --name easydiligencetfstate --query id -o tsv)"
 ```
 
-L'état contient des secrets (le mot de passe de la base, la clé JWT) : seuls
-ceux qui déploient doivent avoir accès à ce compte de stockage.
+The state contains secrets (the database password, the JWT key): only the
+people who deploy should have access to this storage account.
 
-### 2. Configurer
+### 2. Configure
 
 ```bash
-cp backend.hcl.example backend.hcl            # les noms de l'étape 1
-cp terraform.tfvars.example terraform.tfvars  # l'abonnement, le tag des images
+cp backend.hcl.example backend.hcl            # the names from step 1
+cp terraform.tfvars.example terraform.tfvars  # the subscription, the image tag
 terraform init -backend-config=backend.hcl
 ```
 
-`backend.hcl` et `terraform.tfvars` sont ignorés par git.
+`backend.hcl` and `terraform.tfvars` are ignored by git.
 
-### 3. Créer le registre, puis y construire les images
+### 3. Create the registry, then build the images in it
 
-Les applications ont besoin de leurs images dès leur création : le registre
-vient donc d'abord, seul.
+The applications need their images as soon as they are created: so the
+registry comes first, on its own.
 
 ```bash
 terraform apply -target=azurerm_container_registry.this
 ```
 
-Puis les trois images, construites par Azure à partir du dépôt, avec le tag de
-`terraform.tfvars` (`image_tag`) :
+Then the three images, built by Azure from the repository, with the tag from
+`terraform.tfvars` (`image_tag`):
 
 ```bash
 REGISTRY=$(terraform output -raw registry)
-TAG=2026-11-20   # le image_tag de terraform.tfvars
+TAG=2026-11-20   # the image_tag from terraform.tfvars
 az acr build --registry "$REGISTRY" --image easy-diligence/backend:$TAG  ../../backend
 az acr build --registry "$REGISTRY" --image easy-diligence/frontend:$TAG ../../frontend
 az acr build --registry "$REGISTRY" --image easy-diligence/proxy:$TAG    ../../proxy
 ```
 
-### 4. Tout créer
+### 4. Create everything
 
 ```bash
 terraform apply
 ```
 
-Compter une quinzaine de minutes : la base est la plus longue à créer. Au
-démarrage, le backend applique les migrations.
+Allow about fifteen minutes: the database takes the longest to create. At
+startup, the backend applies the migrations.
 
-### 5. Déposer la clé OpenAI
+### 5. Set the OpenAI key
 
-Terraform crée le secret avec une valeur d'attente, et ne voit jamais la vraie
-clé :
+Terraform creates the secret with a placeholder value, and never sees the real
+key:
 
 ```bash
 az keyvault secret set --vault-name "$(terraform output -raw key_vault)" \
-  --name openai-api-key --value "<la clé OpenAI>"
+  --name openai-api-key --value "<the OpenAI key>"
 ```
 
-Puis redémarrer le backend, qui relit ses secrets :
+Then restart the backend, which reads its secrets again:
 
 ```bash
 BACKEND=$(terraform output -raw backend_app)
@@ -129,38 +129,39 @@ az containerapp revision restart --name "$BACKEND" --resource-group "$GROUP" \
     --query properties.latestRevisionName -o tsv)"
 ```
 
-### 6. Créer le premier administrateur
+### 6. Create the first administrator
 
-Un shell dans le conteneur du backend, puis la commande de création :
+Open a shell in the backend container, then run the creation command:
 
 ```bash
 az containerapp exec --name "$BACKEND" --resource-group "$GROUP" --command sh
-# dans le conteneur :
-python -m app.cli create-admin <adresse e-mail> "<Prénom Nom>"
+# in the container:
+python -m app.cli create-admin <email address> "<Full Name>"
 ```
 
-La commande demande le mot de passe. L'application est à l'adresse donnée par
+The command asks for the password. The application is at the address given by
 `terraform output url`.
 
-## Mettre à jour
+## Updating
 
-À chaque nouvelle version : construire les images sous un nouveau tag (étape
-3, sans le `terraform apply -target`), mettre ce tag dans `terraform.tfvars`,
-puis `terraform apply`. Le backend applique les migrations en redémarrant.
+For each new version: build the images under a new tag (step 3, without the
+`terraform apply -target`), put this tag in `terraform.tfvars`, then run
+`terraform apply`. The backend applies the migrations when it restarts.
 
-## Bon à savoir
+## Good to know
 
-- **Délai des requêtes** : l'entrée d'Azure Container Apps coupe une requête
-  après 240 secondes. Une synthèse rédigée en direct sur un très gros
-  questionnaire peut dépasser ce délai : la rédiger alors en différé (Batch).
-- **Un seul backend** : il reste à une instance, toujours allumée. Un
-  traitement en cours vit dans son processus : une mise en veille ou un
-  partage entre instances le couperait.
-- **Nom de domaine** : l'application répond sur `*.azurecontainerapps.io`. Un
-  domaine à soi, avec son certificat, s'ajoute à la Container App du proxy.
-- **Bannière des PDF** : elle n'est pas montée ici. Il faudrait un partage
-  Azure Files monté dans le backend, et `BRAND_BANNER_PATH` dans `backend_env`.
-- **Les réglages du backend** (`.env.template`) passent par `backend_env` dans
-  `terraform.tfvars`, jamais un secret : ceux-là vont dans Key Vault.
-- **Tout supprimer** : `terraform destroy`. Le Key Vault reste récupérable
-  7 jours (suppression douce), puis disparaît.
+- **Request timeout**: the Azure Container Apps ingress cuts off a request
+  after 240 seconds. A summary written live on a very large questionnaire can
+  take longer than that: in that case, write it in deferred mode (Batch).
+- **A single backend**: it stays at one instance, always on. A run in progress
+  lives in its process: putting the backend to sleep or splitting it across
+  instances would cut the run off.
+- **Domain name**: the application answers on `*.azurecontainerapps.io`. A
+  domain of your own, with its certificate, can be added to the proxy's
+  Container App.
+- **PDF banner**: it is not mounted here. It would take an Azure Files share
+  mounted in the backend, and `BRAND_BANNER_PATH` in `backend_env`.
+- **Backend settings** (`.env.template`) go through `backend_env` in
+  `terraform.tfvars`, never a secret: secrets go in Key Vault.
+- **Delete everything**: `terraform destroy`. The Key Vault can still be
+  recovered for 7 days (soft delete), then it is gone.

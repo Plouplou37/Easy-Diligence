@@ -3,7 +3,8 @@
 The missing link between xlsx_to_questionnaire.py and the database. Importing
 always creates a NEW dd type (POST /dd-types/import and import_questionnaire.py
 both refuse an existing code), so a revised questionnaire had no way in: the
-choice was a duplicate type or 205 calls to PUT /questions/questions/{id}.
+choice was a duplicate type or one call to PUT /questions/questions/{id} per
+question.
 
 What it writes is deliberately narrow -- question_text, nothing else:
 
@@ -88,7 +89,7 @@ def load_sections(path: str) -> list:
         data = json.load(handle)
 
     if not isinstance(data, list):
-        raise SystemExit(f"{path}: la racine doit etre une liste de sections")
+        raise SystemExit(f"{path}: the root must be a list of sections")
 
     def one(question):
         if isinstance(question, dict):
@@ -110,7 +111,7 @@ def load_db_sections(db, dd_type_id: int) -> list:
     """Sections and their questions, in an order we chose.
 
     DDSection.questions has no order_by, so relying on it for a rank-based
-    match would be trusting whatever order MySQL happens to return.
+    match would be trusting whatever order the database happens to return.
     """
     sections = (
         db.query(DDSection)
@@ -136,7 +137,7 @@ def check_structure(db_sections, file_sections) -> list:
 
     if len(db_sections) != len(file_sections):
         problems.append(
-            f"{len(db_sections)} sections en base contre {len(file_sections)} dans le fichier"
+            f"{len(db_sections)} sections in the database, {len(file_sections)} in the file"
         )
 
     for rank, ((section, questions), (title, texts)) in enumerate(
@@ -145,11 +146,11 @@ def check_structure(db_sections, file_sections) -> list:
         where = f"section {rank} '{section.title}'"
 
         if (section.title or "").strip() != title:
-            problems.append(f"{where}: titre '{title}' dans le fichier")
+            problems.append(f"{where}: title '{title}' in the file")
 
         if len(questions) != len(texts):
             problems.append(
-                f"{where}: {len(questions)} questions en base contre {len(texts)} dans le fichier"
+                f"{where}: {len(questions)} questions in the database, {len(texts)} in the file"
             )
             problems.extend(f"  {line}" for line in describe_gap(questions, texts))
             continue
@@ -159,8 +160,8 @@ def check_structure(db_sections, file_sections) -> list:
             if old and new and old != new:
                 problems.append(
                     f"{where}, question {rank_q} ({question.question_code}): "
-                    f"reference {old} en base contre {new} dans le fichier "
-                    f"-- alignement rompu"
+                    f"reference {old} in the database, {new} in the file "
+                    f"-- alignment broken"
                 )
 
     return problems
@@ -171,16 +172,16 @@ def describe_gap(questions, texts) -> list:
     old = [db_reference_of(q) for q in questions]
     new = [file_reference_of(ref, text) for text, _, ref in texts]
     if None in old or None in new:
-        return ["pas de numerotation exploitable pour situer l'ecart"]
+        return ["no usable numbering to locate the gap"]
 
     added = [r for r in new if r not in set(old)]
     removed = [r for r in old if r not in set(new)]
     lines = []
     if added:
-        lines.append("ajoutees dans le fichier: " + ", ".join(added))
+        lines.append("added in the file: " + ", ".join(added))
     if removed:
-        lines.append("absentes du fichier: " + ", ".join(removed))
-    return lines or ["memes references, effectifs differents: doublons ?"]
+        lines.append("missing from the file: " + ", ".join(removed))
+    return lines or ["same references, different counts: duplicates?"]
 
 
 def describe_change(question, new_text: str) -> str:
@@ -219,7 +220,7 @@ def update_questionnaire(path: str, code: str, apply: bool, answered: bool) -> N
     try:
         dd_type = db.query(DDType).filter(DDType.code == code).first()
         if not dd_type:
-            raise SystemExit(f"Le code '{code}' n'existe pas")
+            raise SystemExit(f"No DD type with code '{code}'")
 
         db_sections = load_db_sections(db, dd_type.id)
         file_sections = load_sections(path)
@@ -229,16 +230,15 @@ def update_questionnaire(path: str, code: str, apply: bool, answered: bool) -> N
             f"DD type {dd_type.id} ({dd_type.code}): {len(db_sections)} sections, "
             f"{sum(len(q) for _, q in db_sections)} questions"
         )
-        print(f"Fichier {path}: {len(file_sections)} sections, {total} questions")
+        print(f"File {path}: {len(file_sections)} sections, {total} questions")
 
         problems = check_structure(db_sections, file_sections)
         if problems:
-            print("\nLa structure diverge, rien n'a ete ecrit:")
+            print("\nThe structures differ, nothing was written:")
             for problem in problems:
                 print(f"  - {problem}")
             raise SystemExit(
-                "\nCorriger le fichier, ou traiter l'ajout / la "
-                "suppression de questions comme une operation a part."
+                "\nFix the file, or handle adding or removing questions as a separate operation."
             )
 
         # A question changes if its text moved, or if the file carries sources
@@ -254,7 +254,7 @@ def update_questionnaire(path: str, code: str, apply: bool, answered: bool) -> N
                     changed.append((question, text, context if fill_context else None))
 
         if not changed:
-            print(f"\nRien a faire: les {total} textes sont deja identiques.")
+            print(f"\nNothing to do: the {total} texts are already identical.")
             return
 
         print()
@@ -263,20 +263,20 @@ def update_questionnaire(path: str, code: str, apply: bool, answered: bool) -> N
             if context:
                 print(f"    + context_prompt: {context[:90]}{'...' if len(context) > 90 else ''}")
         if len(changed) > MAX_SHOWN:
-            print(f"  ... et {len(changed) - MAX_SHOWN} autres")
+            print(f"  ... and {len(changed) - MAX_SHOWN} more")
 
         existing = count_answers(db, [question for question, _, _ in changed])
         if existing and not answered:
             raise SystemExit(
-                f"\n{existing} reponse(s) referencent ces questions: les reecrire "
-                "ferait passer d'anciennes reponses pour des reponses au nouveau "
-                "texte. Relancer avec --answered si c'est voulu."
+                f"\n{existing} answer(s) point at these questions: rewriting them "
+                "would pass old answers off as answers to the new text. Run again "
+                "with --answered if that is intended."
             )
 
         if not apply:
             print(
-                f"\nDRY-RUN  {code}: {len(changed)}/{total} questions changeraient "
-                f"(relancer avec --apply pour ecrire)"
+                f"\nDRY-RUN  {code}: {len(changed)}/{total} questions would change "
+                f"(run again with --apply to write)"
             )
             return
 
@@ -287,8 +287,8 @@ def update_questionnaire(path: str, code: str, apply: bool, answered: bool) -> N
 
         db.commit()
         print(
-            f"\nOK  {code}: {len(changed)}/{total} questions mises a jour "
-            f"(ids, codes et order_index inchanges)"
+            f"\nOK  {code}: {len(changed)}/{total} questions updated "
+            f"(ids, codes and order_index unchanged)"
         )
     except Exception:
         db.rollback()

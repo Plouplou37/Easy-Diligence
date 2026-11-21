@@ -1,518 +1,519 @@
-# Journal des changements
+# Changelog
 
-## Non publié
+## Unreleased
 
-### Relecture avant publication
+### Everything in English
 
-- Tout l'historique git a été relu : aucun secret, aucune trace du poste de
-  travail, aucun nom réel ; tous les commits portent l'adresse noreply de
-  GitHub.
-- Deux renvois pointaient encore vers l'ancien `proxy/nginx.conf` (README et
-  `frontend/nginx.conf`) : ils nomment son remplaçant,
+- The documentation is in English: `README.md`, `docs/ARCHITECTURE.md`,
+  `CLAUDE.md`, `VERSION.md`, the `infra/` READMEs and this changelog, as well
+  as the comments of `.env.template` and the messages of the scripts in
+  `backend/scripts/`.
+- The syntheses are written in English. The instructions given to the model
+  for the section summaries and the synthesis are in English, and so are the
+  analyst's instruction and the web source added to a regenerated answer. In
+  the PDF report, the synthesis heading reads "Synthesis".
+
+### OpenAI errors explained to the user
+
+- An OpenAI error outside a run (creating a vector store, uploading a
+  document to it, listing its files…) showed "Internal server error". It now
+  gives a message that says what happened and what to do: OpenAI
+  unreachable, rate limit reached, key refused (to be checked by an
+  administrator). OpenAI's text stays in the logs.
+
+### Documentation fixes
+
+- Two links still pointed to the old `proxy/nginx.conf` (README and
+  `frontend/nginx.conf`): they now name its replacement,
   `proxy/default.conf.template`.
 
-### Déploiement sur Azure ou AWS (Terraform)
+### Deployment on Azure or AWS (Terraform)
 
-- **`infra/azure/`** déploie l'application sur Azure, en services managés :
-  Container Apps pour les trois conteneurs (seul le proxy est public, en
-  HTTPS), PostgreSQL Flexible Server privé, Key Vault, Container Registry,
-  identité managée, réseau virtuel, Log Analytics.
-- **`infra/aws/`** fait de même sur AWS : ECS Fargate dans des sous-réseaux
-  privés, un load balancer en HTTPS (avec un domaine et son certificat), RDS
-  PostgreSQL, Secrets Manager, ECR, Cloud Map, CloudWatch.
-- Chaque dossier a son README : les commandes dans l'ordre, de la création du
-  stockage de l'état jusqu'au premier administrateur, puis les mises à jour.
-  La clé OpenAI se dépose à la main et ne passe jamais par Terraform. Rien
-  n'est déployé sans `terraform apply`.
-- La CI vérifie le code Terraform des deux dossiers à chaque pull request.
-- **Le proxy** devient un modèle rendu au démarrage, pour servir dans Docker
-  comme dans les deux clouds :
-  - **il retrouve les services à chaque requête.** Avant, il gardait leur
-    adresse de départ : après une mise à jour qui recréait le backend, il
-    répondait en erreur 502 jusqu'à son propre redémarrage ;
-  - **il lit l'adresse du client derrière l'entrée d'un cloud**, sans
-    qu'un client puisse la choisir ;
-  - **il a son propre contrôle de santé** (`/healthz`).
+- **`infra/azure/`** deploys the application on Azure, as managed services:
+  Container Apps for the three containers (only the proxy is public, over
+  HTTPS), a private PostgreSQL Flexible Server, Key Vault, Container
+  Registry, managed identity, virtual network, Log Analytics.
+- **`infra/aws/`** does the same on AWS: ECS Fargate in private subnets, an
+  HTTPS load balancer (with a domain and its certificate), RDS PostgreSQL,
+  Secrets Manager, ECR, Cloud Map, CloudWatch.
+- Each folder has its README: the commands in order, from creating the state
+  storage to the first administrator, then updates. The OpenAI key is added
+  by hand and never goes through Terraform. Nothing is deployed without
+  `terraform apply`.
+- CI checks the Terraform code of both folders on every pull request.
+- **The proxy** becomes a template rendered at startup, so that it works in
+  Docker as well as in both clouds:
+  - **it resolves the services on every request.** Before, it kept their
+    address from startup: after an update that recreated the backend, it
+    answered with a 502 error until it was itself restarted;
+  - **it reads the client's address behind a cloud's entry point**, without
+    a client being able to choose it;
+  - **it has its own health check** (`/healthz`).
 
-### README et ménage
+### README and cleanup
 
-- Le README commence par un guide de lancement pas à pas : ce qu'il faut,
-  la configuration (avec la génération des secrets sous Linux, macOS et
-  Windows), le démarrage, le premier administrateur, une première due
-  diligence et les problèmes courants.
-- Les scripts n'ajoutent plus `backend/` au chemin de Python avant d'importer
-  l'application : uv l'installe comme paquet. Leurs 9 marqueurs `# noqa: E402`
-  disparaissent, avec l'exception correspondante de ruff.
-- `.git-blame-ignore-revs` pointe vers les commits de formatage actuels (backend
-  et frontend). Il nommait un commit disparu au nettoyage de l'historique.
+- The README starts with a step-by-step getting-started guide: what you
+  need, the configuration (with secret generation on Linux, macOS and
+  Windows), startup, the first administrator, a first due diligence and
+  common problems.
+- The scripts no longer add `backend/` to Python's path before importing the
+  application: uv installs it as a package. Their 9 `# noqa: E402` markers
+  are gone, along with the matching ruff exception.
+- `.git-blame-ignore-revs` points to the current formatting commits (backend
+  and frontend). It named a commit that no longer exists.
 
 ### Docker Compose
 
-- **L'application se lance avec Docker** : `cp .env.template .env`, remplir
-  trois valeurs, puis `docker compose up -d --build`. Il ne faut plus installer
-  ni Python, ni Node, ni PostgreSQL.
-- Quatre services : un **proxy** nginx, seul point d'entrée (port 8080), devant
-  le **frontend** (fichiers statiques), le **backend** (qui applique les
-  migrations à chaque démarrage) et **PostgreSQL 17**. La base et le backend
-  ne sont pas joignables depuis la machine.
-- Le proxy porte les règles du trafic : 110 Mo par envoi, 10 minutes pour les
-  appels qui attendent OpenAI, en-têtes de sécurité. L'adresse du client qu'il
-  transmet ne peut pas être choisie par le client : les limites de connexion
-  par adresse IP tiennent.
-- Le README décrit le premier démarrage, la création du premier
-  administrateur, les journaux, la mise à jour, la sauvegarde et la
-  restauration de la base, l'accès à la base depuis la machine et la bannière
-  des PDF.
-- Les versions des images sont figées (`VERSION.md`).
-- La CI démarre toute l'application à chaque pull request et s'en sert à
-  travers le proxy, jusqu'à créer un administrateur et se connecter.
+- **The application runs with Docker**: `cp .env.template .env`, fill in
+  three values, then `docker compose up -d --build`. Python, Node and
+  PostgreSQL no longer need to be installed.
+- Four services: an nginx **proxy**, the only entry point (port 8080), in
+  front of the **frontend** (static files), the **backend** (which applies
+  the migrations at every startup) and **PostgreSQL 17**. The database and
+  the backend cannot be reached from the machine.
+- The proxy holds the traffic rules: 110 MB per upload, 10 minutes for calls
+  that wait for OpenAI, security headers. The client address it passes on
+  cannot be chosen by the client: the per-IP-address login limits hold.
+- The README describes the first startup, creating the first administrator,
+  the logs, updating, backing up and restoring the database, accessing the
+  database from the machine, and the PDF banner.
+- Image versions are pinned (`VERSION.md`).
+- CI starts the whole application on every pull request and uses it through
+  the proxy, up to creating an administrator and logging in.
 
-### Moteur de réponses repris
+### Answering engine reworked
 
-- **Une question en échec affiche un message écrit pour l'utilisateur**, au
-  lieu du texte brut d'OpenAI. Par exemple : « OpenAI rate limit reached. Use
-  Resume in a few minutes. » Le détail reste dans les journaux du serveur.
-- **Une question coûte au plus 3 appels à OpenAI**, contre 9 auparavant : le
-  SDK ne relance plus de lui-même, seul le moteur le fait. Il attend le délai
-  qu'OpenAI demande en cas de limite de débit, et ne relance pas ce qu'un
-  nouvel essai ne réglerait pas (requête refusée, clé refusée). `retry_count`
-  compte les vraies relances.
-- **Les erreurs sont classées par leur type**, et non plus en cherchant des
-  mots dans leur texte. Un message contenant « invalid » n'arrête plus les
-  relances, et un dépassement de contexte n'est plus relancé pour rien.
-- **Une clé ou un quota refusé arrête le traitement dès la première
-  question**, au lieu d'échouer sur chacune.
-- **Une question s'écrit en une seule transaction** : la réponse brute, ses
-  messages, l'ancienne réponse mise de côté, la nouvelle et son historique.
-  Une panne au milieu ne laisse plus de question sans réponse courante.
-- **Démarrage et reprise passent par la même boucle**, et le statut final se
-  décide à un seul endroit. Une erreur fatale termine toujours le traitement
-  `failed` (un démarrage le remettait à `not_started`). Une pause cliquée
-  juste après « Start » n'est plus écrasée par le démarrage du traitement.
-- **Une régénération qui échoue côté OpenAI** répond par un message lisible
-  (502) au lieu d'une erreur 500.
-- **Les synthèses** : le module est synchrone (les routes lançaient des
-  coroutines qui appelaient la base de façon synchrone). Seuls les appels des
-  résumés de section partent en parallèle, dans des threads, et la base reste
-  dans le thread de la requête.
-- La date d'expiration d'un vector store porte son fuseau (UTC).
-- Le moteur est vérifié par mypy, et ses journaux passent leurs valeurs en
-  arguments. Un test fige les paramètres envoyés à OpenAI pour une question.
+- **A failed question shows a message written for the user**, instead of
+  OpenAI's raw text. For example: "OpenAI rate limit reached. Use Resume in
+  a few minutes." The details stay in the server logs.
+- **A question costs at most 3 calls to OpenAI**, against 9 before: the SDK
+  no longer retries on its own, only the engine does. It waits for the delay
+  OpenAI asks for when a rate limit is hit, and does not retry what a new
+  attempt would not fix (request refused, key refused). `retry_count`
+  counts the actual retries.
+- **Errors are classified by their type**, no longer by looking for words in
+  their text. A message containing "invalid" no longer stops the retries,
+  and a context overflow is no longer retried for nothing.
+- **A refused key or quota stops the run at the first question**, instead of
+  failing on each one.
+- **A question is written in a single transaction**: the raw response, its
+  messages, the old answer set aside, the new one and its history. A failure
+  halfway no longer leaves a question without a current answer.
+- **Start and resume go through the same loop**, and the final status is
+  decided in one place. A fatal error always ends the run as `failed` (a
+  start set it back to `not_started`). A pause clicked right after "Start"
+  is no longer overwritten when the run starts.
+- **A regeneration that fails on OpenAI's side** answers with a readable
+  message (502) instead of a 500 error.
+- **Syntheses**: the module is synchronous (the routes launched coroutines
+  that called the database synchronously). Only the section summary calls
+  run in parallel, in threads, and the database stays in the request's
+  thread.
+- A vector store's expiry date carries its time zone (UTC).
+- The engine is checked by mypy, and its logging calls pass their values as
+  arguments. A test pins the parameters sent to OpenAI for a question.
 
-### Colonnes mortes et copies (migration 0003)
+### Dead columns and copies (migration 0003)
 
-- **On ne peut plus supprimer une session pendant un traitement**, ni une
-  fois terminée. La garde existait, mais elle lisait un statut de session qui
-  restait à « created » pour toujours : elle ne se déclenchait jamais, et la
-  tâche de fond continuait d'écrire sur des lignes supprimées. Le statut
-  d'une session se lit désormais sur ses exécutions, côté serveur comme dans
-  l'interface. Si le serveur refuse, son message s'affiche.
-- La colonne `dd_sessions.status` disparaît, avec le champ `status` des
-  réponses `/session/…` et le filtre `status` de la liste des sessions.
-- Les types de DD d'une session passent dans une table de liaison
-  (`session_dd_types`). L'API renvoie `dd_types: [{id, code, name}]`, dans
-  l'ordre choisi à la création, au lieu de `dd_types_json`. Un type renommé
-  apparaît sous son nouveau nom, et un type qu'une session a choisi ne peut
-  plus être supprimé (409).
-- Supprimer une question ou une section qui a des réponses renvoie un 409,
-  au lieu d'une erreur 500 sur la clé étrangère.
-- Le score de confiance disparaît : la colonne, son champ dans l'API et
-  `average_confidence` dans les statistiques de la page de revue. Il ne
-  mesurait rien (une valeur fixe de 0,8, puis plus rien) et valait toujours 0
-  en moyenne.
-- `is_verified` disparaît des comptes et `validator_id` des exécutions : rien
-  ne les remplissait.
+- **A session can no longer be deleted during a run**, nor once it is
+  finished. The guard existed, but it read a session status that stayed at
+  "created" forever: it never fired, and the background task kept writing to
+  deleted rows. A session's status is now read from its runs, on the server
+  as in the interface. If the server refuses, its message is shown.
+- The `dd_sessions.status` column is gone, along with the `status` field of
+  the `/session/…` responses and the `status` filter of the session list.
+- A session's DD types move to a link table (`session_dd_types`). The API
+  returns `dd_types: [{id, code, name}]`, in the order chosen at creation,
+  instead of `dd_types_json`. A renamed type shows under its new name, and a
+  type that a session chose can no longer be deleted (409).
+- Deleting a question or a section that has answers returns a 409, instead
+  of a 500 error on the foreign key.
+- The confidence score is gone: the column, its field in the API and
+  `average_confidence` in the review page statistics. It measured nothing (a
+  fixed value of 0.8, then nothing at all) and always averaged 0.
+- `is_verified` is gone from accounts and `validator_id` from runs: nothing
+  filled them.
 
-### CI : les tests aussi sur PostgreSQL
+### CI: tests on PostgreSQL too
 
-- La CI relance toute la suite de tests sur son PostgreSQL jetable, avec un
-  schéma créé par les migrations, comme en production. Les tests
-  restaient jusqu'ici sur SQLite, qui ne vérifie ni les index partiels, ni
-  les fuseaux horaires, ni JSONB. En local, rien ne change.
-- Des tests propres à PostgreSQL vérifient que les index uniques sont bien
-  partiels, que les contraintes `CHECK` refusent un statut inconnu et que les
-  dates portent leur fuseau.
-- Un test en échec apparaît en annotation de la pull request.
-- Les sociétés, les synthèses et les assignations de vector stores sont
-  listées dans un ordre stable, et les réponses créées au même instant aussi :
-  PostgreSQL ne garantit aucun ordre sans `ORDER BY`.
+- CI runs the whole test suite again on its throwaway PostgreSQL, with a
+  schema created by the migrations, as in production. Until now the tests
+  stayed on SQLite, which checks neither partial indexes, nor time zones,
+  nor JSONB. Nothing changes locally.
+- PostgreSQL-specific tests check that the unique indexes are indeed
+  partial, that the `CHECK` constraints refuse an unknown status and that
+  dates carry their time zone.
+- A failing test shows up as an annotation on the pull request.
+- Companies, syntheses and vector store assignments are listed in a stable
+  order, and so are answers created at the same instant: PostgreSQL
+  guarantees no order without `ORDER BY`.
 
-### Intégrité de la base (migration 0002)
+### Database integrity (migration 0002)
 
-- **La base garantit elle-même ce que le code supposait** : une seule
-  exécution par session et type de DD, au plus une réponse courante par
-  question, une synthèse par section et une seule synthèse globale, une
-  assignation de vector store par portée (et le type de DD assigné existe),
-  des codes de section et de question uniques. Jusqu'ici, deux clics ou deux
-  requêtes simultanées pouvaient créer des doublons.
-- **Deux clics ne lancent plus deux traitements.** « Resume » sur un
-  traitement déjà en cours le relançait une seconde fois en parallèle ; c'est
-  désormais refusé (« already in progress »). Démarrer, mettre en pause et
-  reprendre changent le statut d'un seul coup, sous condition.
-- Un traitement long qui répond toujours n'est plus pris pour « bloqué » au
-  bout de 10 minutes : il ne l'est que si aucune réponse n'a été écrite
-  depuis 10 minutes. « Resume » reprend un traitement bloqué, une seule fois.
-- Un code de section ou de question déjà pris renvoie un **409** (au lieu
-  d'un 400), même quand une autre requête l'a pris au même moment.
-- Aucun booléen, statut, compteur ou date de création ne peut plus être NULL,
-  et la base pose elle-même les valeurs par défaut. Chaque statut est vérifié
-  par une contrainte `CHECK`, le rôle d'un utilisateur aussi.
-- Les statuts des réponses sont stockés par leur valeur, en minuscules
-  (`needs_review`), comme les autres. L'API ne change pas : elle renvoyait
-  déjà les valeurs.
-- Envoyer `null` pour `is_active` ou `order_index` d'un type de DD laisse le
-  champ tel quel, au lieu de le vider.
-- **Avant de migrer une base qui a des données** :
-  `uv run python scripts/audit_integrity.py` (depuis `backend/`, en lecture
-  seule) liste les lignes en cause. La migration corrige les doublons et les
-  NULL. Elle s'arrête, sans rien changer, devant ce qui demande une décision :
-  exécutions en double, réponses sans exécution ou sans question, codes en
-  double, statut ou rôle inconnu.
+- **The database itself guarantees what the code assumed**: a single run per
+  session and DD type, at most one current answer per question, one
+  synthesis per section and a single global synthesis, one vector store
+  assignment per scope (and the assigned DD type exists), unique section and
+  question codes. Until now, two clicks or two simultaneous requests could
+  create duplicates.
+- **Two clicks no longer start two runs.** "Resume" on a run already in
+  progress started it a second time in parallel; it is now refused
+  ("already in progress"). Start, pause and resume change the status in a
+  single conditional step.
+- A long run that keeps answering is no longer taken for "stuck" after 10
+  minutes: it is only stuck if no answer has been written for 10 minutes.
+  "Resume" resumes a stuck run, only once.
+- A section or question code already taken returns a **409** (instead of a
+  400), even when another request took it at the same moment.
+- No boolean, status, counter or creation date can be NULL any more, and the
+  database sets the default values itself. Each status is checked by a
+  `CHECK` constraint, and so is a user's role.
+- Answer statuses are stored by their value, in lower case (`needs_review`),
+  like the others. The API does not change: it already returned the values.
+- Sending `null` for a DD type's `is_active` or `order_index` leaves the
+  field as it is, instead of clearing it.
+- **Before migrating a database that holds data**:
+  `uv run python scripts/audit_integrity.py` (from `backend/`, read-only)
+  lists the rows at fault. The migration fixes duplicates and NULLs. It
+  stops, without changing anything, at what needs a decision: duplicate
+  runs, answers without a run or without a question, duplicate codes,
+  unknown status or role.
 
-### CI : migrations vérifiées sur PostgreSQL
+### CI: migrations checked on PostgreSQL
 
-- La CI joue les migrations sur un PostgreSQL 17 jetable : `alembic upgrade
-  head`, `alembic check` (les migrations correspondent aux modèles), une
-  descente complète puis une remontée, et la comparaison de `db/schema.sql`
-  avec un script régénéré. Jusqu'ici, rien ne les exécutait : les tests créent
-  leurs tables sur SQLite.
+- CI runs the migrations on a throwaway PostgreSQL 17: `alembic upgrade
+  head`, `alembic check` (the migrations match the models), a full downgrade
+  then upgrade again, and a comparison of `db/schema.sql` with a regenerated
+  script. Until now, nothing ran them: the tests create their tables on
+  SQLite.
 
 ### Simplifications
 
-- **Plus d'inscription libre.** La page `/register` et la route
-  `POST /auth/register` disparaissent : n'importe qui pouvait se créer un
-  compte sur un outil interne. Un administrateur crée désormais les comptes
-  depuis User Management (« Create user ») : nom, identifiant, e-mail, rôle,
-  et un mot de passe provisoire qu'il transmet, que l'utilisateur change dans
-  son profil (`POST /admin/users`).
-- L'entrée « Questions » du menu disparaît : un questionnaire s'ouvre depuis
-  son type de DD (bouton « Questions »), et l'entrée « DD Types » reste
-  allumée sur sa page.
-- Le tableau « User Analytics » du tableau de bord disparaît.
-- Les anciennes adresses `/dashboard`, `/sessions` et `/answers` ne
-  redirigent plus : elles mènent à la page « introuvable ».
+- **No more open registration.** The `/register` page and the
+  `POST /auth/register` route are gone: anyone could create an account on an
+  internal tool. An administrator now creates accounts from User Management
+  ("Create user"): name, username, e-mail, role, and a temporary password
+  that they pass on and that the user changes in their profile
+  (`POST /admin/users`).
+- The "Questions" menu entry is gone: a questionnaire opens from its DD type
+  ("Questions" button), and the "DD Types" entry stays highlighted on its
+  page.
+- The "User Analytics" table of the dashboard is gone.
+- The old `/dashboard`, `/sessions` and `/answers` addresses no longer
+  redirect: they lead to the "not found" page.
 
-### Interface tout en anglais
+### Interface all in English
 
-- Ce qui restait en français passe en anglais, comme le reste de
-  l'interface : l'onglet et les messages de la synthèse, la fenêtre de
-  régénération d'une réponse, les éditeurs de question et de section, les
-  onglets « Answers » et « Synthesis ».
-- La raison enregistrée sur une version régénérée est en anglais
-  (« Regenerated by the AI… ») ; les versions déjà enregistrées gardent la
-  leur.
-- Restent en français, volontairement, car ce sont des contenus et non de
-  l'interface : les consignes données au modèle (et donc la langue des
-  synthèses) et le rapport PDF.
-- Les libellés de la fenêtre de régénération sont reliés à leurs champs.
+- What was still in French moves to English, like the rest of the
+  interface: the synthesis tab and its messages, the answer regeneration
+  dialog, the question and section editors, the "Answers" and "Synthesis"
+  tabs.
+- The reason recorded on a regenerated version is in English ("Regenerated
+  by the AI…"); versions already recorded keep theirs.
+- Kept in French, on purpose, because they are content and not interface:
+  the instructions given to the model (and so the language of the
+  syntheses) and the PDF report.
+- The labels of the regeneration dialog are linked to their fields.
 
-### Frontend : charte apple-design
+### Frontend: apple-design branding
 
-- La police est celle du système (Segoe UI sous Windows) : Roboto n'est plus
-  téléchargé avec l'application.
-- L'interlettrage suit la taille : titres et grands chiffres plus serrés,
-  libellés en capitales bien moins espacés (0,06 à 0,08 em au lieu de 0,1 à
-  0,22 em).
-- Boutons, pastilles et tuiles cliquables répondent dès l'appui. Les menus
-  (compte, export) naissent du bouton qui les ouvre.
-- La barre de navigation est une matière translucide, floutée, sous laquelle
-  la page défile ; elle porte le nom « Easy Diligence » (au lieu de
-  « DD Automation »).
-- L'application suit les réglages d'accessibilité du système : animations
-  réduites (plus rien ne bouge), transparence réduite (surfaces pleines),
-  contraste élevé (bordures et textes secondaires renforcés). Un changement de
-  thème s'adoucit au lieu de basculer d'un coup.
-- Revenir à une version d'une réponse ne demande plus de confirmation : rien
-  n'est perdu, l'ancienne version reste dans l'historique.
-- Le menu du compte affiche le nom de l'utilisateur : il lisait des champs
-  (`first_name`, `last_name`) qu'un compte n'a pas, et restait vide.
-- La configuration de Tailwind passe dans le CSS (`@theme`) :
-  `tailwind.config.js` disparaît. Vérifié : les 36 captures étaient identiques
-  avant que la charte ne change quoi que ce soit.
+- The font is the system's (Segoe UI on Windows): Roboto is no longer
+  downloaded with the application.
+- Letter spacing follows the size: headings and large figures tighter,
+  upper-case labels much less spaced (0.06 to 0.08 em instead of 0.1 to
+  0.22 em).
+- Buttons, badges and clickable tiles respond as soon as they are pressed.
+  Menus (account, export) grow out of the button that opens them.
+- The navigation bar is a translucent, blurred material that the page
+  scrolls under; it carries the name "Easy Diligence" (instead of
+  "DD Automation").
+- The application follows the system's accessibility settings: reduced
+  motion (nothing moves any more), reduced transparency (solid surfaces),
+  high contrast (stronger borders and secondary text). A theme change fades
+  in instead of switching all at once.
+- Going back to a version of an answer no longer asks for confirmation:
+  nothing is lost, the old version stays in the history.
+- The account menu shows the user's name: it read fields (`first_name`,
+  `last_name`) that an account does not have, and stayed empty.
+- The Tailwind configuration moves into the CSS (`@theme`):
+  `tailwind.config.js` is gone. Checked: the 36 screenshots were identical
+  before the branding changed anything.
 
-### Frontend : Tailwind 4
+### Frontend: Tailwind 4
 
-- Tailwind 3 → 4, par l'outil officiel de migration. Les pages sont restées
-  identiques au pixel près : 36 captures comparées avant et après, en thème
-  clair et sombre.
-- Une seule différence visible, voulue : le pied des fenêtres (création d'un
-  type de DD, d'une question, d'une section, d'un vector store) touche enfin
-  le bas de la fenêtre. Tailwind 3 annulait sa marge et laissait une bande
-  blanche sous les boutons.
-- `npm audit` : 0 faille, outils de build compris. Les 2 alertes venaient de
-  `@tailwindcss/typography`, qui fige une ancienne version de
-  `postcss-selector-parser` ; un `overrides` de `package.json`, limité à ce
-  paquet, la remplace par la 6.1.6, corrigée (même version majeure).
-- `autoprefixer` n'est plus nécessaire et disparaît.
+- Tailwind 3 → 4, with the official migration tool. The pages stayed
+  pixel-identical: 36 screenshots compared before and after, in light and
+  dark themes.
+- Only one visible difference, intended: the footer of the dialogs (creating
+  a DD type, a question, a section, a vector store) finally touches the
+  bottom of the dialog. Tailwind 3 canceled its margin and left a white band
+  under the buttons.
+- `npm audit`: 0 vulnerabilities, build tools included. The 2 alerts came
+  from `@tailwindcss/typography`, which pins an old version of
+  `postcss-selector-parser`; an `overrides` entry in `package.json`, limited
+  to that package, replaces it with 6.1.6, which is fixed (same major
+  version).
+- `autoprefixer` is no longer needed and is gone.
 
-### Mot de passe oublié, vector stores disparus, serveur non bloqué
+### Forgotten password, vanished vector stores, server no longer blocked
 
-- Le lien de l'e-mail « mot de passe oublié » mène à une page qui existe
-  (`/reset-password`) : on y choisit son nouveau mot de passe, puis on se
-  connecte avec. Un lien expiré ou déjà utilisé le dit, et explique comment en
-  redemander un. Le lien menait auparavant à une page 404.
-- La demande de lien répond aussi vite que l'adresse existe ou non : l'e-mail
-  part après la réponse, et le temps de réponse ne trahit plus les comptes.
-- Un vector store expiré ou supprimé chez OpenAI est marqué « Expired » ou
-  « Gone », sans les « 0 fichier » qui le faisaient passer pour un store vide.
-  Sa page explique que ses documents sont perdus et n'essaie plus d'en lister
-  les fichiers (ce qui finissait en erreur). Il n'est plus proposé à
-  l'affectation, et la carte d'un type de DD qui l'utilise le signale.
-- Le bouton « Refresh » des vector stores dit qu'il retire les stores disparus
-  chez OpenAI, et combien il en a retiré.
-- Le serveur ne se bloque plus pendant le suivi d'un batch de synthèse (appelé
-  toutes les 15 secondes) ni pendant une génération de synthèse : ces routes
-  appelaient OpenAI depuis la boucle de l'application, et toutes les autres
-  requêtes attendaient.
+- The link in the "forgot password" e-mail leads to a page that exists
+  (`/reset-password`): you choose your new password there, then log in with
+  it. An expired or already used link says so, and explains how to ask for a
+  new one. The link used to lead to a 404 page.
+- Asking for a link gets an answer just as fast whether the address exists
+  or not: the e-mail goes out after the response, and the response time no
+  longer gives accounts away.
+- A vector store that expired or was deleted at OpenAI is marked "Expired"
+  or "Gone", without the "0 files" that made it look like an empty store.
+  Its page explains that its documents are lost and no longer tries to list
+  its files (which ended in an error). It is no longer offered for
+  assignment, and the card of a DD type that uses it flags it.
+- The "Refresh" button of the vector stores says that it removes the stores
+  that vanished at OpenAI, and how many it removed.
+- The server no longer blocks while a synthesis batch is being tracked
+  (called every 15 seconds) nor during a synthesis generation: these routes
+  called OpenAI from the application's event loop, and every other request
+  waited.
 
-### Frontend : pages découpées (2/2)
+### Frontend: pages split up (2/2)
 
-- La gestion des utilisateurs pagine et cherche côté serveur. Elle chargeait
-  les 100 premiers comptes et cherchait parmi eux : le 101e n'apparaissait
-  jamais. La recherche du serveur couvre aussi la société.
-- Une seule sorte de fenêtre, `Modal` : les six fenêtres faites à la main
-  (mot de passe oublié, changement de mot de passe, fiche et suppression d'un
-  utilisateur, type de DD, question) se ferment maintenant toutes avec Échap.
-  La suppression d'un utilisateur passe par la confirmation commune.
-- Les formulaires d'inscription et de changement de mot de passe disent la
-  règle du mot de passe d'avance, et signalent chaque champ fautif à côté du
-  champ. Le profil n'envoie plus le rôle (le serveur l'ignorait).
-- On peut déposer des fichiers dans la fenêtre d'envoi d'un vector store, comme
-  elle l'annonçait. Les fichiers en échec restent affichés, et la fenêtre reste
-  ouverte pour les renvoyer ou les retirer ; elle annonçait aussi une limite de
-  10 Mo que le serveur n'applique pas (100 Mo par défaut).
-- Retirés : la case « Remember me » et la case « Terms and Conditions » (lien
-  vide), qui n'avaient aucun effet, et le bouton « Edit user », qui affichait
-  « coming soon ».
-- Le choix d'une catégorie de type de DD ne range plus « Credit » ou
-  « Equity » parmi les types techniques (le mot « it » était cherché dans tout
-  le nom).
-- Tableau de bord, création de session, types de DD, utilisateurs, profil,
-  connexion, inscription et vector stores sont découpés en widgets et en
-  features ; aucun fichier du frontend ne dépasse 250 lignes (neuf dépassaient
-  400 lignes).
-- `npm run lint` passe sans aucun avertissement, et la CI le lance.
+- User management paginates and searches on the server. It loaded the first
+  100 accounts and searched among them: the 101st never showed up. The
+  server search also covers the company.
+- A single kind of dialog, `Modal`: the six hand-made dialogs (forgot
+  password, password change, user details and user deletion, DD type,
+  question) now all close with Esc. Deleting a user goes through the shared
+  confirmation.
+- The registration and password change forms state the password rule up
+  front, and flag each faulty field next to it. The profile no longer sends
+  the role (the server ignored it).
+- Files can be dropped into the upload dialog of a vector store, as it
+  announced. Failed files stay listed, and the dialog stays open to resend
+  or remove them; it also announced a 10 MB limit that the server does not
+  enforce (100 MB by default).
+- Removed: the "Remember me" checkbox and the "Terms and Conditions"
+  checkbox (empty link), which had no effect, and the "Edit user" button,
+  which showed "coming soon".
+- Choosing a DD type category no longer files "Credit" or "Equity" among the
+  technical types (the word "it" was searched for in the whole name).
+- Dashboard, session creation, DD types, users, profile, login, registration
+  and vector stores are split into widgets and features; no frontend file
+  exceeds 250 lines (nine exceeded 400 lines).
+- `npm run lint` passes without a single warning, and CI runs it.
 
-### Questionnaire d'exemple
+### Example questionnaire
 
-- Le questionnaire d'exemple est remplacé par un questionnaire fictif,
-  `examples/example_questionnaire.json` (code `EXAMPLE`) : 18 questions en 6
-  sections (identité du fonds, équipe, stratégie, risques, opérations, frais et
-  durabilité). Chaque section a une description et chaque
-  question une consigne « où chercher ». Un test vérifie qu'il s'importe.
-- Les commentaires du code et les tests ne nomment plus de questionnaire réel.
-  L'icône d'un type de DD ne se devine plus d'après le nom d'un questionnaire
-  réel : un tel type prend l'icône par défaut.
+- The example questionnaire is `examples/example_questionnaire.json` (code
+  `EXAMPLE`): 18 questions about a fund, in 6 sections (fund identity, team,
+  strategy, risks, operations, fees and sustainability). Each section has a
+  description and each question a "where to look" hint. A test checks that
+  it imports.
+- A DD type whose name matches no icon keyword gets the default icon.
 
-### Frontend : pages découpées (1/2)
+### Frontend: pages split up (1/2)
 
-- Les confirmations s'ouvrent dans une fenêtre de l'application, et non plus
-  dans le `confirm()` du navigateur. Le message nomme ce qui va disparaître ;
-  Échap, la croix ou un clic à côté valent « Annuler ».
-- La page des réponses charge toutes les réponses d'un type de DD. Elle n'en
-  recevait que 100 (la taille de page par défaut du serveur) : au-delà, les
-  suivantes manquaient sans aucun message.
-- Choisir une section dans les filtres ne recharge plus la page : la requête
-  envoyait un paramètre que le serveur ignorait. Après une régénération ou un
-  retour à une version, les sections et les réponses ouvertes le restent.
-- L'export CSV garde ses accents dans Excel (marque UTF-8 en tête de fichier).
-- Le bouton « Sources » d'une réponse ne compte plus les sources qui n'ont
-  rien à afficher (recherche de fichiers sans nom de fichier, recherche web
-  sans lien), et l'éditeur ne les montre plus comme des lignes vides.
-- La page d'une session, la carte d'un type de DD, la page des réponses et la
-  synthèse sont découpées en widgets (`dd-run-card`, `session-progress`,
-  `answers-board`) et en features (`dd-run-control`, `vector-store-assign`,
-  `session-actions`, `answer-review`, `summaries`). La page d'une session passe
-  de 648 à 198 lignes.
+- Confirmations open in an application dialog, no longer in the browser's
+  `confirm()`. The message names what is about to disappear; Esc, the close
+  button or a click outside count as "Cancel".
+- The answers page loads all the answers of a DD type. It only received 100
+  of them (the server's default page size): beyond that, the rest were
+  missing without any message.
+- Choosing a section in the filters no longer reloads the page: the request
+  sent a parameter that the server ignored. After a regeneration or a return
+  to a version, the open sections and answers stay open.
+- The CSV export keeps its accents in Excel (UTF-8 byte order mark at the
+  start of the file).
+- The "Sources" button of an answer no longer counts sources that have
+  nothing to show (file search without a file name, web search without a
+  link), and the editor no longer shows them as empty rows.
+- The session page, the DD type card, the answers page and the synthesis are
+  split into widgets (`dd-run-card`, `session-progress`, `answers-board`) and
+  features (`dd-run-control`, `vector-store-assign`, `session-actions`,
+  `answer-review`, `summaries`). The session page goes from 648 to 198
+  lines.
 
-### Frontend : couches
+### Frontend: layers
 
-- Le code est rangé en Feature-Sliced Design (`app`, `pages`, `widgets`,
-  `features`, `entities`, `shared`), et le lint refuse un import qui remonte
-  les couches ou passe d'une tranche à sa voisine.
-- Une seule mise en page pour toutes les pages, une page 404, et `/login`
-  renvoie au tableau de bord quand on est déjà connecté.
-- Une session expirée renvoie à la page de connexion sans recharger
-  l'application.
-- Les types de DD sont chargés une fois et partagés : la page d'une session en
-  demandait la structure complète une fois par carte.
+- The code is organized in Feature-Sliced Design (`app`, `pages`, `widgets`,
+  `features`, `entities`, `shared`), and the lint refuses an import that
+  goes up the layers or from one slice to its neighbor.
+- A single layout for all pages, a 404 page, and `/login` sends you to the
+  dashboard when you are already logged in.
+- An expired login session sends you to the login page without reloading
+  the application.
+- DD types are loaded once and shared: the session page asked for their full
+  structure once per card.
 
-### Frontend : socle
+### Frontend: foundation
 
-- Le frontend appelle l'API en relatif, sur `/api` : plus d'URL propre à une
-  machine. En développement, le serveur de Vite transmet ces appels au backend
-  (`VITE_API_PROXY`, `http://localhost:8000` par défaut) ; `VITE_API_URL`
-  disparaît.
-- Vite 8, react-router 7 et ESLint 9 ; plus aucune faille connue dans le code
-  livré au navigateur (18 avant, dont 14 « high »).
-- L'authentification passe par le client HTTP commun. Un mot de passe erroné
-  affiche le message de l'API au lieu de recharger la page.
-- Supprimés : la modification des « attributs » d'un fichier de vector store
-  (l'endpoint n'existait pas), les fichiers et appels d'API morts, et les
-  dépendances inutilisées (`rehype-mermaid`, `react-dropzone`,
-  `tailwind-scrollbar`).
-- L'alias `@/` désigne `frontend/src`.
+- The frontend calls the API with a relative path, `/api`, whatever the
+  address it is served from. In development, the Vite server forwards
+  these calls to the backend (`VITE_API_PROXY`, `http://localhost:8000` by
+  default); `VITE_API_URL` is gone.
+- Vite 8, react-router 7 and ESLint 9; no known vulnerability left in the
+  code shipped to the browser (18 before, 14 of them "high").
+- Authentication goes through the shared HTTP client. A wrong password shows
+  the API's message instead of reloading the page.
+- Removed: editing the "attributes" of a vector store file (the endpoint did
+  not exist), dead files and API calls, and unused dependencies
+  (`rehype-mermaid`, `react-dropzone`, `tailwind-scrollbar`).
+- The `@/` alias points to `frontend/src`.
 
-### Base de données
+### Database
 
-- PostgreSQL 17 remplace MySQL, via psycopg 3. La connexion se configure par
-  `POSTGRES_*` ou `DATABASE_URL`.
-- Les modèles passent en SQLModel.
-- Alembic gère le schéma : la migration initiale crée toute la base, et
-  `db/schema.sql` en donne le script SQL complet. Les anciens correctifs SQL
-  appliqués à la main sont supprimés, et l'application ne crée plus ses tables
-  au démarrage.
-- Les transactions sont réelles : un `rollback()` annule désormais vraiment.
-- Les clés étrangères sont indexées, et les statuts stockés en texte avec une
-  contrainte de contrôle.
-- Les adresses e-mail sont enregistrées et comparées en minuscules.
-- Il n'y a pas de reprise des données de l'ancienne base MySQL.
+- PostgreSQL 17 replaces MySQL, through psycopg 3. The connection is set
+  with `POSTGRES_*` or `DATABASE_URL`.
+- The models move to SQLModel.
+- Alembic manages the schema: the initial migration creates the whole
+  database, and `db/schema.sql` gives its complete SQL script. The old SQL
+  fixes applied by hand are removed, and the application no longer creates
+  its tables at startup.
+- Transactions are real: a `rollback()` now really cancels.
+- Foreign keys are indexed, and statuses are stored as text with a check
+  constraint.
+- E-mail addresses are stored and compared in lower case.
+- Data from the old MySQL database is not carried over.
 
-### Outillage
+### Tooling
 
-- Le code du frontend est formaté par Prettier (`npm run format`), et la CI le
-  vérifie (`npm run format:check`). Le formatage n'a rien changé au code livré
-  au navigateur : le build est identique, octet pour octet.
-- Le projet backend s'appelle `easy-diligence`, en version 0.1.0, et passe à
-  Python 3.12.
-- Les outils de développement sont dans le groupe `dev` de `pyproject.toml` :
-  `uv sync` les installe, `uv sync --no-dev` les laisse de côté. Les extras
-  inutilisés (monitoring, documentation) et les dépendances sans usage (celery,
-  aiofiles, python-dateutil…) sont retirés.
-- Ruff vérifie et formate le code (black est retiré) ; mypy vérifie les types,
-  en mode permissif pour commencer.
-- pytest 9 et pytest-asyncio 1.x.
-- `.pre-commit-config.yaml` et une intégration continue GitHub Actions.
-- `.gitattributes` fixe les fins de ligne (LF).
-- `pip-audit` ne trouve plus aucune faille connue, outils de développement
-  compris.
+- The frontend code is formatted by Prettier (`npm run format`), and CI
+  checks it (`npm run format:check`). Formatting changed nothing in the code
+  shipped to the browser: the build is identical, byte for byte.
+- The backend project is called `easy-diligence`, at version 0.1.0, and
+  moves to Python 3.12.
+- The development tools are in the `dev` group of `pyproject.toml`:
+  `uv sync` installs them, `uv sync --no-dev` leaves them out. The unused
+  extras (monitoring, documentation) and the dependencies with no use
+  (celery, aiofiles, python-dateutil…) are removed.
+- Ruff checks and formats the code (black is removed); mypy checks the
+  types, in lenient mode to begin with.
+- pytest 9 and pytest-asyncio 1.x.
+- `.pre-commit-config.yaml` and GitHub Actions continuous integration.
+- `.gitattributes` sets the line endings (LF).
+- `pip-audit` no longer finds any known vulnerability, development tools
+  included.
 
 ### Tests
 
-- La suite est réécrite : chaque test a sa propre base SQLite en mémoire, et
-  `conftest.py` fournit les utilisateurs, les données de départ et de faux
-  clients OpenAI. Les tests vides, en double ou devenus inutiles sont supprimés.
-- Nouveaux tests : cloisonnement entre utilisateurs, sociétés, vector stores,
-  moteur de réponses (démarrage, pause, reprise, question en échec), modèles,
-  sécurité des jetons, connexion.
-- La CI lance toute la suite.
+- The suite is rewritten: each test has its own in-memory SQLite database,
+  and `conftest.py` provides the users, the seed data and fake OpenAI
+  clients. Empty, duplicate or no longer useful tests are removed.
+- New tests: access isolation between users, companies, vector stores,
+  answering engine (start, pause, resume, failed question), models, token
+  security, login.
+- CI runs the whole suite.
 
-### Corrections
+### Fixes
 
-- L'export Excel plantait pour toute réponse qui avait des sources.
-- La modification d'un vector store échouait toujours.
-- Après la modification d'un vector store, la liste montrait l'ancienne version
-  pendant cinq minutes (cache).
-- La page d'administration ne pouvait changer ni le rôle ni le statut d'un
-  utilisateur (méthode HTTP erronée).
-- L'export reprenait toutes les versions d'une réponse : une question
-  régénérée apparaissait deux fois dans le rapport. Il ne garde plus que la
-  version courante.
-- Un administrateur ou la personne assignée à une session ne pouvaient pas en
-  gérer les vector stores.
-- Une nouvelle session pouvait inclure les types de DD privés d'un autre
-  utilisateur. Un type de DD privé d'un autre ne peut plus être lancé.
+- The Excel export crashed for any answer that had sources.
+- Editing a vector store always failed.
+- After a vector store was edited, the list showed the old version for five
+  minutes (cache).
+- The administration page could change neither the role nor the status of a
+  user (wrong HTTP method).
+- The export included every version of an answer: a regenerated question
+  appeared twice in the report. It now keeps only the current version.
+- An administrator or the person assigned to a session could not manage its
+  vector stores.
+- A new session could include another user's private DD types. Another
+  user's private DD type can no longer be started.
 
-- Supprimer un compte vidait le créateur de ses sessions et de ses sociétés :
-  ses sociétés devenaient visibles de tous. Un compte qui possède des données
-  ne se supprime plus, il se désactive.
-- La recherche de la page d'administration ne cherchait que dans la page
-  affichée, avec un total faux.
-- Une section ajoutée après une première section prenait la même position
-  qu'elle.
-- Les sections et les questions arrivent dans l'ordre du questionnaire.
+- Deleting an account cleared the creator of its sessions and companies: its
+  companies became visible to everyone. An account that owns data can no
+  longer be deleted; it is deactivated instead.
+- The search on the administration page only searched the page on display,
+  with a wrong total.
+- A section added after a first section took the same position as it.
+- Sections and questions come in questionnaire order.
 
 ### Export
 
-- Un seul export côté serveur : le rapport PDF. L'export Excel est supprimé ;
-  l'export CSV de la page de revue reste.
-- Les couleurs du rapport et sa mention de pied de page se règlent dans la
-  configuration (`PDF_PRIMARY_COLOR`, `PDF_TEXT_COLOR`, `PDF_RULE_COLOR`,
+- A single server-side export: the PDF report. The Excel export is removed;
+  the CSV export of the review page stays.
+- The report's colors and its footer notice are set in the configuration
+  (`PDF_PRIMARY_COLOR`, `PDF_TEXT_COLOR`, `PDF_RULE_COLOR`,
   `PDF_FOOTER_NOTICE`).
-- Le code de l'export est découpé : `exports/pdf.py`, `markdown.py`,
-  `sources.py`.
+- The export code is split: `exports/pdf.py`, `markdown.py`, `sources.py`.
 
-### Modèles
+### Models
 
-- `schemas/` disparaît : chaque fichier de `models/` porte sa table et ce que
-  l'API en lit et en renvoie. Les champs et leurs limites ne sont écrits
-  qu'une fois, et l'API refuse maintenant ce que la base refuserait (longueur,
-  position négative). Le schéma de la base ne change pas.
-- La durée d'expiration choisie à la création d'un vector store est respectée
-  (elle valait toujours 30 jours).
+- `schemas/` is gone: each file in `models/` holds its table and what the
+  API reads and returns for it. Fields and their limits are written only
+  once, and the API now refuses what the database would refuse (length,
+  negative position). The database schema does not change.
+- The expiry duration chosen when a vector store is created is honored (it
+  was always 30 days).
 
-### Codes des questions
+### Question codes
 
-- Les sections sont lettrées par leur position (A, B…) et les questions
-  numérotées dans leur section (A.01, A.02…), à l'import comme à la création à
-  l'écran. La référence du fichier, quand il en donne une, reste le code. Les
-  anciens codes (`A.01-_96323997`) sont toujours lus.
-- Filtrer les réponses par section demande aussi le type de DD, et l'export
-  suit l'ordre du questionnaire.
+- Sections are lettered by their position (A, B…) and questions numbered
+  within their section (A.01, A.02…), on import as on creation on screen.
+  The file's reference, when it gives one, stays the code. Old codes
+  (`A.01-_96323997`) are still read.
+- Filtering answers by section also requires the DD type, and the export
+  follows questionnaire order.
 
 ### Services
 
-- La logique et les accès à la base passent dans `services/`, pour toutes les
-  routes. Les routes ne font plus que lire la requête, appeler un service et
-  répondre.
-- Les routes sont des fonctions simples : une route asynchrone qui appelait la
-  base ou OpenAI bloquait tout le serveur pendant l'appel.
-- La session et le type de DD lus dans l'URL passent par deux dépendances
-  communes, qui vérifient les droits.
-- Lire la liste des vector stores ne supprime plus rien : un store disparu
-  chez OpenAI apparaît comme `expired` ou `missing`, et le bouton Rafraîchir le
-  retire.
-- Supprimés, car en double : six variantes de l'historique d'une réponse
+- Logic and database access move into `services/`, for every route. Routes
+  now only read the request, call a service and answer.
+- Routes are plain functions: an asynchronous route that called the
+  database or OpenAI blocked the whole server during the call.
+- The session and the DD type read from the URL go through two shared
+  dependencies, which check permissions.
+- Reading the list of vector stores no longer deletes anything: a store that
+  vanished at OpenAI appears as `expired` or `missing`, and the Refresh
+  button removes it.
+- Removed, as duplicates: six variants of an answer's history
   (`with-history`, `versions/{v}`, `original`, `history/{v}/raw`,
-  `by-execution`, `POST validate`) et `/dd-types/code/{code}`.
+  `by-execution`, `POST validate`) and `/dd-types/code/{code}`.
 
-### Nettoyage
+### Cleanup
 
-- Supprimés, car aucun écran ne les appelait et plusieurs plantaient : les
-  endpoints `/executions` et `/documents`, la recherche dans un vector store et
-  `/company/auth-test`, avec leurs schémas.
-- Supprimés aussi : les méthodes sans appelant du client OpenAI et des
-  utilitaires, et les invalidations de cache qui ne visaient aucune donnée
-  mise en cache.
-- Code Pydantic v2 partout (`ConfigDict`, `model_validate`, `model_dump`), et
-  `datetime.utcnow()` remplacé.
-- Les journaux de l'application sont configurés (`LOG_LEVEL`) : sous uvicorn,
-  ses messages d'information étaient perdus.
+- Removed, because no screen called them and several crashed: the
+  `/executions` and `/documents` endpoints, search in a vector store and
+  `/company/auth-test`, with their schemas.
+- Also removed: the methods of the OpenAI client and of the utilities that
+  had no caller, and cache invalidations that targeted no cached data.
+- Pydantic v2 code everywhere (`ConfigDict`, `model_validate`,
+  `model_dump`), and `datetime.utcnow()` replaced.
+- The application's logging is configured (`LOG_LEVEL`): under uvicorn, its
+  info messages were lost.
 
-### Structure du backend
+### Backend structure
 
-Les fichiers sont rangés en `api/routes`, `core`, `engine`, `services` et
-`exports`, sans changement de logique.
+Files are organized into `api/routes`, `core`, `engine`, `services` and
+`exports`, with no change in logic.
 
-### Sécurité
+### Security
 
-- L'inscription ne peut plus choisir son rôle : un nouveau compte est toujours
-  analyste. Le premier administrateur se crée avec
+- Registration can no longer choose its role: a new account is always an
+  analyst. The first administrator is created with
   `python -m app.cli create-admin`.
-- `DATABASE_URL`, `OPENAI_API_KEY` et `JWT_SECRET_KEY` sont obligatoires, et
-  l'application refuse de démarrer sans eux.
-- Les jetons sont stockés hachés et rendus uniques, le jeton de rafraîchissement
-  passe dans le corps de la requête, et le jeton de réinitialisation du mot de
-  passe ne sert qu'une fois.
-- La connexion est limitée après des échecs répétés.
-- La taille et le type des fichiers envoyés sont vérifiés.
-- Une erreur imprévue renvoie un message générique ; sa trace part dans les
-  journaux.
-- `/docs` est fermé par défaut (`DOCS_ENABLED`).
-- Les deux WebSockets inutilisés sont supprimés.
-- PyJWT et bcrypt remplacent python-jose et passlib ; FastAPI, Starlette,
-  python-multipart, jinja2, cryptography et les dépendances qu'elles entraînent
-  sont montés.
+- `DATABASE_URL`, `OPENAI_API_KEY` and `JWT_SECRET_KEY` are required, and
+  the application refuses to start without them.
+- Tokens are stored hashed and made unique, the refresh token moves into the
+  request body, and the password reset token can only be used once.
+- Login is limited after repeated failures.
+- The size and type of uploaded files are checked.
+- An unexpected error returns a generic message; its trace goes to the
+  logs.
+- `/docs` is closed by default (`DOCS_ENABLED`).
+- The two unused WebSockets are removed.
+- PyJWT and bcrypt replace python-jose and passlib; FastAPI, Starlette,
+  python-multipart, jinja2, cryptography and the dependencies they pull in
+  are upgraded.
 
 ## 0.1.0 — 18/11/2026
 
-Premier commit d'Easy-Diligence, sur un historique neuf.
+First version of Easy Diligence.
 
-- La documentation est réécrite : `README.md`, `docs/ARCHITECTURE.md` et
-  `VERSION.md`. Les revues et analyses périmées sont supprimées, ainsi que les
-  restes Docker et les scripts de mesure ponctuels.
-- Toute la configuration est listée et commentée dans `.env.template`.
-  `DATABASE_URL` devient obligatoire, et une `JWT_SECRET_KEY` vide est refusée.
-- Les éléments de charte sont retirés : un logo neutre les remplace, et la
-  bannière du rapport PDF devient facultative (`BRAND_BANNER_PATH`).
-- Un questionnaire d'exemple est fourni dans `examples/`.
+- The documentation is rewritten: `README.md`, `docs/ARCHITECTURE.md` and
+  `VERSION.md`. Outdated reviews and analyses are removed, along with Docker
+  leftovers and one-off measurement scripts.
+- All the configuration is listed and commented in `.env.template`.
+  `DATABASE_URL` becomes required, and an empty `JWT_SECRET_KEY` is refused.
+- The application comes with a neutral logo, and the PDF report banner
+  becomes optional (`BRAND_BANNER_PATH`).
+- An example questionnaire is provided in `examples/`.

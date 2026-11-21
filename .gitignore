@@ -30,15 +30,11 @@ questionnaires/
 *.xlsx
 !examples/**/*.xlsx
 
-# Local brand charter (never published; see BRAND_BANNER_PATH)
+# Branding files (see BRAND_BANNER_PATH)
 branding/
 
 # Local tooling
 .claude/
-PLAN-MIGRATION.md
-REPRISE.md
-# Working specifications ("Cahier des charges — …"), kept out of the repository
-Cahier des charges*.md
 .vscode/
 .idea/
 .DS_Store
