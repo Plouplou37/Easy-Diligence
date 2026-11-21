@@ -37,17 +37,15 @@ export const Input = ({
   const hasRight = Boolean(RightIcon || rightSlot);
 
   const baseInputStyles =
-    'block w-full rounded-lg py-2 text-sm text-content transition-colors disabled:opacity-50 disabled:cursor-not-allowed';
+    'block w-full rounded-lg h-10 py-2 text-sm text-content transition-colors disabled:opacity-50 disabled:cursor-not-allowed';
 
-  // The gradient border needs its own transparent border, so the error state
-  // switches to the plain field recipe instead of adding a border colour.
   const inputStyles = hasError ? 'form-input border-theme-error' : 'input-gradient-border';
   const paddingStyles = `${LeftIcon ? 'pl-10' : 'pl-3'} ${hasRight ? 'pr-10' : 'pr-3'}`;
 
   return (
     <div className={className}>
       {label && (
-        <label htmlFor={inputId} className="block text-xs font-medium text-content-secondary mb-1">
+        <label htmlFor={inputId} className="block text-sm font-medium text-content mb-1.5">
           {label}
           {required && <span className="text-theme-error ml-1">*</span>}
         </label>

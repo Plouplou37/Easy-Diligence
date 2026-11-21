@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+### New look, step 1: palette, typeface, shared components
+
+- A new palette, in the dark and light themes: a neutral ground, one blue
+  for the actions, violet kept for what concerns the AI (`theme-ai` tokens,
+  for the screens to come). The blue-to-green gradients are gone.
+- The Inter typeface, served by the application itself
+  (`@fontsource-variable/inter`): no request to a font service.
+- Shared components restyled, so every screen changes at once: buttons
+  (taller, one blue primary), cards, fields, tables (tinted header, rules
+  between rows), tabs, badges, figure tiles, menus, notifications.
+- The bar at the top spans the width, solid, its links on pills; the
+  account button shows the user's initials. The sign-in screens are one
+  card on the plain background.
+
 ### Run card, error messages, PDF only
 
 - **Run time without the pauses.** The card counted from the first answer,

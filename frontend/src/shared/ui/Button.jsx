@@ -1,7 +1,8 @@
 /**
  * Reusable Button component.
- * primary = navy contained, secondary = outlined, ghost = text only,
- * danger / success = contained in the matching state colour.
+ * primary = blue contained (the one action of a screen), secondary =
+ * outlined, ghost = text only, danger / success = contained in the matching
+ * state colour.
  * Without children (icon only) it takes the compact icon-button look.
  * @param {Object} props
  * @param {'primary'|'secondary'|'danger'|'success'|'ghost'} props.variant - Button style variant
@@ -26,19 +27,19 @@ export const Button = ({
   // The press shows at once (pointer down, not release): a slight scale-down,
   // left out when the system asks for reduced motion.
   const baseStyles =
-    'inline-flex items-center justify-center font-normal rounded-md transition duration-150 ease-out motion-safe:active:scale-[0.97] focus:outline-hidden focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50 disabled:cursor-not-allowed';
+    'inline-flex items-center justify-center font-medium rounded-lg whitespace-nowrap transition duration-150 ease-out motion-safe:active:scale-[0.97] focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent-blue/60 focus-visible:ring-offset-1 focus-visible:ring-offset-surface disabled:opacity-50 disabled:cursor-not-allowed';
 
   const variants = {
-    primary: 'bg-primary-dark text-white hover:bg-primary-dark/85',
+    primary: 'bg-primary text-white font-semibold hover:bg-primary/90',
     secondary:
-      'border border-primary/30 bg-surface text-content hover:border-bleu-atlantis/80 hover:text-bleu-atlantis',
-    danger: 'bg-theme-error text-content-inverse hover:bg-theme-error/85',
-    success: 'bg-theme-success text-content-inverse hover:bg-theme-success/85',
-    ghost: 'text-content hover:bg-primary/5',
+      'border border-border-hover bg-transparent text-content hover:bg-surface-hover hover:border-content-muted',
+    danger: 'bg-theme-error text-content-inverse font-semibold hover:bg-theme-error/90',
+    success: 'bg-theme-success text-content-inverse font-semibold hover:bg-theme-success/90',
+    ghost: 'text-content-secondary hover:text-content hover:bg-surface-hover',
   };
 
   const iconOnlyVariants = {
-    primary: 'text-content hover:bg-primary/10',
+    primary: 'text-content hover:bg-surface-hover',
     secondary: 'text-content-secondary hover:text-content hover:bg-surface-hover',
     danger: 'text-theme-error hover:bg-theme-error-bg',
     success: 'text-theme-success hover:bg-theme-success-bg',
@@ -46,15 +47,15 @@ export const Button = ({
   };
 
   const sizes = {
-    sm: 'px-2.5 py-1 text-xs gap-1.5',
-    md: 'px-3 py-1.5 text-sm gap-1.5',
-    lg: 'px-4 py-2 text-sm gap-2',
+    sm: 'h-8 px-3 text-xs gap-1.5',
+    md: 'h-10 px-4 text-sm gap-2',
+    lg: 'h-11 px-5 text-sm gap-2',
   };
 
   const iconOnlySizes = {
-    sm: 'p-1',
-    md: 'p-1.5',
-    lg: 'p-2',
+    sm: 'p-1.5',
+    md: 'p-2',
+    lg: 'p-2.5',
   };
 
   const iconSizes = {

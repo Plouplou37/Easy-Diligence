@@ -15,7 +15,7 @@ const TONES = {
   info: {
     badge: 'bg-accent-blue/10 text-accent-blue border-accent-blue/30',
     text: 'text-accent-blue',
-    fill: 'bg-linear-to-r from-accent-blue to-accent-green',
+    fill: 'bg-primary',
     dot: 'bg-accent-blue',
   },
   warning: {
@@ -37,10 +37,10 @@ const TONES = {
     dot: 'bg-theme-error',
   },
   brand: {
-    badge: 'bg-primary-dark text-white border-primary-dark',
+    badge: 'bg-primary text-white border-primary',
     text: 'text-content',
-    fill: 'bg-primary-dark',
-    dot: 'bg-primary-dark',
+    fill: 'bg-primary',
+    dot: 'bg-primary',
   },
 };
 
