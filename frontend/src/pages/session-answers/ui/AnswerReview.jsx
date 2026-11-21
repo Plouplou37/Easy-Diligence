@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { getSessionDdTypes } from '@/entities/session';
-import { ExportMenu } from '@/features/session-actions';
+import { ExportPdfButton } from '@/features/session-actions';
 import { SynthesisTab } from '@/features/summaries';
 import { LoadingSpinner, PageHeader, pageLayout, tabs } from '@/shared/ui';
 import { AnswersBoard, useAnswerFilters } from '@/widgets/answers-board';
@@ -59,7 +59,7 @@ const AnswerReview = () => {
         ]}
         title={`Review Answers${ddTypeName ? `: ${ddTypeName}` : ''}`}
         subtitle={`Review and edit AI-generated answers for ${session?.name || 'this session'}`}
-        actions={<ExportMenu sessionId={sessionId} answers={filters.filtered} />}
+        actions={<ExportPdfButton sessionId={sessionId} />}
       />
 
       {/* Answers vs synthesis: both are per DD type. */}

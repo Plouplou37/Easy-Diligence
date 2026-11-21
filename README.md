@@ -219,8 +219,7 @@ Each README gives the commands in order. Nothing is deployed without
   type. They are written either live or later through OpenAI's Batch API,
   which costs half as much.
 - **Export**: a two-level PDF report (the synthesis in the body, the detail of
-  the questions and answers in an appendix), and a CSV export of the answers
-  from the review page.
+  the questions and answers in an appendix).
 - **Accounts and isolation**: `admin` and `analyst` roles. Each user sees only
   their own data, and the administrator sees everything.
 

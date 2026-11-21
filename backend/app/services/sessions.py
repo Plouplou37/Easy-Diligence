@@ -3,7 +3,6 @@
 import json
 import secrets
 import string
-from datetime import datetime
 from typing import Any
 
 from sqlalchemy import case, distinct, func, or_
@@ -268,22 +267,25 @@ def _sections_progress(db: Session, execution: DDExecution) -> list[dict[str, An
 
 
 def _last_error(db: Session, execution: DDExecution) -> str | None:
-    """The first error of a failed run (a paused run has none)."""
+    """Why a failed run stopped: the message of its latest failed answer that
+    is still current (a paused run has none). An older failure, since retried,
+    no longer counts. The message is written for the user (engine/errors.py):
+    no internal error code in front of it."""
     if execution.status != ExecutionStatus.FAILED:
         return None
-    first_failed = (
+    latest_failed = (
         db.query(DDAnswer)
         .filter(
             col(DDAnswer.execution_id) == execution.id,
+            col(DDAnswer.is_current).is_(True),
             col(DDAnswer.status) == AnswerStatus.FAILED,
         )
-        .order_by(col(DDAnswer.created_at).asc())
+        .order_by(col(DDAnswer.created_at).desc(), col(DDAnswer.id).desc())
         .first()
     )
-    if first_failed is None or not first_failed.error_message:
+    if latest_failed is None:
         return None
-    error_type = first_failed.error_type.value if first_failed.error_type else "unknown"
-    return f"{error_type}: {first_failed.error_message}"
+    return latest_failed.error_message
 
 
 def session_progress(db: Session, session: DDSession) -> list[dict[str, Any]]:
@@ -339,19 +341,6 @@ def session_progress(db: Session, session: DDSession) -> list[dict[str, Any]]:
             )
             .all()
         )
-        times = [a.created_at for a in answers if a.created_at]
-
-        # Time actually spent answering, measured on the answers themselves:
-        # the execution row is only written at the start and at the end of a
-        # run, and a resumed run would count its idle hours.
-        elapsed = 0
-        if times:
-            first = min(times)
-            if status == ExecutionStatus.IN_PROGRESS:
-                elapsed = int((datetime.now(first.tzinfo) - first).total_seconds())
-            else:
-                elapsed = int((max(times) - first).total_seconds())
-
         progress.append(
             {
                 "dd_type": execution.dd_type.code if execution.dd_type else None,
@@ -365,7 +354,8 @@ def session_progress(db: Session, session: DDSession) -> list[dict[str, Any]]:
                 # How many answers rest on the assigned documents.
                 "answers_with_documents": sum(1 for a in answers if _cites_documents(a.sources)),
                 "answers_counted": len(answers),
-                "time_elapsed": elapsed,
+                # Time spent running, pauses left out (DDExecution.run_seconds).
+                "time_elapsed": execution.elapsed_seconds(),
                 "current_section": None,  # not tracked
                 "current_question": None,  # not tracked
                 "last_error": _last_error(db, execution),

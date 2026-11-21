@@ -6,7 +6,7 @@ const UNCATEGORIZED = 'Uncategorized';
 /**
  * The search and the section filter over a DD type's answers, applied here:
  * the answers are all loaded, so filtering costs no request. `filtered` feeds
- * the board and the CSV export alike.
+ * the board.
  */
 export const useAnswerFilters = answers => {
   const [searchTerm, setSearchTerm] = useState('');

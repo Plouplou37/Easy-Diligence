@@ -1,1 +1,1 @@
-export { DeleteSessionButton, ExportMenu, ExportPdfButton } from './ui/SessionActions';
+export { DeleteSessionButton, ExportPdfButton } from './ui/SessionActions';

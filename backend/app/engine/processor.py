@@ -33,7 +33,14 @@ from sqlmodel import col
 from app.core import database
 from app.core.exceptions import ExternalServiceError
 from app.engine.answers import new_answer
-from app.engine.errors import Failure, classify, is_global, retry_delay, user_message
+from app.engine.errors import (
+    Failure,
+    classify,
+    is_global,
+    operation_message,
+    question_message,
+    retry_delay,
+)
 from app.engine.openai_client import OpenAIProcessor
 from app.engine.rate_limiter import RateLimiter
 from app.models.answer import AnswerStatus, DDAnswer
@@ -64,12 +71,14 @@ EARLIER_ANSWERS_INTRO = (
 
 
 class QuestionFailed(Exception):
-    """A question OpenAI could not answer, after the engine's retries."""
+    """A question OpenAI could not answer, after the engine's retries. Raised
+    from OpenAI's error; `message` is the one the user reads in a run."""
 
-    def __init__(self, failure: Failure, retries: int) -> None:
+    def __init__(self, failure: Failure, retries: int, message: str) -> None:
         super().__init__(failure.type.value)
         self.failure = failure
         self.retries = retries
+        self.message = message
 
 
 def _sources(result: Result) -> dict[str, Any]:
@@ -201,12 +210,25 @@ class DDProcessor:
                     failed,
                     len(questions),
                 )
+                self._stop_clock(db)
                 return True
             except Exception:
                 logger.exception("Execution %s stopped on an error", self.execution_id)
                 db.rollback()
                 self._set_status(db, ExecutionStatus.FAILED, only_if_running=False)
+                self._stop_clock(db)
                 return False
+
+    def _stop_clock(self, db: Session) -> None:
+        """Add the stretch that just ended to the run's time. Not when the run
+        is in progress again: a resume clicked before this loop saw the pause
+        has started a stretch of its own."""
+        execution = self._execution(db)
+        if execution.status == ExecutionStatus.IN_PROGRESS or execution.running_since is None:
+            return
+        execution.run_seconds = execution.elapsed_seconds()
+        execution.running_since = None
+        db.commit()
 
     @staticmethod
     def _final_status(*, paused: bool, failed: int) -> ExecutionStatus | None:
@@ -320,7 +342,9 @@ class DDProcessor:
                         attempt + 1,
                         self.MAX_ATTEMPTS,
                     )
-                    raise QuestionFailed(failure, attempt) from error
+                    raise QuestionFailed(
+                        failure, attempt, question_message(error, failure)
+                    ) from error
                 delay = retry_delay(error, failure, attempt)
                 logger.warning(
                     "Execution %s: OpenAI call failed (%s: %s), again in %.1fs",
@@ -383,7 +407,7 @@ class DDProcessor:
                     status=AnswerStatus.FAILED,
                     retry_count=error.retries,
                     error_type=error.failure.type,
-                    error_message=user_message(error.failure),
+                    error_message=error.message,
                     last_error_at=datetime.now(UTC),
                 )
             )
@@ -596,7 +620,8 @@ class DDProcessor:
                 )
             )
         except QuestionFailed as error:
-            raise ExternalServiceError(user_message(error.failure)) from error
+            # Not a run: no Resume to point to (engine/errors.operation_message).
+            raise ExternalServiceError(operation_message(error.__cause__ or error)) from error
 
         sources = _sources(result)
         # Inject the analyst-attached file into the sources (so it shows up in

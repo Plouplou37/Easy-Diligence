@@ -499,5 +499,13 @@ ALTER TABLE users DROP COLUMN is_verified;
 
 UPDATE alembic_version SET version_num='0003' WHERE alembic_version.version_num = '0002';
 
+-- Running upgrade 0003 -> 0004
+
+ALTER TABLE dd_executions ADD COLUMN run_seconds INTEGER DEFAULT 0 NOT NULL;
+
+ALTER TABLE dd_executions ADD COLUMN running_since TIMESTAMP WITH TIME ZONE;
+
+UPDATE alembic_version SET version_num='0004' WHERE alembic_version.version_num = '0003';
+
 COMMIT;
 

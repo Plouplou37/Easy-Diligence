@@ -126,8 +126,10 @@ const VectorStoreDetails = ({ store, refreshStore, onRefreshed, deleting, onDele
         <div className="flex items-center justify-between gap-4 mb-4 shrink-0">
           <div className={`${sectionHeader.wrapper} flex-1`}>
             <h3 className={sectionHeader.title}>
-              {/* No count while loading: "Files (0)" read as an empty store. */}
-              {files.filesLoading || stale ? 'Files' : `Files (${files.files.length})`}
+              {/* No count while loading or after a failure: "Files (0)" read as an empty store. */}
+              {files.filesLoading || stale || files.filesError
+                ? 'Files'
+                : `Files (${files.files.length})`}
             </h3>
             <div className={sectionHeader.hairline} />
           </div>
@@ -146,6 +148,7 @@ const VectorStoreDetails = ({ store, refreshStore, onRefreshed, deleting, onDele
             <FileList
               files={files.files}
               loading={files.filesLoading}
+              error={files.filesError}
               onRemoveFile={files.removeFile}
             />
           )}

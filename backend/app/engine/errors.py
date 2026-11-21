@@ -112,6 +112,20 @@ def user_message(failure: Failure) -> str:
     return MESSAGES[failure.type]
 
 
+KEY_REFUSED_IN_A_RUN = (
+    "OpenAI refused the server's API key. Ask an administrator to check the "
+    "OpenAI key and account, then use Resume."
+)
+
+
+def question_message(error: BaseException, failure: Failure) -> str:
+    """The message of a question that failed in a run. A refused key is named:
+    the API_ERROR type also covers OpenAI being down, which waiting fixes."""
+    if isinstance(error, openai.AuthenticationError | openai.PermissionDeniedError):
+        return KEY_REFUSED_IN_A_RUN
+    return user_message(failure)
+
+
 # What the user reads when an OpenAI call made for a request fails, outside a
 # run (a vector store, a file): there is no Resume to point to.
 OPERATION_MESSAGES = {

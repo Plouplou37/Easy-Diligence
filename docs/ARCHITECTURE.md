@@ -218,7 +218,11 @@ of two clouds:
 - `DDExecution` (`models/execution.py`): the run of **one** DD type in a
   session, only one per pair. Statuses (`ExecutionStatus`): `not_started`,
   `in_progress`, `generated`, `failed`, `paused`, etc. It carries the
-  `conversation_id`.
+  `conversation_id`, and the time spent running, pauses left out:
+  `run_seconds` for the stretches already over, `running_since` for the one
+  going on. A start or a resume sets `running_since`
+  (`services/processing._switch`); the engine adds the stretch to
+  `run_seconds` when the run stops (`processor._stop_clock`).
 - `DDAnswer` (`models/answer.py`): a run's (`execution_id`) answer to a
   question (`question_id`), versioned by `version` and `is_current`, with
   `status`, `response_id` and `sources` (JSON). History goes into
@@ -698,8 +702,7 @@ Without a synthesis, the report contains only the detail.
   reduced. Beyond about 40 columns, it is written as lines of text.
 - The markdown horizontal rule (`---`) still comes out as plain text.
 
-There is no Excel export. The review page's CSV export is built in the
-browser.
+The PDF report is the only export: there is no Excel or CSV export.
 
 ### Dashboard
 
@@ -907,7 +910,8 @@ Scripts also run from `backend/`: `uv run python scripts/<script>.py`.
 - The answers page requests `limit=1000` (the server's cap): without it, the
   server returns only 100.
 - The tiles of a DD card (`widgets/dd-run-card/ui/RunStatus.jsx`):
-  - elapsed time is measured from the answers' timestamps;
+  - elapsed time is the time spent running, pauses left out
+    (`DDExecution.elapsed_seconds`);
   - tokens count only the `is_current` versions;
   - the third tile counts the answers backed by documents.
 

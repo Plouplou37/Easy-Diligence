@@ -149,15 +149,21 @@ def _switch(
 ) -> bool:
     """Set the status to `to` if it is still one of `allowed` (or the run is
     stuck), in one conditional UPDATE. False when another request changed it
-    first; the execution is reloaded either way."""
+    first; the execution is reloaded either way.
+
+    Setting a run in progress starts a new stretch of its run time
+    (DDExecution.running_since): the engine adds it up when the run stops."""
     execution_id = stored_id(execution)
     condition: ColumnElement[bool] = col(DDExecution.status).in_(allowed)
     if or_stuck:
         condition = or_(condition, _stuck(execution_id))
+    values: dict[str, Any] = {"status": to}
+    if to == ExecutionStatus.IN_PROGRESS:
+        values["running_since"] = datetime.now(UTC)
     result = db.execute(
         update(DDExecution)
         .where(col(DDExecution.id) == execution_id, condition)
-        .values(status=to)
+        .values(**values)
         .execution_options(synchronize_session=False)
     )
     db.commit()
@@ -172,6 +178,7 @@ def _create_running(db: Session, session: DDSession, dd_type: DDType) -> DDExecu
         session_id=stored_id(session),
         dd_type_id=stored_id(dd_type),
         status=ExecutionStatus.IN_PROGRESS,
+        running_since=datetime.now(UTC),
     )
     db.add(execution)
     try:
@@ -262,6 +269,9 @@ def run_in_background(
             execution = find_execution(db, session_id, dd_type_id)
             if execution is not None:
                 execution.status = ExecutionStatus.FAILED
+                # Stop the clock, as the engine does when it stops itself.
+                execution.run_seconds = execution.elapsed_seconds()
+                execution.running_since = None
                 db.commit()
         except Exception:
             logger.exception("Could not mark the execution failed")

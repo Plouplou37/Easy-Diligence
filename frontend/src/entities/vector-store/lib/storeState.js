@@ -7,7 +7,10 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 /** Whether the store is gone at OpenAI: it can no longer be searched. */
 export const isStale = store => STALE_STATUSES.includes(store?.status);
 
-/** Whether the store's figures are known: they are not when OpenAI could not be reached. */
+/**
+ * Whether the store's figures are unknown: OpenAI could not describe it (out
+ * of reach, key refused…). The backend says why in `problem`.
+ */
 export const isUnknown = store => store?.status === 'error';
 
 /** The store's state, for its badge: a label and a tone, or null when usable. */
@@ -27,7 +30,7 @@ export const storeProblem = store => {
     return 'This vector store no longer exists at OpenAI: its documents are gone, and the DD runs it is assigned to can no longer search them.';
   }
   if (isUnknown(store)) {
-    return 'OpenAI could not be reached: the figures of this vector store are unknown for now.';
+    return `${store.problem || 'OpenAI did not describe this vector store.'} Its figures are unknown for now.`;
   }
   return null;
 };
