@@ -133,6 +133,11 @@ docker compose up -d                       # start again
 git pull && docker compose up -d --build   # update, migrations included
 ```
 
+The `Makefile` at the root gathers these commands and those of the
+development sections below: `make` alone lists them (`make up`, `make logs`,
+`make build-backend`, `make admin`, `make check`…). On Windows, install make
+once with `winget install ezwinports.make`.
+
 ### Backup
 
 ```bash
@@ -360,6 +365,9 @@ npm run format                   # formatting (Prettier); format:check checks it
 npm run build
 ```
 
+From the root, `make check` runs these checks (all but `pip-audit`), and
+`make format` the formatting.
+
 The tests need neither a database nor an OpenAI key. Their settings are fixed
 in `pyproject.toml` (section `[tool.pytest.ini_options]`, through pytest-env)
 and take precedence over `backend/.env`: a test cannot reach a real database.
@@ -427,6 +435,7 @@ frontend/             React application (Vite, Tailwind)
   nginx.conf          serves the application's files
 proxy/                the entry point: nginx in front of the frontend and backend
 docker-compose.yml    the four services (proxy, frontend, backend, db)
+Makefile              the everyday commands (make alone lists them)
 infra/                the Terraform deployment: azure/ and aws/
 examples/             example questionnaire in the import format
 docs/ARCHITECTURE.md  detailed design

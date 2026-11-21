@@ -94,6 +94,8 @@ npm run lint
 npm run format:check   # npm run format to fix
 ```
 
+From the root, `make check` runs all of the above.
+
 - CI also runs `pytest` a second time, on PostgreSQL, with the tests marked
   `postgres` (skipped locally). A failure there shows up as an annotation on
   the pull request.
