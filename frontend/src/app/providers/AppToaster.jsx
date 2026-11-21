@@ -4,9 +4,10 @@ import { Toaster } from 'react-hot-toast';
 const OPTIONS = {
   duration: 4000,
   style: {
-    background: 'color-mix(in srgb, var(--color-primary-dark) 92%, transparent)',
-    color: '#ffffff',
-    borderRadius: '0.5rem',
+    background: 'var(--color-surface-elevated)',
+    color: 'var(--color-text)',
+    border: '1px solid var(--color-border-hover)',
+    borderRadius: '0.625rem',
     fontSize: '0.875rem',
   },
   success: {

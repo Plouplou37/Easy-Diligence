@@ -1,7 +1,7 @@
 import { panel } from './styles';
 
 /**
- * Figure tile with the blue-to-green rail (Dashboard, Vector Stores).
+ * Figure tile (Dashboard, Vector Stores).
  * @param {Object} props
  * @param {string} props.label - Small-caps label
  * @param {React.ReactNode} props.value - The figure
@@ -28,14 +28,13 @@ export const StatTile = ({
       type={onClick ? 'button' : undefined}
       onClick={onClick}
       title={title}
-      className={`${panel.base} overflow-hidden text-left w-full ${onClick ? 'transition duration-150 ease-out hover:border-bleu-atlantis/60 motion-safe:active:scale-[0.98]' : ''} ${active ? 'border-bleu-atlantis' : ''}`}
+      className={`${panel.base} overflow-hidden text-left w-full ${onClick ? 'transition duration-150 ease-out hover:border-border-hover motion-safe:active:scale-[0.98]' : ''} ${active ? 'border-primary bg-primary-dark' : ''}`}
     >
-      <div className={panel.railBrand} />
-      <div className="flex items-center gap-4 pl-6 pr-5 py-4">
-        {Icon && <Icon className={`h-7 w-7 shrink-0 ${iconClass}`} />}
+      <div className="flex items-center gap-4 px-5 py-4">
+        {Icon && <Icon className={`h-6 w-6 shrink-0 ${iconClass}`} />}
         <dl className="min-w-0 flex-1">
           <dt className="eyebrow truncate">{label}</dt>
-          <dd className="mt-1 text-fluid-xl font-light tracking-tight text-content tabular-nums truncate">
+          <dd className="mt-1 text-2xl font-semibold tracking-tight text-content tabular-nums truncate">
             {value}
           </dd>
           {hint && <dd className="mt-0.5 text-xs text-content-muted truncate">{hint}</dd>}

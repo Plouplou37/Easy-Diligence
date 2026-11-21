@@ -39,7 +39,7 @@ export const Badge = ({
 
   return (
     <span
-      className={`inline-flex items-center gap-1 font-medium rounded-xl border whitespace-nowrap ${tone.badge} ${sizes[size] || sizes.md} ${className}`}
+      className={`inline-flex items-center gap-1 font-semibold rounded-full border whitespace-nowrap ${tone.badge} ${sizes[size] || sizes.md} ${className}`}
     >
       {dot && <span className={`w-1.5 h-1.5 rounded-full ${tone.dot}`}></span>}
       {Icon && <Icon className="w-3 h-3" />}

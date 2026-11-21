@@ -6,11 +6,12 @@
    DESIGN SYSTEM CLASSES (Tailwind 4, CSS-first)
    ----------------------------------------------------------------------------
    `inline`: each class carries its value, a variable of the theme tokens
-   (section 1, switched by `data-theme`) or a fixed brand colour. Some class
-   names match a token's name (`surface`, `bleu`…): inlined, they never
-   shadow the variables the themes switch, and `bg-bleu` stays the fixed
-   brand blue while `var(--color-bleu)` follows the theme. Opacity modifiers
-   work on all of them: `bg-surface/60`.
+   (section 1, switched by `data-theme`). Some class names match a token's
+   name (`surface`…): inlined, they never shadow the variables the themes
+   switch. Opacity modifiers work on all of them: `bg-surface/60`.
+   The look: a dark or light neutral ground, one blue for the actions
+   (`primary`), violet only for what concerns the AI (`theme-ai`), no
+   gradients.
    ========================================================================== */
 
 @theme inline {
@@ -37,6 +38,11 @@
   --color-theme-error: var(--color-error);
   --color-theme-error-bg: var(--color-error-bg);
   --color-theme-error-border: var(--color-error-border);
+  /* What concerns the AI (fields sent to the model, its actions): violet,
+     and nothing else is. */
+  --color-theme-ai: var(--color-ai);
+  --color-theme-ai-bg: var(--color-ai-bg);
+  --color-theme-ai-border: var(--color-ai-border);
 
   --color-border: var(--color-border);
   --color-border-hover: var(--color-border-hover);
@@ -50,9 +56,9 @@
   --color-primary-light: var(--color-primary-light);
   --color-primary-dark: var(--color-primary-dark);
 
-  /* Fixed brand colours, the same in both themes. */
-  --color-bleu: #2a4869;
-  --color-bleu-atlantis: #3ea0d9;
+  /* Older names, kept for the classes that use them: they follow the theme. */
+  --color-bleu: var(--color-primary);
+  --color-bleu-atlantis: var(--color-accent-blue);
 
   /* Fluid sizes (variables in section 1), each with its leading. */
   --text-fluid-4xs: var(--font-size-fluid-4xs);
@@ -78,9 +84,10 @@
 }
 
 @theme {
-  /* The system's own face (Segoe UI on Windows, SF on a Mac): tuned for the
-     screen at every size, and nothing to download. */
-  --font-sans: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  /* Inter, served by the application itself (@fontsource-variable/inter,
+     imported in main.jsx): no request to a font service. The system's face
+     while it loads. */
+  --font-sans: 'Inter Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
 
   --animate-fade-in: fade-in 200ms ease-out;
   --animate-scale-in: scale-in 200ms ease-out;
@@ -137,13 +144,8 @@
    `fixed z-50` modals under the navbar. */
 
 @utility bg-auth {
-  /* Brand gradient behind the login / register screens. */
-  background: linear-gradient(
-    135deg,
-    var(--color-accent-deep) 0%,
-    var(--color-bleu) 50%,
-    var(--color-accent-green) 100%
-  );
+  /* Behind the sign-in screens: the page background, plain. */
+  background: var(--color-bg);
 }
 
 /* ============================================================================
@@ -208,10 +210,10 @@
   /* Field: sits one step darker than the card it lives in */
   background-color: var(--color-bg);
   color: var(--color-text);
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  padding: 0.375rem 0.625rem;
-  font-size: var(--font-size-fluid-xs);
+  border: 1px solid var(--color-border-hover);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
   transition:
     border-color 150ms ease,
     background-color 150ms ease;
@@ -240,21 +242,19 @@
   /* Bordered inset block, slightly darker than the parent card */
   background-color: var(--color-bg);
   border: 1px solid var(--color-border);
-  border-radius: 6px;
+  border-radius: 10px;
 }
 
 @utility pill-action {
-  /* Bordered mini button, uppercase tracking */
+  /* Bordered mini button */
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
-  padding: 0.2rem 0.55rem;
-  font-size: var(--font-size-fluid-3xs);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  padding: 0.25rem 0.625rem;
+  font-size: 0.75rem;
   font-weight: 500;
-  border: 1px solid var(--color-border);
-  border-radius: 3px;
+  border: 1px solid var(--color-border-hover);
+  border-radius: 6px;
   background: var(--color-surface);
   color: var(--color-text-secondary);
   transition:
@@ -293,7 +293,7 @@
 @utility alert {
   /* Banners (form feedback, notices) */
   padding: 0.75rem 1rem;
-  border-radius: 6px;
+  border-radius: 8px;
   border: 1px solid;
   font-size: var(--font-size-fluid-xs);
 }
@@ -355,66 +355,36 @@
 }
 
 /* ============================================================================
-   7. GRADIENTS — brand identity (blue → green)
+   7. ACCENTS — flat colours (the former brand gradients are gone; the class
+   names stay, so the screens that use them did not have to change)
    ========================================================================== */
 
 @utility bg-main-gradient {
-  background: linear-gradient(
-    to bottom right,
-    color-mix(in srgb, var(--color-primary-light) 6%, transparent),
-    color-mix(in srgb, var(--color-primary-light) 16%, transparent) 50%,
-    color-mix(in srgb, var(--color-primary-light) 6%, transparent)
-  );
+  background: transparent;
 }
 
 @utility nav-bg {
-  /* Translucent material: the page scrolls under it, blurred, and stays
-     legible (a solid surface under reduced transparency: section 12). */
-  background: color-mix(in srgb, var(--color-surface) 72%, transparent);
-  backdrop-filter: blur(20px) saturate(180%);
+  /* The bar at the top: solid, a hairline below. */
+  background: var(--color-nav);
 }
 
 @utility logo-gradient-hover {
-  /* Text that fills with the brand gradient on hover */
-  background: linear-gradient(
-    to right,
-    var(--color-accent-blue) 0%,
-    var(--color-accent-green) 45%,
-    var(--color-text) 50%,
-    var(--color-text) 100%
-  );
-  background-size: 220% 100%;
-  background-position: 100% 0;
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  transition: background-position 0.5s ease;
-  &:hover {
-    background-position: 0% 0;
-  }
-}
-
-@utility group {
-  &:hover .logo-gradient-hover-on-group {
-    background-position: 0% 0;
-  }
+  /* The name of the application in the bar */
+  color: var(--color-text);
 }
 
 @utility logo-gradient-hover-on-group {
-  .group:hover & {
-    background-position: 0% 0;
-  }
+  color: inherit;
 }
 
 @utility logo-shimmer-animate {
-  /* Loading: sweep through the masked app logo */
+  /* Loading: a light that sweeps through the masked app logo */
   background: linear-gradient(
     to right,
     color-mix(in srgb, var(--color-text) 15%, transparent) 0%,
-    color-mix(in srgb, var(--color-text) 15%, transparent) 20%,
-    var(--color-accent-blue) 35%,
-    var(--color-accent-green) 50%,
-    color-mix(in srgb, var(--color-text) 15%, transparent) 65%,
+    color-mix(in srgb, var(--color-text) 15%, transparent) 30%,
+    var(--color-accent-blue) 50%,
+    color-mix(in srgb, var(--color-text) 15%, transparent) 70%,
     color-mix(in srgb, var(--color-text) 15%, transparent) 100%
   );
   background-size: 300% 100%;
@@ -424,142 +394,56 @@
 }
 
 @utility gradient-border-hover {
-  /* Border that fills with the gradient on hover */
-  border: 1px solid transparent;
-  background:
-    linear-gradient(var(--color-surface), var(--color-surface)) padding-box,
-    linear-gradient(
-        to right,
-        var(--color-accent-blue) 0%,
-        var(--color-accent-green) 45%,
-        var(--color-bleu) 50%,
-        var(--color-bleu) 100%
-      )
-      border-box;
-  background-size:
-    100% 100%,
-    220% 100%;
-  background-position:
-    0 0,
-    100% 0;
-  transition: background-position 0.5s ease;
+  /* A card whose border lights up on hover */
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  transition: border-color 150ms ease;
   &:hover {
-    background-position:
-      0 0,
-      0% 0;
+    border-color: var(--color-border-hover);
   }
 }
 
 @utility gradient-grey-border-hover {
-  border: 1px solid transparent;
-  background:
-    linear-gradient(var(--color-surface), var(--color-surface)) padding-box,
-    linear-gradient(
-        to right,
-        var(--color-accent-blue) 0%,
-        var(--color-accent-green) 45%,
-        var(--color-gris) 50%,
-        var(--color-gris) 100%
-      )
-      border-box;
-  background-size:
-    100% 100%,
-    220% 100%;
-  background-position:
-    0 0,
-    100% 0;
-  transition: background-position 0.5s ease;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  transition: border-color 150ms ease;
   &:hover {
-    background-position:
-      0 0,
-      0% 0;
+    border-color: var(--color-border-hover);
   }
 }
 
 @utility input-gradient-border {
-  /* Field whose border fills with the gradient on focus. Needs its transparent
-     border: never combine with a `border-<colour>` class. */
-  border: 1px solid transparent;
-  background:
-    linear-gradient(var(--color-bg), var(--color-bg)) padding-box,
-    linear-gradient(
-        to right,
-        var(--color-accent-blue) 0%,
-        var(--color-accent-green) 45%,
-        var(--color-border) 50%,
-        var(--color-border) 100%
-      )
-      border-box;
-  background-size:
-    100% 100%,
-    220% 100%;
-  background-position:
-    0 0,
-    100% 0;
-  transition: background-position 0.5s ease;
+  /* A field, as form-input */
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  border: 1px solid var(--color-border-hover);
+  transition: border-color 150ms ease;
   outline: none;
   &:hover {
-    background:
-      linear-gradient(var(--color-bg), var(--color-bg)) padding-box,
-      linear-gradient(
-          to right,
-          var(--color-accent-blue) 0%,
-          var(--color-accent-green) 45%,
-          var(--color-border-hover) 50%,
-          var(--color-border-hover) 100%
-        )
-        border-box;
-    background-size:
-      100% 100%,
-      220% 100%;
-    background-position:
-      0 0,
-      100% 0;
+    border-color: var(--color-text-muted);
   }
   &:focus {
-    background-position:
-      0 0,
-      0% 0;
+    border-color: var(--color-accent-blue);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent-blue) 18%, transparent);
   }
 }
 
 @utility hairline-gradient {
-  /* Hairlines (title underlines, dividers) */
-  background: linear-gradient(
-    to right,
-    var(--color-accent-blue) 0%,
-    var(--color-accent-green) 50%,
-    transparent 100%
-  );
+  /* Hairlines (dividers) */
+  background: var(--color-border);
 }
 
 @utility hairline-gradient-centered {
-  background: linear-gradient(
-    to right,
-    transparent 0%,
-    var(--color-accent-blue) 25%,
-    var(--color-accent-green) 50%,
-    var(--color-accent-blue) 75%,
-    transparent 100%
-  );
+  background: var(--color-border);
 }
 
 @utility hairline-gradient-reverse {
-  background: linear-gradient(
-    to right,
-    transparent 0%,
-    var(--color-accent-green) 50%,
-    var(--color-accent-blue) 100%
-  );
+  background: var(--color-border);
 }
 
 @utility rail-gradient {
-  /* Vertical rails (selected item, card edge) */
-  background: linear-gradient(
-    to bottom,
-    var(--color-accent-blue) 0%,
-    var(--color-accent-green) 100%
-  );
+  /* Vertical rail of a selected item */
+  background: var(--color-primary);
 }
 
 @utility rail-accent {
@@ -567,40 +451,22 @@
   left: 0;
   top: 0;
   bottom: 0;
-  width: 2px;
-  background: linear-gradient(
-    to bottom,
-    var(--color-accent-blue) 0%,
-    var(--color-accent-green) 100%
-  );
+  width: 3px;
+  background: var(--color-primary);
   pointer-events: none;
 }
 
 @utility side-gradient {
-  background: linear-gradient(
-    to bottom,
-    var(--color-accent-deep),
-    var(--color-accent-deep) 50%,
-    var(--color-accent-gold)
-  );
+  /* Card edges: gone, a card is a plain bordered surface */
+  background: transparent;
 }
 
 @utility side-gradient-2 {
-  background: linear-gradient(
-    to bottom,
-    var(--color-accent-deep),
-    var(--color-accent-blue) 50%,
-    var(--color-accent-green)
-  );
+  background: transparent;
 }
 
 @utility side-gradient-2-reverse {
-  background: linear-gradient(
-    to bottom,
-    var(--color-accent-green),
-    var(--color-accent-blue) 50%,
-    var(--color-accent-deep)
-  );
+  background: transparent;
 }
 
 @utility bg-transparent-blur {
@@ -629,53 +495,33 @@
 }
 
 @utility analysis-link {
-  /* Uppercase link; a gradient underline draws in on hover and stays on the
-     active page (`data-active="true"`). */
-  position: relative;
+  /* A link of the bar: the active page sits on a tinted pill
+     (`data-active="true"`). */
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  padding: 0.5rem 0.35rem;
-  font-size: var(--font-size-fluid-2xs);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  padding: 0.375rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
   font-weight: 500;
-  color: color-mix(in srgb, var(--color-text) 70%, transparent);
+  color: var(--color-text-secondary);
   white-space: nowrap;
-  transition: color 200ms ease;
+  transition:
+    color 150ms ease,
+    background-color 150ms ease;
   cursor: pointer;
   &:hover {
-    color: var(--color-accent-blue);
+    color: var(--color-text);
+    background-color: var(--color-surface-hover);
   }
   &[data-active='true'] {
-    color: var(--color-accent-blue);
-  }
-  &::after {
-    content: '';
-    position: absolute;
-    left: 0.35rem;
-    right: 0.35rem;
-    bottom: 0.2rem;
-    height: 1px;
-    background: linear-gradient(
-      to right,
-      var(--color-accent-blue) 0%,
-      var(--color-accent-green) 100%
-    );
-    transform: scaleX(0);
-    transform-origin: left center;
-    transition: transform 250ms ease;
-  }
-  &:hover::after {
-    transform: scaleX(1);
-  }
-  &[data-active='true']::after {
-    transform: scaleX(1);
+    color: var(--color-text);
+    background-color: var(--color-surface-hover);
   }
 }
 
 /* ============================================================================
-   10. MARKDOWN TABLES — same look as the app tables (navy header, zebra rows)
+   10. MARKDOWN TABLES — same look as the app tables (tinted header, zebra rows)
    Higher specificity than the typography plugin's :where() selectors.
    ========================================================================== */
 
@@ -684,12 +530,12 @@
     border-collapse: collapse;
   }
   & thead {
-    background-color: var(--color-primary-dark);
+    background-color: var(--color-surface-hover);
     border-bottom-width: 0;
   }
   & thead th {
-    color: #ffffff;
-    font-weight: 300;
+    color: var(--color-text-secondary);
+    font-weight: 600;
     border: 1px solid var(--color-border);
     padding: 0.35rem 0.5rem;
     vertical-align: middle;
@@ -736,56 +582,61 @@
     color-scheme: light;
 
     /* ── Surfaces & text ── */
-    --color-bg: #f5f5f5;
+    --color-bg: #f5f7fa;
     --color-surface: #ffffff;
-    --color-surface-hover: #ededed;
+    --color-surface-hover: #eef1f5;
     --color-surface-elevated: #ffffff;
+    --color-nav: #ffffff;
 
-    --color-text: #2a4869;
-    --color-text-secondary: #808080;
-    --color-text-muted: #a0a0a0;
+    --color-text: #141a22;
+    --color-text-secondary: #4a5565;
+    --color-text-muted: #667085;
     --color-text-inverse: #ffffff;
 
-    /* ── Brand ── */
-    --color-primary: #1e69aa;
-    --color-primary-light: #85acc1;
-    --color-primary-dark: #2a4869;
-    --color-secondary: #3ea0d9;
-    --color-success: #76bb6b;
-    --color-warning: #ba9950;
-    --color-error: #ef4444;
+    /* ── Actions: one blue. primary-dark is the tint of a selected item. ── */
+    --color-primary: #2f6fdb;
+    --color-primary-light: #8ab4ff;
+    --color-primary-dark: #e8f0fd;
+    --color-secondary: #2459c4;
+    --color-success: #1e7a52;
+    --color-warning: #8a5a00;
+    --color-error: #c33a3a;
 
     /* ── Muted state backgrounds (banners, badges) ── */
-    --color-success-bg: rgba(118, 187, 107, 0.12);
-    --color-success-border: rgba(118, 187, 107, 0.35);
-    --color-warning-bg: rgba(186, 153, 80, 0.12);
-    --color-warning-border: rgba(186, 153, 80, 0.35);
-    --color-error-bg: rgba(239, 68, 68, 0.1);
-    --color-error-border: rgba(239, 68, 68, 0.3);
+    --color-success-bg: rgba(30, 122, 82, 0.1);
+    --color-success-border: rgba(30, 122, 82, 0.3);
+    --color-warning-bg: rgba(186, 128, 0, 0.12);
+    --color-warning-border: rgba(186, 128, 0, 0.35);
+    --color-error-bg: rgba(195, 58, 58, 0.08);
+    --color-error-border: rgba(195, 58, 58, 0.3);
+
+    /* ── The AI ── */
+    --color-ai: #6b4fd8;
+    --color-ai-bg: rgba(107, 79, 216, 0.08);
+    --color-ai-border: rgba(107, 79, 216, 0.35);
 
     /* ── Borders ── */
-    --color-border: #e0e0e0;
-    --color-border-hover: #bbcddd;
+    --color-border: #e3e7ed;
+    --color-border-hover: #c9d0da;
 
-    /* ── Charter accents (gradient stops) ── */
-    --color-gris: #c4c4c4;
-    --color-bleu: #1e69aa;
-    --color-accent-blue: #3ea0d9;
-    --color-accent-green: #76bb6b;
-    --color-accent-deep: #2a4869;
-    --color-accent-gold: #b49b78;
+    /* ── Accents ── */
+    --color-gris: #d5dbe3;
+    --color-accent-blue: #2459c4;
+    --color-accent-green: #1e7a52;
+    --color-accent-deep: #e8f0fd;
+    --color-accent-gold: #8a5a00;
 
     /* ── Scrollbars ── */
-    --color-scrollbar-thumb: #a8c4d4;
-    --color-scrollbar-thumb-hover: #2a4869;
-    --color-scrollbar-track: #f5f5f5;
+    --color-scrollbar-thumb: #c9d0da;
+    --color-scrollbar-thumb-hover: #98a2b3;
+    --color-scrollbar-track: transparent;
 
     /* ── Overlays ── */
     --color-overlay: rgba(255, 255, 255, 0.5);
-    --color-modal-backdrop: rgba(0, 0, 0, 0.5);
+    --color-modal-backdrop: rgba(15, 20, 28, 0.45);
 
     /* ── Shadows ── */
-    --shadow-input-soft: 0 2px 4px rgba(0, 0, 0, 0.1);
+    --shadow-input-soft: 0 1px 2px rgba(16, 24, 40, 0.06);
     --shadow-table-sticky: 2px 0 5px -2px rgba(0, 0, 0, 0.1);
 
     /* ── Fluid typography ── */
@@ -800,57 +651,61 @@
     --font-size-fluid-2xl: clamp(1.875rem, 1.62rem + 1.2vw, 2.75rem);
     --font-size-fluid-3xl: clamp(2.25rem, 1.9rem + 1.8vw, 3.25rem);
 
-    /* ── Layout: floating navbar, and the space the content keeps under it ── */
-    --navbar-height: clamp(44px, 3vw, 56px);
+    /* ── Layout: the bar at the top, and the space the content keeps under it ── */
+    --navbar-height: 56px;
     --navbar-spacing: calc(var(--navbar-height) + 1.5rem);
   }
 
   [data-theme='dark'] {
     color-scheme: dark;
 
-    --color-bg: #0a1420;
-    --color-surface: #16283a;
-    --color-surface-hover: #1f3851;
-    --color-surface-elevated: #1f3851;
+    --color-bg: #0e1116;
+    --color-surface: #161b22;
+    --color-surface-hover: #1c232d;
+    --color-surface-elevated: #1c232d;
+    --color-nav: #11161d;
 
-    --color-text: #d1e0ec;
-    --color-text-secondary: #b0c4d8;
-    --color-text-muted: #8a9aad;
-    --color-text-inverse: #171717;
+    --color-text: #e6eaf0;
+    --color-text-secondary: #a9b3c1;
+    --color-text-muted: #8b96a6;
+    --color-text-inverse: #0e1116;
 
-    --color-primary: #1e69aa;
-    --color-primary-light: #85acc1;
-    --color-primary-dark: #2a4869;
-    --color-secondary: #5bb8e8;
-    --color-success: #8fd584;
-    --color-warning: #d4b366;
-    --color-error: #f87171;
+    --color-primary: #2f6fdb;
+    --color-primary-light: #8ab4ff;
+    --color-primary-dark: #16233a;
+    --color-secondary: #8ab4ff;
+    --color-success: #7fddb0;
+    --color-warning: #f2c66d;
+    --color-error: #f28b8b;
 
-    --color-success-bg: rgba(143, 213, 132, 0.15);
-    --color-success-border: rgba(143, 213, 132, 0.35);
-    --color-warning-bg: rgba(212, 179, 102, 0.15);
-    --color-warning-border: rgba(212, 179, 102, 0.35);
-    --color-error-bg: rgba(248, 113, 113, 0.15);
-    --color-error-border: rgba(248, 113, 113, 0.35);
+    --color-success-bg: rgba(61, 170, 119, 0.16);
+    --color-success-border: rgba(127, 221, 176, 0.35);
+    --color-warning-bg: rgba(242, 198, 109, 0.14);
+    --color-warning-border: rgba(242, 198, 109, 0.35);
+    --color-error-bg: rgba(242, 139, 139, 0.14);
+    --color-error-border: rgba(242, 139, 139, 0.35);
 
-    --color-border: #2a4060;
-    --color-border-hover: #426591;
+    --color-ai: #cdbbff;
+    --color-ai-bg: rgba(182, 156, 255, 0.12);
+    --color-ai-border: rgba(182, 156, 255, 0.45);
 
-    --color-gris: #3a4a5a;
-    --color-bleu: #5b9bd5;
-    --color-accent-blue: #5bb8e8;
-    --color-accent-green: #8fd584;
-    --color-accent-deep: #2a4869;
-    --color-accent-gold: #b49b78;
+    --color-border: #232b36;
+    --color-border-hover: #3a4656;
 
-    --color-scrollbar-thumb: #3a4a5a;
-    --color-scrollbar-thumb-hover: #5b9bd5;
-    --color-scrollbar-track: #1a1b23;
+    --color-gris: #2a3340;
+    --color-accent-blue: #8ab4ff;
+    --color-accent-green: #7fddb0;
+    --color-accent-deep: #16233a;
+    --color-accent-gold: #f2c66d;
+
+    --color-scrollbar-thumb: #2a3340;
+    --color-scrollbar-thumb-hover: #3a4656;
+    --color-scrollbar-track: transparent;
 
     --color-overlay: rgba(0, 0, 0, 0.5);
-    --color-modal-backdrop: rgba(0, 0, 0, 0.7);
+    --color-modal-backdrop: rgba(0, 0, 0, 0.65);
 
-    --shadow-input-soft: 0 2px 4px rgba(0, 0, 0, 0.3);
+    --shadow-input-soft: 0 1px 2px rgba(0, 0, 0, 0.3);
     --shadow-table-sticky: 2px 0 5px -2px rgba(0, 0, 0, 0.4);
   }
 
@@ -978,14 +833,14 @@
 @media (prefers-contrast: more) {
   :root,
   [data-theme='light'] {
-    --color-border: #8593a0;
-    --color-text-secondary: #4d4d4d;
-    --color-text-muted: #666666;
+    --color-border: #8a94a6;
+    --color-text-secondary: #2f3a48;
+    --color-text-muted: #4a5565;
   }
   [data-theme='dark'] {
-    --color-border: #7d97b6;
-    --color-text-secondary: #d6e2ee;
-    --color-text-muted: #b8c6d4;
+    --color-border: #5a6678;
+    --color-text-secondary: #d5dbe4;
+    --color-text-muted: #b8c1cd;
   }
 }
 
