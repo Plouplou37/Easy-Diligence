@@ -205,12 +205,14 @@ class OpenAIProcessor:
             request_params["max_output_tokens"] = max_output_tokens
 
     def _apply_compaction(self, request_params: dict[str, Any]) -> None:
-        """Ask the server to compact the conversation chain past a threshold.
+        """Ask the server to compact the context past a threshold.
 
-        Questions are chained with previous_response_id, which grows the input by
-        ~4 200 tokens each time: a long DD would exceed the context window and
-        truncation='auto' would then drop the earliest answers without telling
-        anyone. Compaction replaces that history with a compressed item instead.
+        A safety net: questions are no longer chained (each one carries the text
+        of the earlier answers instead, within a budget, see
+        processor.compose_earlier_answers), so a request stays far below the
+        threshold. Should one grow past it all the same, truncation='auto' would
+        drop context without telling anyone; compaction replaces it with a
+        compressed item instead.
 
         Sent through 'extra_body' because the pinned SDK (2.2.0) predates the
         parameter and would reject it client-side; the API itself validates it
@@ -301,11 +303,17 @@ class OpenAIProcessor:
         self,
         question_text: str,
         vector_store_ids: list[str],
-        previous_response_id: str | None = None,
+        earlier_answers: str | None = None,
         company_info: dict[str, Any] | None = None,
         tool_choice: str | dict[str, str] | None = None,
     ) -> dict[str, Any]:
         """The responses.create() parameters for one DD question.
+
+        `earlier_answers`, when given, is a message of its own before the
+        question: the answers already written for the earlier questions
+        (processor.compose_earlier_answers). It replaces the old conversation
+        chain (previous_response_id), which carried every earlier search
+        result again and cost 12 to 15 times the input of a question alone.
 
         Kept apart from process_question so a measurement script can send the
         engine's exact request instead of a copy that would drift from it.
@@ -320,12 +328,19 @@ class OpenAIProcessor:
 
         # Prepare the request parameters for responses.create()
         # Using proper message array structure with roles
+        messages: list[dict[str, Any]] = [
+            {"role": "system", "content": [{"type": "input_text", "text": system_prompt}]}
+        ]
+        if earlier_answers:
+            messages.append(
+                {"role": "user", "content": [{"type": "input_text", "text": earlier_answers}]}
+            )
+        messages.append(
+            {"role": "user", "content": [{"type": "input_text", "text": question_text}]}
+        )
         request_params = {
             "model": self.model,
-            "input": [
-                {"role": "system", "content": [{"type": "input_text", "text": system_prompt}]},
-                {"role": "user", "content": [{"type": "input_text", "text": question_text}]},
-            ],
+            "input": messages,
             "store": True,  # Enable prompt caching for cost savings
             "truncation": "auto",  # Automatically drop old messages when context is full
             "include": [
@@ -391,11 +406,6 @@ class OpenAIProcessor:
             # "none": send no tool_choice, leaving the API to its own default
             logger.debug("Using configured tool_choice: %s", choice)
 
-        # Add previous_response_id for context chaining if available
-        if previous_response_id:
-            request_params["previous_response_id"] = previous_response_id
-            logger.debug("Added previous_response_id for context chaining")
-
         logger.debug(
             "Request params: model=%s, input_messages=%s, tools=%s",
             request_params["model"],
@@ -417,19 +427,17 @@ class OpenAIProcessor:
         self,
         question_text: str,
         vector_store_ids: list[str],
-        previous_response_id: str | None = None,
+        earlier_answers: str | None = None,
         company_info: dict[str, Any] | None = None,
         tool_choice: str | dict[str, str] | None = None,
     ) -> dict[str, Any]:
-        """
-        Process a single question using OpenAI's responses.create() with previous_response_id chaining
-        This maintains the exact API structure requested by the user
-        """
+        """Answer one question with responses.create(): the request of
+        build_question_request, then the answer and its sources."""
         try:
             logger.debug("Processing question with OpenAI API")
 
             request_params = self.build_question_request(
-                question_text, vector_store_ids, previous_response_id, company_info, tool_choice
+                question_text, vector_store_ids, earlier_answers, company_info, tool_choice
             )
 
             # Make the API call using client.responses.create()
@@ -892,7 +900,6 @@ class OpenAIProcessor:
                 "tokens_used": (response.usage.total_tokens if response.usage else 0)
                 + discarded_tokens,
                 "response_id": response.id,
-                "previous_response_id": previous_response_id,  # Pass through for context chain tracking
                 # No confidence_score: it used to be hardcoded to 0.8, which
                 # surfaced as "Confidence: 80%" on every answer and in the Excel
                 # export -- a number that looked like an assessment but measured

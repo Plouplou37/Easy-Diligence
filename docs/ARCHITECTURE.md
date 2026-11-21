@@ -229,8 +229,9 @@ of two clouds:
     taken at answer time**: a code changed later does not reach older
     answers. A single function fills them: `engine/answers.new_answer`.
   - A question or section that has answers cannot be deleted (409).
-- `DDResponse` and `DDMessage`: OpenAI's raw responses and messages, chained
-  by `previous_response_id`.
+- `DDResponse` and `DDMessage`: OpenAI's raw responses and messages. The
+  `previous_response_id` column dates from the conversation chain and stays
+  empty now ("Memory, compaction and limits").
 - `VectorStore` and `SessionVectorStore` (`models/vector_store.py`): the
   OpenAI vector stores and their assignment to sessions and DD types.
 - `DDSummary` (`models/summary.py`): the generated summaries, per section or
@@ -341,7 +342,8 @@ on the attached vector stores, and `web_search`.
   passes an explicit value keeps control.
 - **Why `web_search` by default.** A comparison on the same questionnaire
   and the same documents showed that `auto` saves almost nothing in input
-  tokens, since the chained conversation dominates. On the other hand, the
+  tokens, since the chained conversation dominated (the questions were still
+  chained then: worth measuring again without the chain). On the other hand, the
   model then skips the web on most questions: web citations collapse, more
   answers come back without a source, and the questions about the management
   company suffer most. The documents describe the fund, whereas the
@@ -362,7 +364,7 @@ on the attached vector stores, and `web_search`.
   authoritative: this is not a fallback to the old tool.
 - Ruled out: two calls per question, one per tool. It is the only absolute
   guarantee that both tools are used, but it doubles the cost and the time,
-  since each call sends the whole chained conversation again.
+  since each call sends the whole context again.
 
 ### Fund and management company
 
@@ -427,15 +429,29 @@ degraded, but not broken.
 
 ### Memory, compaction and limits
 
-- **Memory.** The questions of a run form a conversation chained by
-  `previous_response_id`, in `order_index` order. `truncation="auto"` is sent
-  to OpenAI.
-- **Compaction.** Chaining grows the input by about 4,000 tokens per
-  question. A questionnaire of nearly 300 questions would thus exceed the
-  model's context window. Beyond `COMPACT_THRESHOLD` (200,000 by default, see
-  `openai_client._apply_compaction`), the history is compacted instead of
-  being silently truncated. The `context_management` parameter goes through
-  `extra_body`, because the SDK does not know it yet.
+- **Memory.** Each question carries the text of the answers already written
+  for the earlier questions of the run, in the questionnaire's order (section,
+  then question), in a message of its own before the question
+  (`processor.compose_earlier_answers`). An earlier answer may help with the
+  next question (the same team, the same figures), but it is context, not a
+  source: the message says so. Failed and rejected answers are left out. The
+  budget is `EARLIER_ANSWERS_MAX_CHARS` (30,000 characters, about 7,500
+  tokens), the closest questions first, each answer cut past
+  `EARLIER_ANSWER_MAX_CHARS` (3,000). A regenerated answer gets the same
+  context.
+- **Why not a conversation chain.** The questions used to form one OpenAI
+  conversation, chained by `previous_response_id`. Measured on a real run
+  (`gpt-5.6-luna`, five documents), a question alone cost about 6,400 input
+  tokens, and a chained one 75,000 to 96,000: the chain sends every earlier
+  search result again (document extracts, web pages), not just the answers.
+  The chain also compared `order_index` alone, which starts again at 0 in
+  every section: from the second section on, each question continued the
+  question of the same rank in the first section.
+- **Compaction.** A safety net: beyond `COMPACT_THRESHOLD` (200,000 by
+  default, see `openai_client._apply_compaction`), OpenAI compacts the context
+  instead of truncating it silently (`truncation="auto"`). A request now stays
+  far below it. The `context_management` parameter goes through `extra_body`,
+  because the SDK does not know it yet.
 - **Reasoning model parameters** (`_apply_model_params`):
   - no `temperature`;
   - `max_output_tokens` of at least 25,000 (the
@@ -455,7 +471,8 @@ degraded, but not broken.
 - **Pause**: sets `execution.status` to `paused`. The loop checks it
   **between two questions**, so stopping is not instantaneous.
 - **Resume**: keeps the `conversation_id`, skips the questions whose current
-  answer is good and retries the others (no answer, or failed).
+  answer is good and retries the others (no answer, or failed). The answers
+  written before the pause reach the next questions as earlier answers.
 - The engine does not set the status back to `in_progress` itself: the
   service does. A pause clicked before the background task starts is
   therefore no longer overwritten. At the end of a run, the final status is
