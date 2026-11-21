@@ -1,29 +1,36 @@
 import { useState } from 'react';
 import {
   ArrowPathIcon,
+  ArrowUpTrayIcon,
   ExclamationTriangleIcon,
-  PlusIcon,
   TrashIcon,
 } from '@heroicons/react/24/outline';
-import { isStale, isUnknown, storeProblem, storeState } from '@/entities/vector-store';
+import { expiryLevel, isStale, isUnknown, storeProblem, storeState } from '@/entities/vector-store';
 import { FileUploadModal, useFileManagement, useFileUpload } from '@/features/vector-store-manage';
 import { formatBytes } from '@/shared/lib/format';
-import { Button, sectionHeader } from '@/shared/ui';
+import { AiBadge, Button } from '@/shared/ui';
 import FileList from './FileList';
 
-const Figure = ({ label, value, title }) => (
-  <div className="bg-surface-bg rounded-md p-3">
-    <div className="eyebrow">{label}</div>
-    <div className="mt-1 text-lg font-medium text-content" title={title}>
+// The colour of the expiry date once it is near (entities/vector-store, expiryLevel).
+const EXPIRY_TONES = { imminent: 'text-theme-error', soon: 'text-theme-warning' };
+
+const Figure = ({ label, value, hint, title, tone = 'text-content' }) => (
+  <div className="form-surface min-w-0 flex-[1_1_9rem] px-4 py-3">
+    <dt className="text-xs text-content-muted">{label}</dt>
+    <dd
+      className={`mt-0.5 truncate text-xl font-semibold tracking-tight tabular-nums ${tone}`}
+      title={title}
+    >
       {value}
-    </div>
+    </dd>
+    {hint && <dd className="mt-0.5 text-xs text-content-muted">{hint}</dd>}
   </div>
 );
 
 /**
- * One vector store: its figures, its files, the upload and the deletion.
- * `refreshStore(id)` fetches it again and resolves to the fresh store, which
- * `onRefreshed` receives.
+ * One document collection (an OpenAI vector store): its figures, its
+ * documents, the upload and the deletion. `refreshStore(id)` fetches it again
+ * and resolves to the fresh store, which `onRefreshed` receives.
  */
 const VectorStoreDetails = ({ store, refreshStore, onRefreshed, deleting, onDelete }) => {
   const [refreshing, setRefreshing] = useState(false);
@@ -35,7 +42,7 @@ const VectorStoreDetails = ({ store, refreshStore, onRefreshed, deleting, onDele
     return fresh;
   };
 
-  // A store gone at OpenAI has no files to list: asking would only fail.
+  // A collection gone at OpenAI has no files to list: asking would only fail.
   const stale = isStale(store);
   const known = !stale && !isUnknown(store);
   const problem = storeProblem(store);
@@ -59,100 +66,119 @@ const VectorStoreDetails = ({ store, refreshStore, onRefreshed, deleting, onDele
   const expires = store.expires_at ? new Date(store.expires_at) : null;
   let expiry = expires ? expires.toLocaleDateString() : 'Never';
   if (!known) expiry = storeState(store)?.label || '—';
+  const days = store.expires_after_days;
+  const expiryHint =
+    known && days ? `After ${days} day${days === 1 ? '' : 's'} without use` : undefined;
+  const expiryTone = EXPIRY_TONES[known ? expiryLevel(store) : null];
+
+  // No count while loading or after a failure: "0" would read as an empty collection.
+  const countKnown = !files.filesLoading && !stale && !files.filesError;
 
   return (
     <>
-      <div className="p-5 border-b border-border shrink-0">
-        <div className="flex items-center justify-between gap-4 mb-4">
-          <div>
+      <div className="space-y-5 p-5 sm:p-6">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0 flex-[1_1_16rem]">
+            <p className="eyebrow">Document collection</p>
             {/* The OpenAI id is internal: kept in the tooltip. */}
-            <h2 className="text-fluid-lg font-medium text-content" title={`ID: ${store.id}`}>
+            <h2
+              className="mt-1 break-words text-xl font-semibold tracking-tight text-content"
+              title={`OpenAI vector store ID: ${store.id}`}
+            >
               {store.name}
             </h2>
             {store.description && (
-              <p
-                className="text-sm text-content-secondary mt-1 line-clamp-2"
-                title={store.description}
-              >
+              <p className="mt-1 whitespace-pre-line text-sm text-content-secondary">
                 {store.description}
               </p>
             )}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2">
             <Button
               onClick={refreshAll}
               loading={refreshing}
-              variant="ghost"
+              variant="secondary"
               icon={ArrowPathIcon}
-              title="Refresh this vector store"
-              aria-label="Refresh this vector store"
-            />
+              title="Ask OpenAI again for this collection's figures and documents"
+            >
+              Refresh
+            </Button>
             <Button
               onClick={() => onDelete(store.id)}
               loading={deleting}
               variant="danger"
+              size="lg"
               icon={TrashIcon}
-              title="Delete this vector store"
-              aria-label="Delete this vector store"
+              title="Delete this collection"
+              aria-label="Delete this collection"
             />
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-4">
+        <dl className="flex flex-wrap gap-3">
           <Figure label="Files" value={known ? store.file_count : '—'} />
           <Figure label="Size" value={known ? formatBytes(store.total_bytes) : '—'} />
           <Figure
             label="Expires"
             value={expiry}
+            hint={expiryHint}
+            tone={expiryTone}
             title={known && expires ? expires.toLocaleString() : undefined}
           />
-        </div>
+        </dl>
 
         {problem && (
-          <div className={`alert ${stale ? 'alert-error' : 'alert-warning'} mt-4 text-sm`}>
-            <p className="flex items-start gap-2">
-              <ExclamationTriangleIcon className="w-5 h-5 shrink-0" />
-              <span>
-                {problem}
-                {stale &&
-                  ' Delete it here, or use Refresh at the top of the page to remove every vector store in this state.'}
-              </span>
+          <div
+            className={`alert ${stale ? 'alert-error' : 'alert-warning'} flex items-start gap-2`}
+          >
+            <ExclamationTriangleIcon className="h-5 w-5 shrink-0" aria-hidden="true" />
+            <p>
+              {problem}
+              {stale &&
+                ' Delete it here, or use Refresh at the top of the page to remove every collection in this state.'}
             </p>
           </div>
         )}
       </div>
 
-      <div className="flex-1 min-h-0 flex flex-col p-5">
-        <div className="flex items-center justify-between gap-4 mb-4 shrink-0">
-          <div className={`${sectionHeader.wrapper} flex-1`}>
-            <h3 className={sectionHeader.title}>
-              {/* No count while loading or after a failure: "Files (0)" read as an empty store. */}
-              {files.filesLoading || stale || files.filesError
-                ? 'Files'
-                : `Files (${files.files.length})`}
+      <div className="border-t border-border p-5 sm:p-6">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <h3 className="text-base font-semibold text-content">
+              Documents
+              {countKnown && (
+                <span className="ml-2 text-sm font-normal tabular-nums text-content-muted">
+                  {files.files.length}
+                </span>
+              )}
             </h3>
-            <div className={sectionHeader.hairline} />
+            {!stale && <AiBadge>Searched by the AI</AiBadge>}
           </div>
           {!stale && (
-            <Button onClick={() => setUploadOpen(true)} variant="primary" icon={PlusIcon}>
-              Upload Files
+            <Button onClick={() => setUploadOpen(true)} variant="secondary" icon={ArrowUpTrayIcon}>
+              Add files
             </Button>
           )}
         </div>
-        <div className="flex-1 min-h-0">
-          {stale ? (
-            <p className="text-sm text-content-muted">
-              No documents: they went with the vector store.
-            </p>
-          ) : (
+
+        {stale ? (
+          <p className="text-sm text-content-muted">
+            No documents: they went with the collection at OpenAI.
+          </p>
+        ) : (
+          <>
             <FileList
               files={files.files}
               loading={files.filesLoading}
               error={files.filesError}
               onRemoveFile={files.removeFile}
             />
-          )}
-        </div>
+            <p className="mt-3 text-xs text-content-muted">
+              The AI does not read them whole: for each question, it searches them and reads the
+              passages it finds.
+            </p>
+          </>
+        )}
       </div>
 
       <FileUploadModal isOpen={uploadOpen} onClose={() => setUploadOpen(false)} upload={upload} />

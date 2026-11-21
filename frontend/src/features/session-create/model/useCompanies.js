@@ -2,10 +2,12 @@ import { useCallback, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { companyAPI } from '@/entities/company';
 import { errorMessage } from '@/shared/api';
+import { toPayload } from '../lib/fund';
 
-/** The funds the user can open a session on, with their creation and editing. */
+/** The funds the user can open a due diligence on, with their creation and editing. */
 export const useCompanies = () => {
   const [companies, setCompanies] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
@@ -13,7 +15,9 @@ export const useCompanies = () => {
       const response = await companyAPI.list();
       setCompanies(response.data);
     } catch (error) {
-      toast.error(errorMessage(error, 'Failed to load companies'));
+      toast.error(errorMessage(error, 'The funds could not be loaded'));
+    } finally {
+      setLoading(false);
     }
   }, []);
 
@@ -21,51 +25,40 @@ export const useCompanies = () => {
     load();
   }, [load]);
 
-  /** Resolves to the new company, or null. */
-  const create = async values => {
-    setSaving(true);
+  /** Add a fund. Resolves to it, or null (a toast says why). */
+  const create = async fields => {
     try {
-      const response = await companyAPI.create(values);
+      const response = await companyAPI.create(toPayload(fields));
       setCompanies(previous => [...previous, response.data]);
-      toast.success('Company created successfully');
       return response.data;
     } catch (error) {
-      toast.error(errorMessage(error, 'Failed to create company'));
+      toast.error(errorMessage(error, 'The fund could not be added'));
+      return null;
+    }
+  };
+
+  /** Replace the details of `company`. Resolves to the saved company, or null. */
+  const save = async (company, fields) => {
+    setSaving(true);
+    try {
+      // PUT /company/{id} takes a whole company, not a patch: every field is sent.
+      const response = await companyAPI.update(company.id, toPayload(fields));
+      setCompanies(previous =>
+        previous.map(item => (item.id === company.id ? response.data : item))
+      );
+      toast.success("The fund's details are saved");
+      return response.data;
+    } catch (error) {
+      toast.error(
+        error.response?.status === 403
+          ? 'Only the person who added this fund, or an administrator, can change its details'
+          : errorMessage(error, "The fund's details could not be saved")
+      );
       return null;
     } finally {
       setSaving(false);
     }
   };
 
-  /** Set the management company of `company`. Resolves to true once saved. */
-  const saveManager = async (company, manager) => {
-    setSaving(true);
-    try {
-      // PUT /company/{id} takes a whole company, not a patch: it reassigns
-      // every field it receives. Sending only the manager would blank the rest.
-      const response = await companyAPI.update(company.id, {
-        name: company.name,
-        website_url: company.website_url,
-        description: company.description,
-        management_company_name: manager.management_company_name || null,
-        management_company_website: manager.management_company_website || null,
-      });
-      setCompanies(previous =>
-        previous.map(item => (item.id === company.id ? response.data : item))
-      );
-      toast.success('Management company saved');
-      return true;
-    } catch (error) {
-      toast.error(
-        error.response?.status === 403
-          ? 'Only the owner of this company can edit it'
-          : errorMessage(error, 'Failed to save management company')
-      );
-      return false;
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return { companies, saving, create, saveManager };
+  return { companies, loading, saving, create, save };
 };

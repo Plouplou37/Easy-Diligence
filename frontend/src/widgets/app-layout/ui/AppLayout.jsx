@@ -26,19 +26,20 @@ const AppLayout = () => {
     {
       name: 'Main',
       items: [
-        { name: 'Dashboard', href: '/', icon: HomeIcon },
-        { name: 'New Session', href: '/session/create', icon: PlusIcon },
-        { name: 'Vector Stores', href: '/vector-stores', icon: BookOpenIcon },
-        // A questionnaire opens from its DD type ("Questions" button), which
-        // keeps the DD Types entry lit on /questions.
-        { name: 'DD Types', href: '/dd-types', icon: TagIcon },
+        { name: 'Due diligences', href: '/', icon: HomeIcon },
+        { name: 'New due diligence', href: '/session/create', icon: PlusIcon },
+        // Vector stores, called by what they hold.
+        { name: 'Documents', href: '/vector-stores', icon: BookOpenIcon },
+        // DD types. The questions open from their questionnaire, which keeps
+        // this entry lit on /questions.
+        { name: 'Questionnaires', href: '/dd-types', icon: TagIcon },
       ],
     },
     ...(isAdmin
       ? [
           {
             name: 'Administration',
-            items: [{ name: 'User Management', href: '/admin/users', icon: UsersIcon }],
+            items: [{ name: 'Users', href: '/admin/users', icon: UsersIcon }],
           },
         ]
       : []),

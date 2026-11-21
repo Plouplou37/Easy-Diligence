@@ -32,13 +32,13 @@ const SourcesList = ({ sources: rawSources, compact = false }) => {
       case 'file':
         return 'Files';
       case 'file_search':
-        return 'Vector Store Search';
+        return 'Documents';
       case 'web':
-        return 'Web URLs';
+        return 'Web pages';
       case 'web_search':
-        return 'Web Searches';
+        return 'Web searches';
       default:
-        return 'Other Sources';
+        return 'Other sources';
     }
   };
 

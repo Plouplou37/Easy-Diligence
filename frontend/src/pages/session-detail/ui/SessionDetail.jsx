@@ -1,81 +1,37 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import toast from 'react-hot-toast';
-import { CheckCircleIcon, ClockIcon } from '@heroicons/react/24/outline';
-import { fetchDdTypes } from '@/entities/dd-type';
-import { FINISHED_STATUSES, getOverallStatus } from '@/entities/execution';
-import { getSessionDdTypes, sessionAPI } from '@/entities/session';
+import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { getOverallStatus } from '@/entities/execution';
+import { getSessionDdTypes } from '@/entities/session';
 import { useDdRunControl } from '@/features/dd-run-control';
-import { DeleteSessionButton, ExportPdfButton } from '@/features/session-actions';
-import { AssignAllSelect, useVectorStoreAssignments } from '@/features/vector-store-assign';
-import {
-  Button,
-  EmptyState,
-  LoadingSpinner,
-  PageHeader,
-  pageLayout,
-  sectionHeader,
-} from '@/shared/ui';
-import { DDCard } from '@/widgets/dd-run-card';
-import { SessionProgressPanel } from '@/widgets/session-progress';
+import { useVectorStoreAssignments } from '@/features/vector-store-assign';
+import { Button, EmptyState, LoadingSpinner } from '@/shared/ui';
+import { SessionWorkspace } from '@/widgets/session-workspace';
+import { useSessionData } from '../model/useSessionData';
 
-const POLL_MS = 3000;
-
+/**
+ * A due diligence, as a workspace. The URL says what is shown:
+ * `?dd_type=<code>` the questionnaire, `&tab=synthesis` its synthesis rather
+ * than its questions (the old answers page redirects here with the same).
+ */
 const SessionDetail = () => {
   const { sessionId } = useParams(); // an id or a session code
   const navigate = useNavigate();
   const location = useLocation();
-  const [session, setSession] = useState(null);
-  const [progressByCode, setProgressByCode] = useState({});
-  const [ddTypes, setDdTypes] = useState([]);
-  const [loading, setLoading] = useState(true);
-  // The poll is the only thing that moves this page while a DD runs: when it
-  // stops answering, say so rather than look stalled.
-  const [progressStale, setProgressStale] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  // Read once: the URL changes below replace the history entry and its state.
+  // The creation page says whether a document collection came with it.
+  const [justCreated, setJustCreated] = useState(() => Boolean(location.state?.newSession));
+  const [documentsAssigned] = useState(() => Boolean(location.state?.documentsAssigned));
 
-  const loadProgress = useCallback(async () => {
-    try {
-      const response = await sessionAPI.getStatus(sessionId);
-      setProgressByCode(Object.fromEntries(response.data.progress.map(run => [run.dd_type, run])));
-      setProgressStale(false);
-    } catch {
-      setProgressStale(true);
-    }
-  }, [sessionId]);
-
+  const { session, ddTypes, progressByCode, loading, stale, loadProgress } =
+    useSessionData(sessionId);
   const stores = useVectorStoreAssignments({ sessionId, ddTypes });
   const runs = useDdRunControl({ sessionId, progressByCode, ddTypes, onChange: loadProgress });
+
   const loadStores = stores.load;
-
   useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      try {
-        const response = await sessionAPI.get(sessionId);
-        setSession(response.data);
-        // Inactive types too: a session built on a since-deactivated type still
-        // shows its card and its answers; starting it is refused instead.
-        await Promise.allSettled([
-          fetchDdTypes({ activeOnly: false }).then(setDdTypes),
-          loadProgress(),
-          loadStores(),
-        ]);
-      } catch {
-        toast.error('Failed to load session data');
-        setSession(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
-  }, [sessionId, loadProgress, loadStores]);
-
-  // Poll only while a DD runs; Start and Resume reload the progress, which re-arms it.
-  useEffect(() => {
-    if (!runs.isRunning) return undefined;
-    const interval = setInterval(loadProgress, POLL_MS);
-    return () => clearInterval(interval);
-  }, [runs.isRunning, loadProgress]);
+    loadStores();
+  }, [loadStores]);
 
   const shownDdTypes = useMemo(
     () => getSessionDdTypes(session, ddTypes, progressByCode),
@@ -86,10 +42,46 @@ const SessionDetail = () => {
     [shownDdTypes, progressByCode]
   );
 
+  // The questionnaire asked for, else the one running, else the first.
+  const requested = searchParams.get('dd_type');
+  const selected =
+    shownDdTypes.find(ddType => ddType.code === requested) ||
+    shownDdTypes.find(ddType => progressByCode[ddType.code]?.status === 'in_progress') ||
+    shownDdTypes[0] ||
+    null;
+  const tabParam = searchParams.get('tab');
+  const tab = tabParam === 'synthesis' ? 'synthesis' : 'questions';
+
+  const updateParams = useCallback(
+    changes =>
+      setSearchParams(
+        previous => {
+          const next = new URLSearchParams(previous);
+          Object.entries(changes).forEach(([key, value]) =>
+            value ? next.set(key, value) : next.delete(key)
+          );
+          return next;
+        },
+        { replace: true, preventScrollReset: true }
+      ),
+    [setSearchParams]
+  );
+
+  // The questionnaire chosen by default goes into the URL: it then stays put
+  // when a run starts or ends, and the address can be shared as it is. The
+  // old answers page's `tab=answers` is the questions, the default: dropped.
+  const selectedCode = selected?.code;
+  useEffect(() => {
+    const changes = {};
+    if (selectedCode && requested !== selectedCode) changes.dd_type = selectedCode;
+    if (tabParam && tabParam !== 'synthesis') changes.tab = null;
+    if (Object.keys(changes).length > 0) updateParams(changes);
+  }, [selectedCode, requested, tabParam, updateParams]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <LoadingSpinner size="lg" text="Loading session details..." />
+        <LoadingSpinner size="lg" text="Loading the due diligence..." />
       </div>
     );
   }
@@ -97,121 +89,42 @@ const SessionDetail = () => {
   if (!session) {
     return (
       <EmptyState
-        title="Session not found"
-        text="The requested session could not be found, or you do not have access to it."
+        title="Due diligence not found"
+        text="The requested due diligence could not be found, or you do not have access to it."
         action={
           <Button variant="secondary" onClick={() => navigate('/')}>
-            Back to Dashboard
+            Back to the due diligences
           </Button>
         }
       />
     );
   }
 
-  const answersUrl = (code, extra = '') => `/session/${sessionId}/answers?dd_type=${code}${extra}`;
-  const anyFinished = Object.values(progressByCode).some(run =>
-    FINISHED_STATUSES.includes(run.status)
-  );
-
   return (
-    <div className={pageLayout.container}>
-      <PageHeader
-        breadcrumb={[{ label: session.name || 'Session' }]}
-        title={session.name}
-        subtitle={session.description}
-        meta={
-          <span
-            className="tabular-nums"
-            title={`Session code: ${session.session_code || `SES-${session.id}`}`}
-          >
-            Created {new Date(session.created_at).toLocaleDateString()}
-            {session.company_name && ` · ${session.company_name}`}
-            {session.management_company_name && ` · ${session.management_company_name}`}
-          </span>
-        }
-        actions={
-          <>
-            {anyFinished && <ExportPdfButton sessionId={sessionId} />}
-            <DeleteSessionButton session={session} sessionId={sessionId} status={overall.status} />
-          </>
-        }
-      />
-
-      {location.state?.newSession && (
-        <div className="alert alert-success">
-          <div className="flex items-start space-x-3">
-            <CheckCircleIcon className="w-5 h-5 mt-0.5 shrink-0 text-theme-success" />
-            <div>
-              <h3 className="text-sm font-medium text-theme-success">Session created</h3>
-              <p className="text-sm text-content-secondary mt-1">
-                Your due diligence session is ready. Next step: Create and assign document
-                collections below to enable AI-powered analysis.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <SessionProgressPanel overall={overall} isRunning={runs.isRunning} stale={progressStale} />
-
-      <div>
-        <div className="flex items-center justify-between gap-4 mb-6">
-          <div className="flex-1 min-w-0">
-            <div className={sectionHeader.wrapper}>
-              <h2 className={sectionHeader.title}>Due Diligence Analysis</h2>
-              <div className={sectionHeader.hairline} />
-            </div>
-            <span className="mt-1 block text-sm text-content-muted">
-              {shownDdTypes.length} type{shownDdTypes.length !== 1 ? 's' : ''} configured
-            </span>
-          </div>
-          <AssignAllSelect
-            vectorStores={stores.vectorStores}
-            onAssign={storeId =>
-              stores.assignAll(
-                storeId,
-                shownDdTypes.map(ddType => ddType.code)
-              )
-            }
-          />
-        </div>
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          {shownDdTypes.map(ddType => {
-            const progress = progressByCode[ddType.code];
-            const canStart = runs.canStart(ddType);
-            return (
-              <div key={ddType.code} className="relative">
-                <DDCard
-                  ddType={ddType}
-                  progress={progress}
-                  onStart={canStart ? runs.start : null}
-                  onResume={runs.resume}
-                  onPause={runs.pause}
-                  onView={code => navigate(answersUrl(code))}
-                  onSynthesis={code => navigate(answersUrl(code, '&tab=synthesis'))}
-                  disabled={!canStart && progress?.status !== 'in_progress'}
-                  vectorStores={stores.vectorStores}
-                  assignedVectorStore={stores.assignedTo(ddType.code)}
-                  onAssignVectorStore={stores.assign}
-                  onRemoveVectorStore={stores.remove}
-                />
-                {!canStart && progress?.status === 'not_started' && (
-                  <div className="absolute inset-0 bg-surface-bg/75 rounded-lg flex items-center justify-center">
-                    <div className="text-center p-4">
-                      <ClockIcon className="w-8 h-8 text-content-muted mx-auto mb-2" />
-                      <p className="text-sm text-content-secondary">
-                        Wait for other DD to complete
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    </div>
+    <SessionWorkspace
+      session={session}
+      sessionId={sessionId}
+      ddTypes={shownDdTypes}
+      selected={selected}
+      progressByCode={progressByCode}
+      overall={overall}
+      stale={stale}
+      runs={runs}
+      stores={stores}
+      tab={tab}
+      onTabChange={next => updateParams({ tab: next === 'synthesis' ? 'synthesis' : null })}
+      onSelectDdType={code => updateParams({ dd_type: code })}
+      justCreated={justCreated}
+      documentsAssigned={documentsAssigned}
+      onDismissCreated={() => setJustCreated(false)}
+    />
   );
 };
 
-export default SessionDetail;
+/** One page per session: opening another starts from a clean state. */
+const SessionDetailPage = () => {
+  const { sessionId } = useParams();
+  return <SessionDetail key={sessionId} />;
+};
+
+export default SessionDetailPage;

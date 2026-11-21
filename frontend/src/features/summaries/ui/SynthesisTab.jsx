@@ -3,7 +3,7 @@ import {
   ClockIcon,
   DocumentTextIcon,
 } from '@heroicons/react/24/outline';
-import { Button, LoadingSpinner, emptyState, panel } from '@/shared/ui';
+import { Button, EmptyState, LoadingSpinner } from '@/shared/ui';
 import { useSynthesis } from '../model/useSynthesis';
 import SummaryBlock from './SummaryBlock';
 
@@ -42,11 +42,11 @@ const BatchBanner = ({ batch, pending, cancelling, onCancel }) => {
   }
 
   return (
-    <div className={`alert flex items-start justify-between gap-4 ${tone}`}>
-      <div>{text}</div>
+    <div className={`alert flex flex-wrap items-start justify-between gap-3 ${tone}`}>
+      <div className="min-w-0 flex-1">{text}</div>
       {/* Hidden once cancelling: a second request would only be refused. */}
       {pending && batch.status !== 'cancelling' && (
-        <Button onClick={onCancel} variant="danger" size="sm" disabled={cancelling}>
+        <Button onClick={onCancel} variant="danger" disabled={cancelling}>
           {cancelling ? 'Cancelling…' : 'Cancel the batch'}
         </Button>
       )}
@@ -54,22 +54,19 @@ const BatchBanner = ({ batch, pending, cancelling, onCancel }) => {
   );
 };
 
-/** The synthesis of one DD type: per-section summaries and a global one. */
+/** The synthesis of one questionnaire: per-section summaries and a global one. */
 const SynthesisTab = ({ sessionId, ddTypeCode, ddTypeName }) => {
   const synthesis = useSynthesis(sessionId, ddTypeCode);
   const { summaries, batch, batchPending, generating } = synthesis;
 
-  // The synthesis is strictly per DD type.
+  // The synthesis is strictly per questionnaire.
   if (!ddTypeCode) {
     return (
-      <div className={`${panel.base} ${emptyState.wrapper}`}>
-        <DocumentTextIcon className={emptyState.icon} />
-        <h3 className={emptyState.title}>Select a DD type</h3>
-        <p className={emptyState.text}>
-          The synthesis is written per DD type. Open the review of one DD type to generate or read
-          its synthesis.
-        </p>
-      </div>
+      <EmptyState
+        icon={DocumentTextIcon}
+        title="Select a questionnaire"
+        text="The synthesis is written per questionnaire. Pick one to generate or read its synthesis."
+      />
     );
   }
 
@@ -77,13 +74,13 @@ const SynthesisTab = ({ sessionId, ddTypeCode, ddTypeName }) => {
   const sectionSummaries = summaries.filter(summary => !isGlobal(summary));
 
   return (
-    <div className="space-y-6 pb-12">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-medium text-content">
-            Synthesis — {ddTypeName || ddTypeCode}
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 flex-1 basis-64">
+          <h2 className="text-base font-semibold text-content">
+            Synthesis of {ddTypeName || ddTypeCode}
           </h2>
-          <p className="text-sm text-content-muted">
+          <p className="mt-1 text-sm text-content-secondary">
             A summary per section and an overall synthesis (both in the PDF report), written from
             the current answers.
           </p>
@@ -91,7 +88,7 @@ const SynthesisTab = ({ sessionId, ddTypeCode, ddTypeName }) => {
         {/* While OpenAI still holds the job, neither path may be relaunched: the
             backend refuses a second submission, and a synchronous run would be
             overwritten by the batch landing behind it. */}
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             onClick={synthesis.generate}
             variant="primary"
@@ -128,24 +125,21 @@ const SynthesisTab = ({ sessionId, ddTypeCode, ddTypeName }) => {
       )}
 
       {synthesis.loading ? (
-        <div className="py-12 flex justify-center">
-          <LoadingSpinner size="lg" text="Loading the synthesis…" />
-        </div>
+        <LoadingSpinner text="Loading the synthesis…" />
       ) : summaries.length === 0 ? (
-        <div className={`${emptyState.wrapper} border-2 border-dashed border-border rounded-lg`}>
-          <DocumentTextIcon className={emptyState.icon} />
-          <h3 className={emptyState.title}>No synthesis yet</h3>
-          <p className={emptyState.text}>
-            Click “Generate the synthesis” to write it from the current answers.
-          </p>
-        </div>
+        <EmptyState
+          icon={DocumentTextIcon}
+          title="No synthesis yet"
+          text="“Generate the synthesis” writes it from the current answers."
+          className="rounded-lg border border-dashed border-border-hover"
+        />
       ) : (
         <>
           {global && (
             <SummaryBlock title="Overall synthesis" summary={global} onSaved={synthesis.load} />
           )}
           {sectionSummaries.length > 0 && (
-            <div className="space-y-4">
+            <div className="space-y-3">
               <h3 className="eyebrow">Section summaries</h3>
               {sectionSummaries.map(summary => (
                 <SummaryBlock

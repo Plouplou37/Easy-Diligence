@@ -1,53 +1,66 @@
-import { getToneStyles } from '@/shared/lib/status';
-import { Button, Modal, field, modalStyles } from '@/shared/ui';
-import { formatUserDate, roleBadge } from '../lib/display';
+import { Badge, Button, Modal, modalStyles } from '@/shared/ui';
+import { formatUserDate, initialsOf, roleOf } from '../lib/display';
 
 const Item = ({ label, children, title }) => (
-  <div>
-    <p className={field.label}>{label}</p>
-    <div className="text-sm text-content" title={title}>
+  <div className="min-w-0">
+    <dt className="text-xs text-content-muted">{label}</dt>
+    <dd className="mt-0.5 break-words text-sm text-content" title={title}>
       {children}
-    </div>
+    </dd>
   </div>
 );
 
-const pill = 'inline-flex items-center rounded-xl border px-2 py-0.5 text-xs font-medium';
-
 /** Everything known about an account, read only. */
-export const UserDetailsModal = ({ user, onClose }) => (
-  <Modal isOpen={Boolean(user)} onClose={onClose} title="User Details" size="lg">
-    {user && (
-      <>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-3">
-            <Item label="Full Name">{user.full_name || 'Not specified'}</Item>
-            <Item label="Username">@{user.username}</Item>
-            <Item label="Email">{user.email}</Item>
-            <Item label="Company">{user.company || 'Not specified'}</Item>
+export const UserDetailsModal = ({ user, onClose }) => {
+  const role = roleOf(user?.role);
+  return (
+    <Modal isOpen={Boolean(user)} onClose={onClose} title="User details">
+      {user && (
+        <>
+          <div className="flex items-center gap-4">
+            <span
+              className="inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-border bg-surface-hover text-base font-semibold text-content"
+              aria-hidden="true"
+            >
+              {initialsOf(user)}
+            </span>
+            <div className="min-w-0">
+              <p className="truncate text-lg font-semibold text-content">
+                {user.full_name || 'No name given'}
+              </p>
+              <p className="truncate text-sm text-content-secondary">@{user.username}</p>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                <Badge variant={role.variant}>{role.label}</Badge>
+                {user.is_active ? (
+                  <Badge variant="success" dot>
+                    Active
+                  </Badge>
+                ) : (
+                  <Badge variant="neutral" dot>
+                    Inactive
+                  </Badge>
+                )}
+              </div>
+            </div>
           </div>
-          <div className="space-y-3">
-            <Item label="Role">
-              <span className={`${pill} ${roleBadge(user.role)}`}>{user.role}</span>
-            </Item>
-            <Item label="Status">
-              <span
-                className={`${pill} ${getToneStyles(user.is_active ? 'success' : 'error').badge}`}
-              >
-                {user.is_active ? 'Active' : 'Inactive'}
-              </span>
-            </Item>
-            <Item label="Last Login">{formatUserDate(user.last_login)}</Item>
+
+          <dl className="mt-6 grid gap-x-6 gap-y-4 border-t border-border pt-5 sm:grid-cols-2">
+            <Item label="Email">{user.email}</Item>
+            <Item label="Company">{user.company || 'Not given'}</Item>
+            <Item label="Phone">{user.phone || 'Not given'}</Item>
+            <Item label="Last sign-in">{formatUserDate(user.last_login)}</Item>
             <Item label="Created" title={`User ID: ${user.id}`}>
               {formatUserDate(user.created_at)}
             </Item>
+          </dl>
+
+          <div className={`${modalStyles.footer} -mx-5 -mb-4 mt-6`}>
+            <Button variant="secondary" onClick={onClose}>
+              Close
+            </Button>
           </div>
-        </div>
-        <div className={`${modalStyles.footer} -mx-5 -mb-4 mt-4`}>
-          <Button variant="secondary" onClick={onClose}>
-            Close
-          </Button>
-        </div>
-      </>
-    )}
-  </Modal>
-);
+        </>
+      )}
+    </Modal>
+  );
+};

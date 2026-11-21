@@ -1,32 +1,33 @@
 import { useState } from 'react';
-import { ChevronDownIcon, FunnelIcon } from '@heroicons/react/24/outline';
+import { AdjustmentsHorizontalIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { SESSION_STATUS_OPTIONS } from '@/shared/lib/status';
-import { Button, SearchInput, field, panel } from '@/shared/ui';
+import { Button, SearchInput } from '@/shared/ui';
 
 const PERIODS = [
-  ['all', 'All Time'],
+  ['all', 'Any time'],
   ['today', 'Today'],
-  ['week', 'Last 7 Days'],
-  ['month', 'Last 30 Days'],
+  ['week', 'Last 7 days'],
+  ['month', 'Last 30 days'],
 ];
 
 const SORTS = [
-  ['activity', 'Latest Activity'],
-  ['review', 'Most to Review'],
-  ['recent', 'Newest First'],
-  ['oldest', 'Oldest First'],
-  ['name', 'Name (A-Z)'],
-  ['progress', 'Progress (%)'],
+  ['activity', 'Latest activity'],
+  ['review', 'Most to review'],
+  ['recent', 'Newest first'],
+  ['oldest', 'Oldest first'],
+  ['name', 'Name (A to Z)'],
+  ['progress', 'Most progress'],
 ];
 
+// On a phone, each control takes the whole width, its label aligned on the others.
 const Select = ({ id, label, value, onChange, children }) => (
-  <div>
-    <label htmlFor={id} className={field.label}>
+  <div className="flex w-full items-center gap-2 sm:w-auto">
+    <label htmlFor={id} className="w-16 shrink-0 text-xs font-medium text-content-muted sm:w-auto">
       {label}
     </label>
     <select
       id={id}
-      className={`${field.input} py-2 text-sm`}
+      className="form-input h-10 min-w-0 flex-1 cursor-pointer text-sm sm:flex-none"
       value={value}
       onChange={e => onChange(e.target.value)}
     >
@@ -35,77 +36,93 @@ const Select = ({ id, label, value, onChange, children }) => (
   </div>
 );
 
-/** The search, and the filters folded behind a button. `filters`: useSessionFilters. */
+/**
+ * The toolbar above the list: search, status, creation date, sort, and "with
+ * answers to review". On a phone the filters fold behind a button.
+ * `filters`: useSessionFilters.
+ */
 export const SessionFilters = ({ filters }) => {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className={`${panel.base} p-5`}>
-      <div className="flex flex-col sm:flex-row gap-3">
-        <SearchInput
-          className="flex-1"
-          value={filters.search}
-          onChange={filters.setSearch}
-          placeholder="Search sessions by name, fund, management company or DD type..."
-        />
-        <Button
-          variant="secondary"
-          onClick={() => setOpen(!open)}
-          icon={FunnelIcon}
-          aria-expanded={open}
-        >
-          Filters
-          <ChevronDownIcon
-            className={`w-4 h-4 transform transition-transform ${open ? 'rotate-180' : ''}`}
-          />
-        </Button>
-      </div>
+    <div className="flex flex-wrap items-center gap-3 border-b border-border px-4 py-3 sm:px-5">
+      <SearchInput
+        className="min-w-0 grow basis-48 sm:basis-80 [&_input]:h-10"
+        value={filters.search}
+        onChange={filters.setSearch}
+        placeholder="Search"
+        aria-label="Search the due diligences"
+        title="Searches the name, the fund, the management company and the questionnaires"
+      />
+      <Button
+        variant="secondary"
+        icon={AdjustmentsHorizontalIcon}
+        onClick={() => setOpen(!open)}
+        aria-expanded={open}
+        aria-controls="dashboard-filters"
+        className="sm:hidden"
+      >
+        Filters{filters.filterCount > 0 && ` (${filters.filterCount})`}
+      </Button>
 
-      {open && (
-        <div className="mt-4 pt-4 border-t border-border grid grid-cols-1 gap-4 sm:grid-cols-4">
-          <Select
-            id="status-filter"
-            label="Status"
-            value={filters.status}
-            onChange={filters.setStatus}
-          >
-            <option value="all">All Statuses</option>
-            {SESSION_STATUS_OPTIONS.map(option => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </Select>
-          <Select
-            id="date-filter"
-            label="Created"
-            value={filters.period}
-            onChange={filters.setPeriod}
-          >
-            {PERIODS.map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </Select>
-          <Select id="sort-by" label="Sort By" value={filters.sortBy} onChange={filters.setSortBy}>
-            {SORTS.map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </Select>
-          <label className="flex items-end gap-2 pb-2 text-sm text-content cursor-pointer">
-            <input
-              type="checkbox"
-              className="w-4 h-4 rounded-sm"
-              checked={filters.reviewOnly}
-              onChange={event => filters.setReviewOnly(event.target.checked)}
-            />
-            With answers to review
-          </label>
-        </div>
-      )}
+      {/* From the small screens up, the filters sit in the toolbar itself. */}
+      <div
+        id="dashboard-filters"
+        className={`${open ? 'flex' : 'hidden'} w-full flex-col gap-3 sm:contents`}
+      >
+        <Select
+          id="status-filter"
+          label="Status"
+          value={filters.status}
+          onChange={filters.setStatus}
+        >
+          <option value="all">All statuses</option>
+          {SESSION_STATUS_OPTIONS.map(option => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </Select>
+        <Select
+          id="date-filter"
+          label="Created"
+          value={filters.period}
+          onChange={filters.setPeriod}
+        >
+          {PERIODS.map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </Select>
+        <Select id="sort-by" label="Sort" value={filters.sortBy} onChange={filters.setSortBy}>
+          {SORTS.map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </Select>
+        <label
+          className={`inline-flex h-10 w-full cursor-pointer items-center gap-2 whitespace-nowrap rounded-lg border px-3 text-sm transition-colors sm:w-auto ${
+            filters.reviewOnly
+              ? 'border-primary bg-primary-dark text-content'
+              : 'border-border-hover text-content-secondary hover:bg-surface-hover hover:text-content'
+          }`}
+        >
+          <input
+            type="checkbox"
+            className="h-4 w-4 rounded-sm"
+            checked={filters.reviewOnly}
+            onChange={event => filters.setReviewOnly(event.target.checked)}
+          />
+          With answers to review
+        </label>
+        {filters.active && (
+          <Button variant="ghost" icon={XMarkIcon} onClick={filters.reset}>
+            Clear
+          </Button>
+        )}
+      </div>
     </div>
   );
 };

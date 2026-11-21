@@ -21,7 +21,7 @@ export const useDDTypes = initialCode => {
     try {
       setDdTypes(await fetchDdTypes({ withQuestions: true }));
     } catch {
-      toast.error('Failed to load DD types');
+      toast.error('The questionnaires could not be loaded');
     } finally {
       setLoading(false);
     }
@@ -46,21 +46,21 @@ export const useDDTypes = initialCode => {
   const validateDdType = async () => {
     if (!selectedDdType || selectedDdType.is_validated) return false;
     const confirmed = await confirm({
-      title: 'Validate DD type',
+      title: 'Validate questionnaire',
       message:
-        `Validate "${selectedDdType.name}"? Once validated, its questionnaire can no ` +
-        'longer be changed. This cannot be undone.',
+        `Validate "${selectedDdType.name}"? Its sections and questions are then frozen: ` +
+        'they can no longer be changed. This cannot be undone.',
       confirmLabel: 'Validate',
       danger: true,
     });
     if (!confirmed) return false;
     try {
       await ddTypesAPI.validate(selectedDdType.code);
-      toast.success('DD type validated successfully');
+      toast.success('Questionnaire validated');
       await refreshSelectedDdType();
       return true;
     } catch (error) {
-      toast.error(errorMessage(error, 'Failed to validate DD type'));
+      toast.error(errorMessage(error, 'The questionnaire could not be validated'));
       return false;
     }
   };
@@ -68,7 +68,7 @@ export const useDDTypes = initialCode => {
   const deleteDdType = async () => {
     if (!selectedDdType || selectedDdType.is_validated) return false;
     const confirmed = await confirm({
-      title: 'Delete DD type',
+      title: 'Delete questionnaire',
       message: `Delete "${selectedDdType.name}" with all its sections and questions? This cannot be undone.`,
       confirmLabel: 'Delete',
       danger: true,
@@ -76,12 +76,12 @@ export const useDDTypes = initialCode => {
     if (!confirmed) return false;
     try {
       await ddTypesAPI.delete(selectedDdType.code);
-      toast.success('DD type deleted successfully');
+      toast.success('Questionnaire deleted');
       setSelectedDdTypeCode(null);
       await refreshSelectedDdType();
       return true;
     } catch (error) {
-      toast.error(errorMessage(error, 'Failed to delete DD type'));
+      toast.error(errorMessage(error, 'The questionnaire could not be deleted'));
       return false;
     }
   };

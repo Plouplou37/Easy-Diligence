@@ -1,9 +1,12 @@
-import { ClockIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import { expiryLevel, isStale, isUnknown, storeState } from '@/entities/vector-store';
 import { formatBytes } from '@/shared/lib/format';
-import { Badge, panel, sectionHeader, tableStyles } from '@/shared/ui';
+import { Badge, panel } from '@/shared/ui';
 
-/** The store's state, or how soon it expires. */
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+const fileCount = count => `${count} file${count === 1 ? '' : 's'}`;
+
+/** The collection's state, or how soon it expires; nothing when all is well. */
 const StoreMarker = ({ store }) => {
   const state = storeState(store);
   if (state) {
@@ -13,86 +16,73 @@ const StoreMarker = ({ store }) => {
       </Badge>
     );
   }
-  const expiry = expiryLevel(store);
-  const when = store.expires_at ? new Date(store.expires_at).toLocaleDateString() : '';
-  if (expiry === 'imminent') {
-    return (
-      <span title={`Expires on ${when} unless used`}>
-        <ExclamationTriangleIcon className="h-4 w-4 text-theme-error" />
-      </span>
-    );
-  }
-  if (expiry === 'soon') {
-    return (
-      <span title={`Expires on ${when} unless used`}>
-        <ClockIcon className="h-4 w-4 text-theme-warning" />
-      </span>
-    );
-  }
-  return null;
+  const level = expiryLevel(store);
+  if (!level) return null;
+  const expires = new Date(store.expires_at);
+  const days = Math.max(0, Math.ceil((expires - Date.now()) / DAY_MS));
+  const label = days === 0 ? 'Expires today' : `Expires in ${days} day${days === 1 ? '' : 's'}`;
+  return (
+    <span title={`Expires on ${expires.toLocaleDateString()} unless a due diligence uses it`}>
+      <Badge variant={level === 'imminent' ? 'error' : 'warning'} size="sm">
+        {label}
+      </Badge>
+    </span>
+  );
 };
 
+/** What the line under the name says: the figures, or why there are none. */
+const figures = store => {
+  if (isStale(store)) return 'No documents left';
+  if (isUnknown(store)) return 'Figures unknown';
+  return `${fileCount(store.file_count)} · ${formatBytes(store.total_bytes)}`;
+};
+
+/** The document collections, the selected one highlighted. */
 const VectorStoreList = ({ stores, selectedStore, onSelectStore }) => (
-  <div className={`${panel.base} w-1/3 flex flex-col overflow-hidden`}>
-    <div className={`${panel.header} shrink-0`}>
-      <div className={sectionHeader.wrapper}>
-        <h3 className={sectionHeader.title}>Vector Stores</h3>
-        <div className={sectionHeader.hairline} />
-      </div>
+  <nav
+    aria-label="Document collections"
+    className={`${panel.base} min-w-0 flex-[1_1_280px] overflow-hidden lg:sticky lg:top-(--navbar-spacing)`}
+  >
+    <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
+      <h2 className="eyebrow">Collections</h2>
+      <span className="text-xs tabular-nums text-content-muted">{stores.length}</span>
     </div>
 
-    <div className="flex-1 overflow-y-auto max-h-[calc(100vh-var(--navbar-spacing)-220px)]">
-      <table className={`${tableStyles.table} ${tableStyles.inPanel}`}>
-        <thead className={tableStyles.theadSticky}>
-          <tr>
-            <th className={tableStyles.th}>Name</th>
-            <th className={tableStyles.thRight}>Files</th>
-            <th className={tableStyles.thRight}>Size</th>
-          </tr>
-        </thead>
-        <tbody>
-          {stores.map((store, index) => {
-            const isSelected = selectedStore?.id === store.id;
-            // A store gone at OpenAI, or not described, has no figures: "0" would read as empty.
-            const known = !isStale(store) && !isUnknown(store);
-            return (
-              <tr
-                key={store.id}
-                onClick={() => onSelectStore(store)}
-                className={`${tableStyles.row} ${
-                  isSelected ? tableStyles.rowSelected : tableStyles.rowAlt(index)
-                } cursor-pointer`}
+    <ul className="max-h-80 space-y-1 overflow-y-auto p-2 lg:max-h-[calc(100vh-var(--navbar-spacing)-8rem)]">
+      {stores.map(store => {
+        const selected = selectedStore?.id === store.id;
+        return (
+          <li key={store.id}>
+            <button
+              type="button"
+              onClick={() => onSelectStore(store)}
+              aria-current={selected ? 'true' : undefined}
+              className={`flex min-h-11 w-full flex-col gap-1 rounded-lg border px-3 py-2.5 text-left transition-colors ${
+                selected
+                  ? 'border-primary bg-primary-dark'
+                  : 'border-transparent hover:bg-surface-hover'
+              }`}
+            >
+              <span
+                className={`w-full truncate text-sm font-medium ${
+                  isStale(store) ? 'text-content-muted line-through' : 'text-content'
+                }`}
+                title={store.name}
               >
-                {/* max-w-0 + w-full: the name column takes the remaining width
-                    and truncates instead of stretching the table. */}
-                <td className={`${tableStyles.td} relative w-full max-w-0`}>
-                  {isSelected && <span className="rail-accent" />}
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`flex-1 min-w-0 truncate text-sm font-medium ${
-                        isStale(store) ? 'text-content-muted line-through' : 'text-content'
-                      }`}
-                    >
-                      {store.name}
-                    </span>
-                    <span className="flex items-center gap-1 shrink-0">
-                      <StoreMarker store={store} />
-                    </span>
-                  </div>
-                </td>
-                <td className={`${tableStyles.tdRight} tabular-nums`}>
-                  {known ? store.file_count : '—'}
-                </td>
-                <td className={`${tableStyles.tdRight} whitespace-nowrap tabular-nums`}>
-                  {known ? formatBytes(store.total_bytes) : '—'}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
-  </div>
+                {store.name}
+              </span>
+              <span className="flex w-full flex-wrap items-center justify-between gap-x-2 gap-y-1">
+                <span className="text-xs tabular-nums text-content-secondary">
+                  {figures(store)}
+                </span>
+                <StoreMarker store={store} />
+              </span>
+            </button>
+          </li>
+        );
+      })}
+    </ul>
+  </nav>
 );
 
 export default VectorStoreList;

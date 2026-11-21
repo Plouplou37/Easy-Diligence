@@ -610,7 +610,8 @@ data. The shared functions are in **`services/authz.py`**: `user_is_admin`,
 `POST /answers/{id}/regenerate` (`api/routes/answers.py`,
 `DDProcessor.regenerate_single_answer`) creates a new version with the status
 `needs_review`. The context sent to the model includes the previous answers.
-The button is on each answer (`AnswerCard`). If OpenAI fails despite the
+The button is in the answer panel of the session page
+(`features/answer-review`, `AnswerPanel`). If OpenAI fails despite the
 retries, the request responds with the message written for the user
 (`ExternalServiceError`), and the answer stays as it was.
 
@@ -868,21 +869,35 @@ Scripts also run from `backend/`: `uv run python scripts/<script>.py`.
   `session-create`, `session-actions`, `dd-run-control`, `answer-review`,
   `summaries`, `questionnaire-edit`, `dd-type-admin`, `vector-store-manage`,
   `vector-store-assign`, `user-admin` and `theme-toggle`. The widgets:
-  `app-layout`, `sessions-overview` (dashboard), `dd-run-card`,
-  `session-progress`, `answers-board`, `questionnaire-tree` and
-  `vector-store-browser`.
-- **Layout**: every page uses `pageLayout.container` (`max-w-7xl`) and the
-  `PageHeader` header (breadcrumb, title, actions on the right). Technical
-  details (codes, ids, tokens) appear only on hover (`title`).
+  `app-layout`, `sessions-overview` (dashboard), `session-workspace` (the
+  session page), `questionnaire-tree` and `vector-store-browser`.
+- **The session page** is a workspace in three columns
+  (`widgets/session-workspace`): on the left the fund, the documents, the
+  session's questionnaires and the sections of the selected one; in the
+  centre its questions (or its synthesis); on the right the selected
+  answer, with its sources and actions. The former answers page
+  (`/session/:id/answers`) redirects there, keeping the questionnaire and
+  the tab.
+- **Creating a session** is a guided flow in four steps
+  (`pages/session-create`, `features/session-create`): fund and management
+  company, documents, questionnaires, review. A panel shows what the model
+  will receive, written as `openai_client._build_system_prompt` writes it.
+- **What the AI reads is marked**: `AiBadge` (`shared/ui`), violet, the
+  colour kept for the AI (`theme-ai` tokens), on every field the model reads
+  and on the documents it searches.
+- **Layout**: pages use `pageLayout.container` (`max-w-7xl`) and the
+  `PageHeader` header (breadcrumb, title, actions on the right); the session
+  page runs wider. Technical details (codes, ids, tokens) appear only on
+  hover (`title`).
 - **Logo**: `public/logo-white.svg` and the icon `public/icon.svg`.
-- **Branding** (`apple-design` skill, 4.4):
-  - **system font** (`system-ui`: Segoe UI on Windows), nothing to
-    download;
+- **The look**:
+  - a neutral ground in both themes, one blue for the actions (`primary`),
+    violet only for the AI, no gradients;
+  - **Inter**, served by the application (`@fontsource-variable/inter`);
   - **letter-spacing by size**: negative on large text (headings, tile
     figures: `tracking-tight`), slight on small upper-case labels (0.06 to
     0.08 em, never more);
-  - **navigation bar** in translucent material (`nav-bg`: surface at 72%,
-    blur and saturation); the page scrolls beneath it;
+  - **the bar at the top**, solid and full width (`nav-bg`);
   - **confirmation** only for what cannot be undone (deleting, validating a
     DD type): reverting to a version no longer asks for one, because the old
     version stays in the history.
@@ -904,16 +919,14 @@ Scripts also run from `backend/`: `uv run python scripts/<script>.py`.
 
 - **Never show a value whose source no longer exists, and never cut content
   silently.**
-- `AnswerCard` animates `grid-rows-[0fr]→[1fr]` rather than a capped
-  `max-h`, which cut long answers. Markdown tables are wrapped in an
-  `overflow-x-auto` container (`MARKDOWN_COMPONENTS`).
-- The answers page requests `limit=1000` (the server's cap): without it, the
-  server returns only 100.
-- The tiles of a DD card (`widgets/dd-run-card/ui/RunStatus.jsx`):
-  - elapsed time is the time spent running, pauses left out
+- An answer is shown whole, never cut at a fixed height. Markdown tables
+  are wrapped in an `overflow-x-auto` container (`MARKDOWN_COMPONENTS`).
+- The session page requests the answers with `limit=1000` (the server's
+  cap): without it, the server returns only 100.
+- The status line of the session page (`widgets/session-workspace`):
+  - the run time is the time spent running, pauses left out
     (`DDExecution.elapsed_seconds`);
-  - tokens count only the `is_current` versions;
-  - the third tile counts the answers backed by documents.
+  - tokens count only the `is_current` versions.
 
 ## Troubleshooting
 

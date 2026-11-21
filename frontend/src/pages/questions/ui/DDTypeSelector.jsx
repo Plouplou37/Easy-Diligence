@@ -1,83 +1,81 @@
-import { CheckCircleIcon, TrashIcon } from '@heroicons/react/24/outline';
-import { Button, Badge, field, panel } from '@/shared/ui';
+import { useId } from 'react';
+import { CheckCircleIcon, LockClosedIcon } from '@heroicons/react/24/outline';
+import { Badge, field, panel } from '@/shared/ui';
 
-const DDTypeSelector = ({
-  ddTypes,
-  selectedCode,
-  onChange,
-  onValidate,
-  onDelete,
-  selectedDdType,
-}) => {
+const Figure = ({ label, children }) => (
+  <div className="form-surface min-w-24 px-4 py-2.5">
+    <dt className="text-xs text-content-muted">{label}</dt>
+    <dd className="mt-0.5 text-lg font-semibold tabular-nums text-content">{children}</dd>
+  </div>
+);
+
+/** The questionnaire shown on the page, its size and its status. */
+const DDTypeSelector = ({ ddTypes, selectedCode, onChange, selectedDdType }) => {
+  const selectId = useId();
+  const sections = selectedDdType?.sections || [];
+  const questions = sections.reduce((sum, section) => sum + (section.questions?.length || 0), 0);
+  const validated = Boolean(selectedDdType?.is_validated);
+
   return (
-    <div className={`${panel.base} p-6`}>
-      <div className="flex items-center justify-between">
-        <div className="flex-1 mr-4">
-          <label className={field.label}>Select DD Type</label>
+    <div className={`${panel.base} p-5`}>
+      <div className="flex flex-wrap items-end gap-x-6 gap-y-4">
+        <div className="min-w-0 flex-[1_1_18rem]">
+          <label htmlFor={selectId} className={field.label}>
+            Questionnaire
+          </label>
           <select
+            id={selectId}
             value={selectedCode || ''}
             onChange={e => onChange(e.target.value)}
-            className="form-input w-full py-2 text-sm"
+            className="form-input h-10 w-full text-sm"
           >
-            <option value="">Select a DD Type...</option>
+            <option value="">Choose a questionnaire…</option>
             {ddTypes.map(ddType => (
               <option key={ddType.code} value={ddType.code}>
                 {ddType.name}
-                {ddType.is_validated ? ' - Validated' : ''}
+                {ddType.is_validated ? ' — validated' : ' — draft'}
               </option>
             ))}
           </select>
         </div>
 
         {selectedDdType && (
-          <div className="flex items-center space-x-2">
-            {!selectedDdType.is_validated && (
-              <>
-                <Button onClick={onValidate} variant="success" icon={CheckCircleIcon}>
-                  Validate
-                </Button>
-                <Button onClick={onDelete} variant="danger" icon={TrashIcon}>
-                  Delete
-                </Button>
-              </>
-            )}
-            {selectedDdType.is_validated && (
-              <Badge variant="success" icon={CheckCircleIcon} size="lg">
-                Validated
-              </Badge>
-            )}
-          </div>
+          <dl className="flex flex-wrap gap-3">
+            <Figure label="Sections">{sections.length}</Figure>
+            <Figure label="Questions">{questions}</Figure>
+            <div className="form-surface min-w-24 px-4 py-2.5">
+              <dt className="text-xs text-content-muted">Status</dt>
+              <dd className="mt-1.5">
+                {validated ? (
+                  <Badge variant="success" icon={CheckCircleIcon}>
+                    Validated
+                  </Badge>
+                ) : (
+                  <Badge variant="neutral">Draft</Badge>
+                )}
+              </dd>
+            </div>
+          </dl>
         )}
       </div>
 
       {selectedDdType && (
-        <div className="mt-4 p-4 bg-surface-bg rounded-md">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-            <div>
-              <span className="text-content-secondary">Sections:</span>
-              <span className="ml-2 font-medium text-content">
-                {selectedDdType.sections?.length || 0}
+        <p className="mt-4 flex items-start gap-2 text-sm text-content-secondary">
+          {validated ? (
+            <>
+              <LockClosedIcon className="mt-0.5 h-4 w-4 shrink-0 text-theme-success" />
+              <span>
+                Validated: its sections and questions are frozen, and can be read only. To change
+                them, create a new questionnaire.
               </span>
-            </div>
-            <div>
-              <span className="text-content-secondary">Questions:</span>
-              <span className="ml-2 font-medium text-content">
-                {selectedDdType.sections?.reduce((sum, s) => sum + (s.questions?.length || 0), 0) ||
-                  0}
-              </span>
-            </div>
-            <div>
-              <span className="text-content-secondary">Status:</span>
-              <span
-                className={`ml-2 font-medium ${
-                  selectedDdType.is_validated ? 'text-theme-success' : 'text-theme-warning'
-                }`}
-              >
-                {selectedDdType.is_validated ? 'Validated' : 'Draft'}
-              </span>
-            </div>
-          </div>
-        </div>
+            </>
+          ) : (
+            <span>
+              Draft: its sections and questions can change. Validate it once it is final: they are
+              then frozen, for good.
+            </span>
+          )}
+        </p>
       )}
     </div>
   );

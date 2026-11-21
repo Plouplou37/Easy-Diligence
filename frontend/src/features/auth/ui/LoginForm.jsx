@@ -21,20 +21,20 @@ export const LoginForm = () => {
 
   return (
     <>
-      <form className="space-y-6" onSubmit={submit}>
-        <div className="space-y-5">
-          <Input
-            id="email"
-            name="email"
-            label="Email address"
-            type="email"
-            autoComplete="email"
-            required
-            leftIcon={EnvelopeIcon}
-            value={email}
-            onChange={event => setEmail(event.target.value)}
-            placeholder="you@example.com"
-          />
+      <form className="space-y-5" onSubmit={submit}>
+        <Input
+          id="email"
+          name="email"
+          label="Email address"
+          type="email"
+          autoComplete="email"
+          required
+          leftIcon={EnvelopeIcon}
+          value={email}
+          onChange={event => setEmail(event.target.value)}
+          placeholder="you@example.com"
+        />
+        <div>
           <PasswordInput
             id="password"
             name="password"
@@ -44,10 +44,13 @@ export const LoginForm = () => {
             leftIcon={LockClosedIcon}
             value={password}
             onChange={event => setPassword(event.target.value)}
-            placeholder="••••••••"
           />
-          <div className="text-sm text-right">
-            <button type="button" onClick={() => setForgotOpen(true)} className="text-link">
+          <div className="mt-1 flex justify-end">
+            <button
+              type="button"
+              onClick={() => setForgotOpen(true)}
+              className="text-link inline-flex min-h-10 items-center text-sm"
+            >
               Forgot your password?
             </button>
           </div>

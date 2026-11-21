@@ -38,38 +38,41 @@ export const ChangePasswordModal = ({ isOpen, onClose }) => {
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={close} title="Change Password" size="sm">
+    <Modal isOpen={isOpen} onClose={close} title="Change password" size="sm">
       <form onSubmit={submit} noValidate>
-        <p className="text-sm text-content-secondary mb-4">{PASSWORD_RULE}</p>
-        <div className="space-y-4">
+        <p className="mb-5 text-sm text-content-secondary">
+          You are then signed out everywhere, and sign in again with the new password.
+        </p>
+        <div className="space-y-5">
           <PasswordInput
-            label="Current Password"
+            label="Current password"
             autoComplete="current-password"
             value={form.current}
             onChange={change('current')}
             error={problems.current}
           />
           <PasswordInput
-            label="New Password"
+            label="New password"
             autoComplete="new-password"
             value={form.next}
             onChange={change('next')}
             error={problems.next}
+            helperText={PASSWORD_RULE}
           />
           <PasswordInput
-            label="Confirm New Password"
+            label="Confirm the new password"
             autoComplete="new-password"
             value={form.confirm}
             onChange={change('confirm')}
             error={problems.confirm}
           />
         </div>
-        <div className={`${modalStyles.footer} -mx-5 -mb-4 mt-4`}>
+        <div className={`${modalStyles.footer} -mx-5 -mb-4 mt-6`}>
           <Button type="button" variant="secondary" onClick={close}>
             Cancel
           </Button>
           <Button type="submit" variant="primary" loading={saving}>
-            Change Password
+            Change password
           </Button>
         </div>
       </form>

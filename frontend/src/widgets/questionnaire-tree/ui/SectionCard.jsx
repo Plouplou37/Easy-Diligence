@@ -1,16 +1,22 @@
 import { useState } from 'react';
 import {
-  FolderIcon,
-  PencilIcon,
-  TrashIcon,
-  PlusIcon,
-  ChevronDownIcon,
-  ChevronRightIcon,
   Bars3Icon,
+  ChevronRightIcon,
+  PencilIcon,
+  PlusIcon,
+  TrashIcon,
 } from '@heroicons/react/24/outline';
 import { Button } from '@/shared/ui';
 import QuestionItem from './QuestionItem';
 
+// A section code is a letter or a few (services/question_codes.py); anything
+// else (an older code) stays in the tooltip only.
+const SHOWN_CODE = /^[A-Z]{1,3}$/;
+
+/**
+ * One section of the questionnaire, an item of its list: the title, the
+ * context sent to the model, the questions once opened, and the actions.
+ */
 const SectionCard = ({
   section,
   isValidated,
@@ -25,125 +31,137 @@ const SectionCard = ({
   dragOverQuestion,
 }) => {
   const [expanded, setExpanded] = useState(false);
+  const count = section.questions?.length || 0;
+  const questionsId = `section-${section.id}-questions`;
 
   return (
-    <div
+    <li
       onDragOver={e => !isValidated && dragHandlers.onDragOver(e, section)}
       onDragLeave={dragHandlers.onDragLeave}
       onDrop={e => !isValidated && dragHandlers.onDrop(e, section)}
-      className={`relative bg-surface rounded-lg shadow-xs ${
-        dragOverSection === section.id ? 'border-2 border-accent-blue' : 'border border-border'
+      className={`transition-colors ${
+        dragOverSection === section.id
+          ? 'bg-primary-dark outline-2 -outline-offset-2 outline-accent-blue'
+          : ''
       }`}
     >
-      <div className="p-4 border-b border-border">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3 flex-1">
-            {!isValidated && (
-              <div
-                draggable
-                onDragStart={e => dragHandlers.onDragStart(e, section)}
-                className="cursor-move p-1 hover:bg-surface-hover rounded-sm"
-              >
-                <Bars3Icon className="h-5 w-5 text-content-muted" />
-              </div>
-            )}
-            <button
-              type="button"
-              onClick={() => setExpanded(!expanded)}
-              className="text-content-muted hover:text-content"
-              aria-expanded={expanded}
-              aria-label={`${expanded ? 'Hide' : 'Show'} the questions of ${section.title}`}
+      <div className="flex flex-wrap items-start gap-x-2 gap-y-2 px-3 py-3 sm:px-4">
+        <div className="flex min-w-0 flex-[1_1_18rem] items-start gap-1">
+          {!isValidated && (
+            <div
+              draggable
+              onDragStart={e => dragHandlers.onDragStart(e, section)}
+              className="mt-0.5 shrink-0 cursor-grab rounded-md p-2 text-content-muted transition-colors hover:bg-surface-hover hover:text-content active:cursor-grabbing"
+              title="Drag to reorder the sections"
             >
-              {expanded ? (
-                <ChevronDownIcon className="h-5 w-5" />
-              ) : (
-                <ChevronRightIcon className="h-5 w-5" />
-              )}
-            </button>
-            <FolderIcon className="h-5 w-5 text-accent-blue" />
-            <div>
-              <h3
-                className="text-fluid-md font-medium text-content"
-                title={`Code: ${section.section_code}`}
-              >
-                {section.title}
-              </h3>
-              <p className="text-sm text-content-muted">
-                {section.questions?.length || 0} questions
-              </p>
+              <Bars3Icon className="h-4 w-4" aria-hidden="true" />
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={() => setExpanded(!expanded)}
+            aria-expanded={expanded}
+            aria-controls={questionsId}
+            className="flex min-h-10 min-w-0 flex-1 items-start gap-2 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-surface-hover"
+          >
+            <ChevronRightIcon
+              className={`mt-0.5 h-4 w-4 shrink-0 text-content-muted transition-transform ${
+                expanded ? 'rotate-90' : ''
+              }`}
+              aria-hidden="true"
+            />
+            <span className="min-w-0 flex-1">
+              <span className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                <span
+                  className="font-semibold text-content"
+                  title={`Code: ${section.section_code}`}
+                >
+                  {SHOWN_CODE.test(section.section_code || '') && `${section.section_code}. `}
+                  {section.title}
+                </span>
+                <span className="text-xs tabular-nums text-content-muted">
+                  {count} question{count === 1 ? '' : 's'}
+                </span>
+              </span>
               {/* The description reaches the model with the section heading, so
                   it has to be visible: a field that is sent but never shown is
                   a field nobody can check. */}
               {section.description && (
-                <p className="mt-1 text-sm text-content-secondary whitespace-pre-line">
+                <span className="mt-1 block whitespace-pre-line text-sm text-content-secondary">
                   {section.description}
-                </p>
+                </span>
               )}
-            </div>
-          </div>
+            </span>
+          </button>
+        </div>
 
-          <div className="flex items-center space-x-2">
+        {!isValidated && (
+          <div className="ml-auto flex shrink-0 items-center">
             <Button
               onClick={() => onCreateQuestion(section.id)}
-              disabled={isValidated}
-              variant="primary"
-              size="sm"
+              variant="secondary"
               icon={PlusIcon}
+              className="mr-1"
             >
               Question
             </Button>
-            {!isValidated && (
-              <>
-                <Button
-                  onClick={() => onEditSection(section)}
-                  variant="ghost"
-                  size="sm"
-                  icon={PencilIcon}
-                />
-                <Button
-                  onClick={() => onDeleteSection(section.id)}
-                  variant="danger"
-                  size="sm"
-                  icon={TrashIcon}
-                />
-              </>
-            )}
+            <Button
+              onClick={() => onEditSection(section)}
+              variant="ghost"
+              size="lg"
+              icon={PencilIcon}
+              title="Edit section"
+              aria-label={`Edit the section ${section.title}`}
+            />
+            <Button
+              onClick={() => onDeleteSection(section.id)}
+              variant="danger"
+              size="lg"
+              icon={TrashIcon}
+              title="Delete section"
+              aria-label={`Delete the section ${section.title}`}
+            />
           </div>
-        </div>
+        )}
       </div>
 
       {expanded && (
-        <div className="p-4 space-y-2">
-          {section.questions && section.questions.length > 0 ? (
-            [...section.questions]
-              .sort((a, b) => a.order_index - b.order_index)
-              .map(question => (
-                <QuestionItem
-                  key={question.id}
-                  question={question}
-                  sectionId={section.id}
-                  isValidated={isValidated}
-                  onEdit={onEditQuestion}
-                  onDelete={onDeleteQuestion}
-                  dragHandlers={questionDragHandlers}
-                  dragOverQuestion={dragOverQuestion}
-                />
-              ))
+        <div id={questionsId} className="px-3 pb-4 sm:pl-14 sm:pr-4">
+          {count > 0 ? (
+            <ol className="space-y-2">
+              {[...section.questions]
+                .sort((a, b) => a.order_index - b.order_index)
+                .map(question => (
+                  <QuestionItem
+                    key={question.id}
+                    question={question}
+                    sectionId={section.id}
+                    isValidated={isValidated}
+                    onEdit={onEditQuestion}
+                    onDelete={onDeleteQuestion}
+                    dragHandlers={questionDragHandlers}
+                    dragOverQuestion={dragOverQuestion}
+                  />
+                ))}
+            </ol>
           ) : (
-            <div className="text-center py-8 text-content-muted">
-              <p className="text-sm">No questions in this section</p>
+            <div className="rounded-lg border border-dashed border-border-hover px-4 py-6 text-center">
+              <p className="text-sm text-content-muted">No questions in this section yet.</p>
               {!isValidated && (
-                <div className="mt-2">
-                  <Button onClick={() => onCreateQuestion(section.id)} variant="ghost" size="sm">
-                    Add your first question
-                  </Button>
-                </div>
+                <Button
+                  onClick={() => onCreateQuestion(section.id)}
+                  variant="secondary"
+                  icon={PlusIcon}
+                  className="mt-3"
+                >
+                  Add the first question
+                </Button>
               )}
             </div>
           )}
         </div>
       )}
-    </div>
+    </li>
   );
 };
 

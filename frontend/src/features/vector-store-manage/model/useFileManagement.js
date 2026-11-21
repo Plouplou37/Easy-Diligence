@@ -40,21 +40,21 @@ export const useFileManagement = (selectedStore, onFileChange) => {
   const removeFile = async fileId => {
     const file = files.find(item => item.id === fileId);
     const confirmed = await confirm({
-      title: 'Remove file',
+      title: 'Remove document',
       message:
-        `Remove ${file?.filename ? `"${file.filename}"` : 'this file'} from the vector store? ` +
-        'The DD runs that use this store will no longer search it.',
+        `Remove ${file?.filename ? `"${file.filename}"` : 'this document'} from the collection? ` +
+        'The due diligences that use this collection will no longer search it.',
       confirmLabel: 'Remove',
       danger: true,
     });
     if (!confirmed) return;
     try {
       await vectorStoresAPI.removeFile(storeId, fileId);
-      toast.success('File removed successfully');
+      toast.success('Document removed');
       await loadFiles();
       await onFileChange();
     } catch {
-      toast.error('Failed to remove file');
+      toast.error('The document could not be removed');
     }
   };
 

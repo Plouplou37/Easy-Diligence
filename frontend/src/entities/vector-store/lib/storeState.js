@@ -24,13 +24,13 @@ export const storeState = store => {
 /** What the state of a store means for its user, or null when it is usable. */
 export const storeProblem = store => {
   if (store?.status === 'expired') {
-    return 'This vector store expired at OpenAI after going unused: its documents are gone, and the DD runs it is assigned to can no longer search them.';
+    return 'This document collection expired at OpenAI after going unused: its documents are gone, and the due diligences it is assigned to can no longer search them.';
   }
   if (store?.status === 'missing') {
-    return 'This vector store no longer exists at OpenAI: its documents are gone, and the DD runs it is assigned to can no longer search them.';
+    return 'This document collection no longer exists at OpenAI: its documents are gone, and the due diligences it is assigned to can no longer search them.';
   }
   if (isUnknown(store)) {
-    return `${store.problem || 'OpenAI did not describe this vector store.'} Its figures are unknown for now.`;
+    return `${store.problem || 'OpenAI did not describe this document collection.'} Its figures are unknown for now.`;
   }
   return null;
 };

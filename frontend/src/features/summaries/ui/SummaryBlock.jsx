@@ -4,7 +4,7 @@ import { CheckIcon, PencilIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { summariesAPI } from '@/entities/summary';
-import { Button, panel, sectionHeader } from '@/shared/ui';
+import { Button } from '@/shared/ui';
 
 /** One editable block: the global synthesis or a section summary. */
 const SummaryBlock = ({ title, summary, onSaved }) => {
@@ -31,14 +31,13 @@ const SummaryBlock = ({ title, summary, onSaved }) => {
   };
 
   return (
-    <div className={`${panel.base} p-5`}>
-      <div className="flex items-center justify-between gap-3 mb-3">
-        <h3 className="text-fluid-sm font-medium text-content uppercase tracking-[0.08em]">
+    <section className="rounded-lg border border-border p-4">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <h3 className="text-xs font-semibold uppercase tracking-[0.06em] text-content-secondary">
           {title}
         </h3>
-        <div className={sectionHeader.hairline} />
         {!editing && (
-          <Button onClick={() => setEditing(true)} variant="secondary" size="sm" icon={PencilIcon}>
+          <Button onClick={() => setEditing(true)} variant="secondary" icon={PencilIcon}>
             Edit
           </Button>
         )}
@@ -53,9 +52,9 @@ const SummaryBlock = ({ title, summary, onSaved }) => {
             className="form-input w-full px-3 py-2 text-sm font-mono"
             aria-label={title}
           />
-          <div className="flex space-x-2">
-            <Button onClick={save} variant="success" icon={CheckIcon} disabled={saving}>
-              {saving ? 'Saving…' : 'Save'}
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={save} variant="primary" icon={CheckIcon} loading={saving}>
+              Save
             </Button>
             <Button
               onClick={() => setEditing(false)}
@@ -76,7 +75,7 @@ const SummaryBlock = ({ title, summary, onSaved }) => {
           </div>
         </div>
       )}
-    </div>
+    </section>
   );
 };
 

@@ -21,7 +21,7 @@ export const useVectorStores = () => {
           const { data } = await vectorStoresAPI.refresh();
           if (data?.removed > 0) {
             toast(
-              `${data.removed} vector store${data.removed > 1 ? 's' : ''} gone at OpenAI removed`
+              `${data.removed} collection${data.removed > 1 ? 's' : ''} gone at OpenAI removed`
             );
           }
         } catch (error) {
@@ -31,7 +31,7 @@ export const useVectorStores = () => {
       const response = await vectorStoresAPI.list();
       setVectorStores(Array.isArray(response.data) ? response.data : []);
     } catch {
-      toast.error('Failed to load vector stores');
+      toast.error('The document collections could not be loaded');
       setVectorStores([]);
     } finally {
       setLoading(false);
@@ -45,11 +45,11 @@ export const useVectorStores = () => {
   const createStore = async formData => {
     try {
       await vectorStoresAPI.create(formData);
-      toast.success('Vector store created successfully');
+      toast.success('Collection created');
       await loadVectorStores();
       return true;
     } catch (error) {
-      toast.error(errorMessage(error, 'Failed to create vector store'));
+      toast.error(errorMessage(error, 'The collection could not be created'));
       return false;
     }
   };
@@ -57,10 +57,10 @@ export const useVectorStores = () => {
   const deleteStore = async storeId => {
     const store = vectorStores.find(item => item.id === storeId);
     const confirmed = await confirm({
-      title: 'Delete vector store',
+      title: 'Delete collection',
       message:
-        `Delete ${store?.name ? `"${store.name}"` : 'this vector store'} and its files? ` +
-        'The sessions it is assigned to lose these documents. This cannot be undone.',
+        `Delete ${store?.name ? `"${store.name}"` : 'this collection'} and its documents? ` +
+        'The due diligences that use it lose them. This cannot be undone.',
       confirmLabel: 'Delete',
       danger: true,
     });
@@ -69,11 +69,11 @@ export const useVectorStores = () => {
     setDeletingStores(previous => new Set([...previous, storeId]));
     try {
       await vectorStoresAPI.delete(storeId);
-      toast.success('Vector store deleted successfully');
+      toast.success('Collection deleted');
       await loadVectorStores();
       return true;
     } catch (error) {
-      toast.error(errorMessage(error, 'Failed to delete vector store'));
+      toast.error(errorMessage(error, 'The collection could not be deleted'));
       return false;
     } finally {
       setDeletingStores(previous => {

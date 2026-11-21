@@ -1,105 +1,116 @@
-import {
-  ClockIcon,
-  DocumentIcon,
-  ExclamationTriangleIcon,
-  TrashIcon,
-} from '@heroicons/react/24/outline';
+import { DocumentIcon, ExclamationTriangleIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { formatBytes } from '@/shared/lib/format';
-import { LoadingSpinner, Button, emptyState, tableStyles } from '@/shared/ui';
+import { Badge, Button, EmptyState, LoadingSpinner } from '@/shared/ui';
 
 // OpenAI listed the file but did not give its details: the backend sends
 // `details_missing`, and does not cache that answer.
 const MISSING_DETAILS = "OpenAI did not return this file's details. Refresh to ask again.";
 
-/** The file's creation date (OpenAI gives seconds), or "—". */
-const createdOn = file =>
-  Number.isFinite(file.created_at) ? new Date(file.created_at * 1000).toLocaleDateString() : '—';
+// The state of a document at OpenAI: the AI can search it once it is ready.
+const FILE_STATES = {
+  completed: { label: 'Ready', variant: 'success' },
+  in_progress: {
+    label: 'Indexing…',
+    variant: 'info',
+    title: 'OpenAI is still reading this document: it can be searched once ready.',
+  },
+  failed: { label: 'Failed', variant: 'error', title: 'OpenAI could not index this document.' },
+  cancelled: { label: 'Cancelled', variant: 'neutral' },
+};
+
+/** The day the file was added (OpenAI gives seconds), or null. */
+const addedOn = file =>
+  Number.isFinite(file.created_at) ? new Date(file.created_at * 1000).toLocaleDateString() : null;
+
+const FileState = ({ file }) => {
+  const state = FILE_STATES[file.status];
+  if (!state) return null;
+  const title = file.status === 'failed' && file.last_error?.message;
+  return (
+    <span title={title || state.title}>
+      <Badge variant={state.variant} size="sm">
+        {state.label}
+      </Badge>
+    </span>
+  );
+};
 
 const FileList = ({ files, loading, error, onRemoveFile }) => {
   if (loading) {
-    return (
-      <div className="flex justify-center items-center py-8">
-        <LoadingSpinner size="md" />
-      </div>
-    );
+    return <LoadingSpinner size="md" text="Loading the documents…" className="py-10" />;
   }
 
-  // The listing failed: the store may well hold files, so never "No files".
+  // The listing failed: the collection may well hold files, so never "No documents".
   if (error) {
     return (
-      <div className={emptyState.wrapper}>
-        <ExclamationTriangleIcon className={emptyState.icon} />
-        <p className={emptyState.title}>The files could not be listed</p>
-        <p className={emptyState.text}>{error}</p>
+      <div className="alert alert-error flex items-start gap-2" role="alert">
+        <ExclamationTriangleIcon className="h-5 w-5 shrink-0" aria-hidden="true" />
+        <div>
+          <p className="font-semibold">The documents could not be listed</p>
+          <p className="mt-0.5">{error}</p>
+        </div>
       </div>
     );
   }
 
   if (files.length === 0) {
     return (
-      <div className={emptyState.wrapper}>
-        <DocumentIcon className={emptyState.icon} />
-        <p className={emptyState.title}>No files in this vector store</p>
+      <div className="rounded-lg border border-dashed border-border-hover">
+        <EmptyState
+          icon={DocumentIcon}
+          title="No documents in this collection yet"
+          text="Add the fund's documents: prospectus, factsheets, reports, presentations."
+        />
       </div>
     );
   }
 
   return (
-    <div className="h-full border border-border rounded-lg overflow-y-auto">
-      <table className={`${tableStyles.table} ${tableStyles.inPanel}`}>
-        <thead className={tableStyles.theadSticky}>
-          <tr>
-            <th className={tableStyles.th}>File</th>
-            <th className={tableStyles.th}>Size</th>
-            <th className={tableStyles.th}>Created</th>
-            <th className={tableStyles.thRight}>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {files.map((file, index) => (
-            <tr key={file.id} className={`${tableStyles.row} ${tableStyles.rowAlt(index)}`}>
-              <td className={tableStyles.td}>
-                <div className="flex items-center">
-                  <DocumentIcon className="h-5 w-5 text-accent-blue mr-2 shrink-0" />
-                  <div
-                    className={`max-w-xs truncate text-sm font-medium ${
-                      file.details_missing ? 'text-content-muted italic' : 'text-content'
-                    }`}
-                    title={
-                      file.details_missing
-                        ? `${MISSING_DETAILS} ID: ${file.id}`
-                        : `${file.filename} · ID: ${file.id}`
-                    }
-                  >
-                    {file.filename}
-                  </div>
-                </div>
-              </td>
-              <td className={`${tableStyles.td} whitespace-nowrap tabular-nums`}>
-                {formatBytes(file.size_bytes)}
-              </td>
-              <td className={tableStyles.td}>
-                <div className="flex items-center whitespace-nowrap text-content-secondary">
-                  <ClockIcon className="h-4 w-4 mr-1 text-content-muted" />
-                  {createdOn(file)}
-                </div>
-              </td>
-              <td className={tableStyles.tdRight}>
-                <div className="flex items-center justify-end space-x-2">
-                  <Button
-                    onClick={() => onRemoveFile(file.id)}
-                    variant="danger"
-                    size="sm"
-                    icon={TrashIcon}
-                    title="Remove file"
-                  />
-                </div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border">
+      {files.map(file => {
+        const added = addedOn(file);
+        return (
+          <li
+            key={file.id}
+            className="flex flex-wrap items-center gap-x-4 gap-y-1 py-1.5 pl-4 pr-1.5 transition-colors hover:bg-surface-hover"
+          >
+            <DocumentIcon className="h-4 w-4 shrink-0 text-content-muted" aria-hidden="true" />
+            <span
+              className={`min-w-0 flex-[1_1_12rem] truncate text-sm ${
+                file.details_missing ? 'italic text-content-muted' : 'font-medium text-content'
+              }`}
+              title={
+                file.details_missing
+                  ? `${MISSING_DETAILS} ID: ${file.id}`
+                  : `${file.filename} · ID: ${file.id}`
+              }
+            >
+              {file.filename}
+            </span>
+            <span className="flex flex-wrap items-center gap-x-4 gap-y-1">
+              {Number.isFinite(file.size_bytes) && (
+                <span className="text-xs tabular-nums text-content-muted">
+                  {formatBytes(file.size_bytes)}
+                </span>
+              )}
+              {added && (
+                <span className="text-xs tabular-nums text-content-muted">Added {added}</span>
+              )}
+              <FileState file={file} />
+            </span>
+            <Button
+              onClick={() => onRemoveFile(file.id)}
+              variant="danger"
+              size="lg"
+              icon={TrashIcon}
+              className="ml-auto"
+              title="Remove this document"
+              aria-label={`Remove ${file.filename}`}
+            />
+          </li>
+        );
+      })}
+    </ul>
   );
 };
 
