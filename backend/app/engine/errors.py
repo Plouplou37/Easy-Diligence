@@ -110,3 +110,37 @@ MESSAGES = {
 
 def user_message(failure: Failure) -> str:
     return MESSAGES[failure.type]
+
+
+# What the user reads when an OpenAI call made for a request fails, outside a
+# run (a vector store, a file): there is no Resume to point to.
+OPERATION_MESSAGES = {
+    ErrorType.RATE_LIMIT: "OpenAI rate limit reached. Try again in a few minutes.",
+    ErrorType.TIMEOUT: "OpenAI took too long to answer. Try again in a moment.",
+    ErrorType.NETWORK_ERROR: "OpenAI could not be reached. Try again in a moment.",
+    ErrorType.CONTEXT_OVERFLOW: "OpenAI refused the request: it is too large.",
+    ErrorType.VALIDATION_ERROR: (
+        "OpenAI refused the request. Check what was sent (a file's type or size, "
+        "a name), then try again."
+    ),
+    ErrorType.API_ERROR: (
+        "OpenAI returned an error. Try again in a moment; if it persists, "
+        "check the OpenAI key and account."
+    ),
+    ErrorType.UNKNOWN: "The operation failed at OpenAI. Try again in a moment.",
+}
+
+KEY_REFUSED = (
+    "OpenAI refused the server's API key. Ask an administrator to check the OpenAI key and account."
+)
+
+
+def operation_message(error: BaseException) -> str:
+    """The message for an OpenAI error that reached a route (app/main.py).
+
+    A refused key gets its own message: it is the one case the user cannot
+    wait out, and the API_ERROR type also covers OpenAI being down.
+    """
+    if isinstance(error, openai.AuthenticationError | openai.PermissionDeniedError):
+        return KEY_REFUSED
+    return OPERATION_MESSAGES[classify(error).type]

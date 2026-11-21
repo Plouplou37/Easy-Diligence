@@ -2,6 +2,15 @@
 
 ## Non publié
 
+### Erreurs d'OpenAI expliquées à l'utilisateur
+
+- Une erreur d'OpenAI hors du traitement des questions (créer un vector
+  store, y déposer un document, lister ses fichiers…) affichait « Internal
+  server error ». Elle donne maintenant un message qui dit ce qui s'est passé
+  et quoi faire : OpenAI injoignable, limite de requêtes atteinte, clé
+  refusée (à faire vérifier par un administrateur). Le texte d'OpenAI reste
+  dans les journaux.
+
 ### Relecture avant publication
 
 - Tout l'historique git a été relu : aucun secret, aucune trace du poste de

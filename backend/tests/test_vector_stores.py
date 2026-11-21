@@ -1,6 +1,8 @@
 """Vector stores API on a real database, with OpenAI replaced by a fake
 (conftest.FakeVectorStoreClient)."""
 
+import httpx
+import openai
 import pytest
 
 from app.models.vector_store import SessionVectorStore, VectorStore
@@ -322,3 +324,67 @@ def test_create_keeps_the_chosen_expiry(client, analyst, auth_headers, fake_vect
         "/api/vector-stores/", json={"name": "Docs", "expires_after_days": 0}, headers=headers
     )
     assert refused.status_code == 422
+
+
+# --- OpenAI failing -------------------------------------------------------------
+
+OPENAI_REQUEST = httpx.Request("POST", "https://api.openai.com/v1/vector_stores")
+
+
+def openai_error(cls, status, message):
+    """An error of the OpenAI SDK, with OpenAI's own text in it."""
+    return cls(message, response=httpx.Response(status, request=OPENAI_REQUEST), body=None)
+
+
+def failing(error):
+    def fail(*_args, **_kwargs):
+        raise error
+
+    return fail
+
+
+@pytest.mark.parametrize(
+    ("error", "message"),
+    [
+        (openai.APIConnectionError(request=OPENAI_REQUEST), "OpenAI could not be reached."),
+        (
+            openai_error(
+                openai.AuthenticationError, 401, "Incorrect API key provided: sk-EXAMPLE-1234"
+            ),
+            "OpenAI refused the server's API key.",
+        ),
+    ],
+)
+def test_create_tells_why_openai_failed(
+    client, db, analyst, auth_headers, fake_vector_stores, monkeypatch, error, message
+):
+    """Found by hand: OpenAI out of reach gave "Internal server error", which
+    said neither what happened nor what to do. A 502, never a 401: the frontend
+    would take a 401 for an expired session and log the user out."""
+    monkeypatch.setattr(fake_vector_stores, "create_vector_store", failing(error))
+    response = client.post(
+        "/api/vector-stores/", json={"name": "Fund documents"}, headers=auth_headers(analyst)
+    )
+    assert response.status_code == 502
+    detail = response.json()["detail"]
+    assert detail.startswith(message)
+    assert "sk-EXAMPLE" not in detail
+    assert "Connection error" not in detail
+    assert db.query(VectorStore).count() == 0
+
+
+def test_upload_tells_why_openai_failed(
+    client, analyst, make_store, auth_headers, fake_vector_stores, monkeypatch
+):
+    """The same through an upload route, which reads the file before handing
+    the rest to a worker thread."""
+    make_store(analyst, "vs_1")
+    error = openai_error(openai.RateLimitError, 429, "Rate limit reached for org-EXAMPLE")
+    monkeypatch.setattr(fake_vector_stores, "upload_file", failing(error))
+    response = client.post(
+        "/api/vector-stores/vs_1/files",
+        files={"file": ("prospectus.pdf", b"%PDF-1.7 content", "application/pdf")},
+        headers=auth_headers(analyst),
+    )
+    assert response.status_code == 502
+    assert response.json()["detail"] == "OpenAI rate limit reached. Try again in a few minutes."

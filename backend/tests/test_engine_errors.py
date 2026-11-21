@@ -6,12 +6,15 @@ import openai
 import pytest
 
 from app.engine.errors import (
+    KEY_REFUSED,
     MAX_DELAY,
     MESSAGES,
+    OPERATION_MESSAGES,
     Failure,
     ResponseError,
     classify,
     is_global,
+    operation_message,
     retry_delay,
 )
 from app.engine.openai_client import OpenAIProcessor
@@ -77,6 +80,16 @@ def test_the_delay_follows_retry_after_or_backs_off():
 
 def test_every_type_has_a_message_for_the_user():
     assert set(MESSAGES) == set(ErrorType)
+    assert set(OPERATION_MESSAGES) == set(ErrorType)
+
+
+def test_a_refused_key_is_named_outside_a_run():
+    """The API_ERROR type also covers OpenAI being down: a refused key, which
+    waiting will not fix, gets its own message."""
+    assert operation_message(status_error(openai.AuthenticationError, 401)) == KEY_REFUSED
+    assert operation_message(status_error(openai.PermissionDeniedError, 403)) == KEY_REFUSED
+    down = operation_message(status_error(openai.InternalServerError, 500))
+    assert down == OPERATION_MESSAGES[ErrorType.API_ERROR]
 
 
 def test_the_sdk_does_not_retry_on_its_own():
