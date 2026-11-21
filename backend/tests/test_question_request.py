@@ -33,6 +33,16 @@ class _CapturingResponses:
         raise _Sent
 
 
+def _earlier_answers():
+    """The answers of two earlier questions, as the engine sends them."""
+    return DDProcessor.compose_earlier_answers(
+        [
+            ("A.01", "What is the fund's full name?", "Example Asia Fund, a sub-fund of a SICAV."),
+            ("A.02", "Where is the fund domiciled?", "In Luxembourg, as a UCITS."),
+        ]
+    )
+
+
 def _question():
     """A question as the engine reads it: its section, its "where to look"."""
     section = SimpleNamespace(
@@ -64,7 +74,7 @@ def test_the_request_for_a_question_does_not_move(monkeypatch, model):
         processor.process_question(
             question_text=DDProcessor.compose_question_text(_question()),
             vector_store_ids=["vs_example"],
-            previous_response_id="resp_previous",
+            earlier_answers=_earlier_answers(),
             company_info={
                 "name": "Example Asia Fund",
                 "website_url": "https://example.com",

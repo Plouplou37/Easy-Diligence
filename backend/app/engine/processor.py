@@ -10,6 +10,11 @@ the raw response and its messages, the old answer set aside, the new answer and
 the first version of its history. A failure between the two leaves the
 question as it was.
 
+The questions are not chained into one OpenAI conversation: each call carries
+the text of the answers already written for the earlier questions
+(compose_earlier_answers). Chaining sent every earlier search result again,
+and a question cost 12 to 15 times the input it costs alone.
+
 The run's execution is created and set in progress by the service
 (services/processing.py), which hands its id over.
 """
@@ -43,6 +48,19 @@ logger = logging.getLogger(__name__)
 
 # What OpenAIProcessor.process_question returns.
 Result = dict[str, Any]
+
+# The earlier answers sent with a question: at most this many characters in
+# all (about 7,500 tokens), the closest questions first; each answer cut past
+# EARLIER_ANSWER_MAX_CHARS.
+EARLIER_ANSWERS_MAX_CHARS = 30_000
+EARLIER_ANSWER_MAX_CHARS = 3_000
+
+EARLIER_ANSWERS_INTRO = (
+    "Answers already written for the earlier questions of this due diligence, "
+    "for context. Use them where they help with the question that follows (the "
+    "same fund, team or figures). They are not sources: check every fact you take "
+    "from them against the documents or the web, and cite those."
+)
 
 
 class QuestionFailed(Exception):
@@ -121,14 +139,40 @@ class DDProcessor:
 
         return "\n\n".join(parts)
 
+    @staticmethod
+    def compose_earlier_answers(answers: Sequence[tuple[str, str, str]]) -> str | None:
+        """The message of earlier answers sent before a question, or None.
+
+        `answers` holds (code, question text, answer text) for the earlier
+        questions, in the questionnaire's order. Within the budget, the closest
+        questions win: they are the most likely to bear on the next one. What
+        is kept is then written in the questionnaire's order.
+        """
+        kept: list[str] = []
+        total = 0
+        for code, question_text, answer_text in reversed(answers):
+            text = answer_text.strip()
+            if not text:
+                continue
+            if len(text) > EARLIER_ANSWER_MAX_CHARS:
+                text = text[:EARLIER_ANSWER_MAX_CHARS].rstrip() + " […]"
+            entry = f"[{code}] {question_text.strip()}\n{text}"
+            if total + len(entry) > EARLIER_ANSWERS_MAX_CHARS:
+                break
+            kept.append(entry)
+            total += len(entry)
+        if not kept:
+            return None
+        return "\n\n".join([EARLIER_ANSWERS_INTRO, *reversed(kept)])
+
     # --- Runs ---------------------------------------------------------------------
 
     def start_processing(self, vector_store_ids: list[str], company_info: dict[str, Any]) -> bool:
-        """Answer every question of the DD type, in a new conversation."""
+        """Answer every question of the DD type."""
         return self._run(vector_store_ids, company_info, resume=False)
 
     def resume_processing(self, vector_store_ids: list[str], company_info: dict[str, Any]) -> bool:
-        """Answer the questions not answered yet, or failed, in the same conversation."""
+        """Answer the questions not answered yet, or failed."""
         return self._run(vector_store_ids, company_info, resume=True)
 
     def _run(
@@ -241,7 +285,7 @@ class DDProcessor:
         """Ask one question, then store what came back, in one transaction."""
         question_id = stored_id(question)
         question_text = self.compose_question_text(question)
-        previous_response_id = self._previous_response_id(db, question)
+        earlier_answers = self._earlier_answers(db, question)
         db.commit()  # ends the read: no transaction stays open during the call
 
         try:
@@ -249,7 +293,7 @@ class DDProcessor:
                 lambda: self.openai_processor.process_question(
                     question_text=question_text,
                     vector_store_ids=vector_store_ids,
-                    previous_response_id=previous_response_id,
+                    earlier_answers=earlier_answers,
                     company_info=company_info,
                 )
             )
@@ -303,7 +347,7 @@ class DDProcessor:
                 answer_text=result["answer"],
                 sources=sources,
                 tokens_used=result["tokens_used"],
-                # The response the next questions chain onto.
+                # OpenAI's raw response, kept in dd_responses.
                 response_id=response.response_id,
                 status=AnswerStatus.COMPLETED,
                 retry_count=retries,
@@ -354,7 +398,6 @@ class DDProcessor:
         response = DDResponse(
             execution_id=stored_id(execution),
             response_id=result["response_id"],
-            previous_response_id=result.get("previous_response_id"),
             openai_response=result.get("full_response", {}),
         )
         db.add(response)
@@ -437,22 +480,37 @@ class DDProcessor:
         )
         return [question for question in questions if question.id not in answered]
 
-    def _previous_response_id(self, db: Session, question: DDQuestion) -> str | None:
-        """The OpenAI response this question continues: that of the last
-        completed answer before it, by question order."""
-        previous = db.scalars(
-            select(DDAnswer)
+    @staticmethod
+    def _place(section: DDSection, question: DDQuestion) -> tuple[int, int, int, int]:
+        """Where a question stands in the questionnaire, as _questions orders it.
+        `order_index` alone starts again at 0 in every section."""
+        return (section.order_index, question.order_index, stored_id(section), stored_id(question))
+
+    def _earlier_answers(self, db: Session, question: DDQuestion) -> str | None:
+        """The current answers of the run's earlier questions, as the message
+        sent before this one (compose_earlier_answers). Failed and rejected
+        answers are left out."""
+        section = question.section
+        if section is None:
+            return None
+        here = self._place(section, question)
+        rows = db.execute(
+            select(DDAnswer, DDQuestion, DDSection)
             .join(DDQuestion, col(DDAnswer.question_id) == col(DDQuestion.id))
+            .join(DDSection, col(DDQuestion.section_id) == col(DDSection.id))
             .where(
                 col(DDAnswer.execution_id) == self.execution_id,
-                col(DDQuestion.order_index) < question.order_index,
-                col(DDAnswer.status) == AnswerStatus.COMPLETED,
-                col(DDAnswer.response_id).isnot(None),
+                col(DDAnswer.is_current).is_(True),
+                col(DDAnswer.status).not_in([AnswerStatus.FAILED, AnswerStatus.REJECTED]),
+                col(DDAnswer.answer_text).isnot(None),
             )
-            .order_by(col(DDQuestion.order_index).desc())
-            .limit(1)
-        ).first()
-        return previous.response_id if previous else None
+        ).all()
+        earlier = sorted(
+            (self._place(s, q), a.question_code, q.question_text, a.answer_text or "")
+            for a, q, s in rows
+            if self._place(s, q) < here
+        )
+        return self.compose_earlier_answers([(code, q, a) for _, code, q, a in earlier])
 
     def _still_running(self, db: Session) -> bool:
         """Whether the run is still in progress: a pause sets it to `paused`,
@@ -486,8 +544,8 @@ class DDProcessor:
     ) -> DDAnswer:
         """Regenerate ONE existing answer on demand (interactive).
 
-        Reuses the conversation chain (previous answers) for context, but skips
-        the batch rate-limiter and circuit breaker since this is a single,
+        Sends the earlier answers for context, like a question of a run, but
+        skips the batch rate-limiter and circuit breaker since this is a single,
         user-triggered call. Updates the answer in place as a new version
         (mirrors the manual-edit pattern), so the version history and the
         'revert to version' feature keep working. Status -> NEEDS_REVIEW.
@@ -506,10 +564,9 @@ class DDProcessor:
         if question is None or question.section is None:
             raise ValueError("Answer has no associated question/section")
         answer_id = stored_id(answer)
-        previous_response_id = self._previous_response_id(db, question)
+        earlier_answers = self._earlier_answers(db, question)
 
-        # Build the (optionally guided) question text without touching the
-        # previous_response_id conversation chain.
+        # The (optionally guided) question text.
         guided = bool(instruction or reference_url or extra_file_source)
         extras = []
         if instruction:
@@ -533,7 +590,7 @@ class DDProcessor:
                 lambda: self.openai_processor.process_question(
                     question_text=question_text,
                     vector_store_ids=vector_store_ids,
-                    previous_response_id=previous_response_id,
+                    earlier_answers=earlier_answers,
                     company_info=company_info,
                     tool_choice=tool_choice,
                 )

@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+### Answering engine: the earlier answers instead of a conversation chain
+
+- The questions of a run are no longer chained into one OpenAI conversation
+  (`previous_response_id`). Each question now carries the text of the answers
+  already written for the earlier questions, in the questionnaire's order,
+  within a budget of 30,000 characters (the closest questions first). A
+  regenerated answer gets the same context.
+- Why: measured on a run, a chained question cost 75,000 to 96,000 input
+  tokens, against about 6,400 alone, because the chain sent every earlier
+  search result again. The chain also followed the question number alone,
+  which starts again in every section: from the second section on, each
+  question continued the wrong one (B.02 continued A.01).
+- The request sent to OpenAI changes on purpose:
+  `tests/data/question_request.json` is rewritten.
+
 ### Vector store files
 
 - When OpenAI lists a file but does not give its details, the row says so:

@@ -4,11 +4,14 @@ OpenAI is replaced by FakeEngine. The background task runs inside the request
 (the test client waits for it), on the test database.
 """
 
+import re
+
 import httpx
 import openai
 import pytest
 
 import app.engine.processor as processor_module
+from app.engine.processor import DDProcessor
 from app.models.answer import AnswerStatus, DDAnswer, ErrorType
 from app.models.execution import DDExecution, ExecutionStatus
 from app.models.message import DDMessage
@@ -34,10 +37,10 @@ class FakeEngine:
         self.on_call = None
 
     def process_question(
-        self, question_text, vector_store_ids, previous_response_id, company_info, **_
+        self, question_text, vector_store_ids, company_info, earlier_answers=None, **_
     ):
         number = len(self.calls) + 1
-        self.calls.append({"question": question_text, "previous": previous_response_id})
+        self.calls.append({"question": question_text, "earlier": earlier_answers})
         if self.on_call:
             self.on_call(number)
         if number in self.fail_on:
@@ -47,7 +50,6 @@ class FakeEngine:
             raise self.errors[number]
         return {
             "response_id": f"resp_{number}",
-            "previous_response_id": previous_response_id,
             "full_response": {"id": f"resp_{number}"},
             "messages": [{"id": f"msg_{number}", "role": "assistant", "content": "An answer"}],
             "sources": {"files": [], "web": [], "total_count": 0},
@@ -97,17 +99,66 @@ def _answers(db, **filters):
     return db.query(DDAnswer).filter_by(**filters).order_by(DDAnswer.id).all()
 
 
-def test_start_answers_every_question_in_one_chained_conversation(db, run, engine_client):
+def _earlier_codes(call):
+    """The question codes of the earlier answers a call carried, in order."""
+    return re.findall(r"^\[([A-Z]\.\d+)\]", call["earlier"] or "", flags=re.MULTILINE)
+
+
+def test_start_answers_every_question_with_the_earlier_answers(db, run, engine_client):
     assert run("start").status_code == 200
 
     assert _execution(db).status == ExecutionStatus.GENERATED
     answers = _answers(db)
     assert [a.status for a in answers] == [AnswerStatus.COMPLETED] * 3
     assert [a.answer_text for a in answers] == ["Answer 1", "Answer 2", "Answer 3"]
-    # Each question continues the conversation of the previous one.
-    assert [c["previous"] for c in engine_client.calls] == [None, "resp_1", "resp_2"]
+    # No conversation chain: each question carries the answers written before it.
+    assert engine_client.calls[0]["earlier"] is None
+    assert [_earlier_codes(c) for c in engine_client.calls] == [[], ["A.01"], ["A.01", "A.02"]]
+    assert "Answer 2" in engine_client.calls[2]["earlier"]
     assert db.query(DDResponse).count() == 3
     assert db.query(DDMessage).count() == 3
+
+
+def test_the_earlier_answers_follow_the_questionnaire_across_sections(
+    db, client, analyst, make_dd_type, make_dd_session, auth_headers, engine_client
+):
+    """Found by hand: the chain compared order_index alone, which starts again
+    at 0 in every section. B.02 continued A.01 and B.03 continued A.02, while
+    B.01 and C.01 started from nothing."""
+    dd_type = make_dd_type(sections=3, questions=2)
+    session = make_dd_session(analyst)
+    url = f"/api/processing/session/{session.id}/dd/{dd_type.code}/start"
+    assert client.post(url, headers=auth_headers(analyst)).status_code == 200
+
+    assert [_earlier_codes(c) for c in engine_client.calls] == [
+        [],
+        ["A.01"],
+        ["A.01", "A.02"],
+        ["A.01", "A.02", "B.01"],
+        ["A.01", "A.02", "B.01", "B.02"],
+        ["A.01", "A.02", "B.01", "B.02", "C.01"],
+    ]
+
+
+def test_the_earlier_answers_keep_the_closest_within_the_budget():
+    long_answer = "x" * (processor_module.EARLIER_ANSWER_MAX_CHARS + 500)
+    answers = [(f"A.{n:02d}", f"Question {n}?", long_answer) for n in range(1, 21)]
+
+    message = DDProcessor.compose_earlier_answers(answers)
+
+    assert message.startswith(processor_module.EARLIER_ANSWERS_INTRO)
+    assert len(message) <= (
+        processor_module.EARLIER_ANSWERS_MAX_CHARS
+        + len(processor_module.EARLIER_ANSWERS_INTRO)
+        + 100
+    )
+    codes = re.findall(r"^\[(A\.\d+)\]", message, flags=re.MULTILINE)
+    # The closest questions, in the questionnaire's order; each answer cut.
+    assert codes and codes[-1] == "A.20"
+    assert codes == sorted(codes)
+    assert "[…]" in message
+    assert DDProcessor.compose_earlier_answers([]) is None
+    assert DDProcessor.compose_earlier_answers([("A.01", "Question?", "  ")]) is None
 
 
 def test_a_generated_run_cannot_be_restarted(run, engine_client):
@@ -158,7 +209,8 @@ def test_resume_skips_answered_questions_and_keeps_the_conversation(
     assert execution.status == ExecutionStatus.GENERATED
     assert execution.conversation_id == conversation
     assert len(engine_client.calls) == 3  # 1 before the pause, 2 after
-    assert engine_client.calls[1]["previous"] == "resp_1"
+    # The answer written before the pause still reaches the next question.
+    assert _earlier_codes(engine_client.calls[1]) == ["A.01"]
     assert len(_answers(db, status=AnswerStatus.COMPLETED)) == 3
 
 
