@@ -2,6 +2,14 @@ import { DocumentIcon, TrashIcon, ClockIcon } from '@heroicons/react/24/outline'
 import { formatBytes } from '@/shared/lib/format';
 import { LoadingSpinner, Button, emptyState, tableStyles } from '@/shared/ui';
 
+// OpenAI listed the file but did not give its details: the backend sends
+// `details_missing`, and does not cache that answer.
+const MISSING_DETAILS = "OpenAI did not return this file's details. Refresh to ask again.";
+
+/** The file's creation date (OpenAI gives seconds), or "—". */
+const createdOn = file =>
+  Number.isFinite(file.created_at) ? new Date(file.created_at * 1000).toLocaleDateString() : '—';
+
 const FileList = ({ files, loading, onRemoveFile }) => {
   if (loading) {
     return (
@@ -38,8 +46,14 @@ const FileList = ({ files, loading, onRemoveFile }) => {
                 <div className="flex items-center">
                   <DocumentIcon className="h-5 w-5 text-accent-blue mr-2 shrink-0" />
                   <div
-                    className="max-w-xs truncate text-sm font-medium text-content"
-                    title={`${file.filename} · ID: ${file.id}`}
+                    className={`max-w-xs truncate text-sm font-medium ${
+                      file.details_missing ? 'text-content-muted italic' : 'text-content'
+                    }`}
+                    title={
+                      file.details_missing
+                        ? `${MISSING_DETAILS} ID: ${file.id}`
+                        : `${file.filename} · ID: ${file.id}`
+                    }
                   >
                     {file.filename}
                   </div>
@@ -51,7 +65,7 @@ const FileList = ({ files, loading, onRemoveFile }) => {
               <td className={tableStyles.td}>
                 <div className="flex items-center whitespace-nowrap text-content-secondary">
                   <ClockIcon className="h-4 w-4 mr-1 text-content-muted" />
-                  {new Date(file.created_at * 1000).toLocaleDateString()}
+                  {createdOn(file)}
                 </div>
               </td>
               <td className={tableStyles.tdRight}>

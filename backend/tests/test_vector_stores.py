@@ -326,6 +326,61 @@ def test_create_keeps_the_chosen_expiry(client, analyst, auth_headers, fake_vect
     assert refused.status_code == 422
 
 
+# --- Incomplete answers from OpenAI are not cached --------------------------------
+
+
+def answers_in_turn(*answers):
+    """A fake method giving each answer in turn: raised if it is an exception."""
+    remaining = list(answers)
+
+    def method(*_args, **_kwargs):
+        answer = remaining.pop(0)
+        if isinstance(answer, Exception):
+            raise answer
+        return answer
+
+    return method
+
+
+def test_a_file_without_details_is_listed_then_asked_again(
+    client, analyst, make_store, auth_headers, fake_vector_stores, monkeypatch
+):
+    """Found by hand: OpenAI answered 404 for the details of a file it had just
+    taken. The row showed "NaN undefined" and "Invalid Date", and the listing
+    stayed cached that way for five minutes."""
+    make_store(analyst, "vs_1")
+    missing = {"id": "file_1", "filename": "File file_1", "details_missing": True}
+    found = {"id": "file_1", "filename": "annual-report.pdf", "size_bytes": 2048}
+    monkeypatch.setattr(
+        fake_vector_stores, "list_vector_store_files", answers_in_turn([missing], [found])
+    )
+    headers = auth_headers(analyst)
+
+    first = client.get("/api/vector-stores/vs_1/files", headers=headers).json()["files"]
+    assert first == [missing]
+    second = client.get("/api/vector-stores/vs_1/files", headers=headers).json()["files"]
+    assert second == [found]
+
+
+def test_a_store_openai_could_not_describe_is_asked_again(
+    client, analyst, make_store, auth_headers, fake_vector_stores, monkeypatch
+):
+    make_store(analyst, "vs_1")
+    described = {"id": "vs_1", "status": "completed", "file_counts": {"total": 5}}
+    monkeypatch.setattr(
+        fake_vector_stores,
+        "get_vector_store_info",
+        answers_in_turn(RuntimeError("Connection error."), described),
+    )
+    headers = auth_headers(analyst)
+
+    first = client.get("/api/vector-stores/", headers=headers).json()
+    assert first[0]["status"] == "error"
+    second = client.get("/api/vector-stores/", headers=headers).json()
+    assert second[0]["status"] == "completed"
+    assert second[0]["file_count"] == 5
+
+
 # --- OpenAI failing -------------------------------------------------------------
 
 OPENAI_REQUEST = httpx.Request("POST", "https://api.openai.com/v1/vector_stores")

@@ -1345,9 +1345,12 @@ Format your answers like a professional analyst responding to specific due dilig
                     }
                 except Exception as file_error:
                     logger.warning("Could not get details for file %s: %s", file_obj.id, file_error)
+                    # No name, size nor date: the interface says so, and the
+                    # listing is not cached (services/vector_stores.list_files).
                     return {
                         "id": file_obj.id,
                         "filename": f"File {file_obj.id}",
+                        "details_missing": True,
                         "status": getattr(file_obj, "status", "unknown"),
                         "attributes": getattr(file_obj, "attributes", {}),
                         "last_error": file_obj.last_error.model_dump()

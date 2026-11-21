@@ -1,4 +1,6 @@
+/** A size in bytes, readable ("1.95 MB"); "—" when the size is unknown. */
 export const formatBytes = bytes => {
+  if (!Number.isFinite(bytes) || bytes < 0) return '—';
   if (bytes === 0) return '0 Bytes';
   const k = 1024;
   const sizes = ['Bytes', 'KB', 'MB', 'GB'];
