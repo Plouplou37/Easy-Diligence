@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { ChevronDownIcon, DocumentArrowDownIcon, TrashIcon } from '@heroicons/react/24/outline';
-import { answersAPI, exportAnswersToCSV } from '@/entities/answer';
+import { DocumentArrowDownIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { answersAPI } from '@/entities/answer';
 import { sessionAPI } from '@/entities/session';
 import { errorMessage } from '@/shared/api';
 import { useConfirm } from '@/shared/lib/confirm';
 import { downloadBlob } from '@/shared/lib/format';
-import { Button, menu } from '@/shared/ui';
+import { Button } from '@/shared/ui';
 
 // A session can be deleted unless it is running or finished: the status
 // derived from its runs (getSessionStatus), which the server checks too.
@@ -47,53 +47,6 @@ export const ExportPdfButton = ({ sessionId }) => {
     >
       Export PDF
     </Button>
-  );
-};
-
-/** Export, as the session's PDF report or as a CSV table of `answers`. */
-export const ExportMenu = ({ sessionId, answers }) => {
-  const [open, setOpen] = useState(false);
-  const { exporting, exportPdf } = usePdfExport(sessionId);
-
-  const choose = action => () => {
-    setOpen(false);
-    action();
-  };
-
-  return (
-    <div className="relative">
-      <Button
-        variant="primary"
-        icon={DocumentArrowDownIcon}
-        onClick={() => setOpen(shown => !shown)}
-        loading={exporting}
-        aria-haspopup="menu"
-        aria-expanded={open}
-      >
-        {exporting ? 'Exporting…' : 'Export'}
-        <ChevronDownIcon className="h-4 w-4" />
-      </Button>
-      {open && (
-        <>
-          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div
-            role="menu"
-            className={`absolute right-0 mt-2 w-48 z-20 py-1 origin-top-right animate-scale-in ${menu.panel}`}
-          >
-            <button role="menuitem" onClick={choose(exportPdf)} className={menu.item}>
-              PDF report
-            </button>
-            <button
-              role="menuitem"
-              onClick={choose(() => exportAnswersToCSV(answers, sessionId))}
-              className={menu.item}
-            >
-              CSV (table)
-            </button>
-          </div>
-        </>
-      )}
-    </div>
   );
 };
 

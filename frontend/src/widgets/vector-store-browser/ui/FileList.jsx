@@ -1,4 +1,9 @@
-import { DocumentIcon, TrashIcon, ClockIcon } from '@heroicons/react/24/outline';
+import {
+  ClockIcon,
+  DocumentIcon,
+  ExclamationTriangleIcon,
+  TrashIcon,
+} from '@heroicons/react/24/outline';
 import { formatBytes } from '@/shared/lib/format';
 import { LoadingSpinner, Button, emptyState, tableStyles } from '@/shared/ui';
 
@@ -10,11 +15,22 @@ const MISSING_DETAILS = "OpenAI did not return this file's details. Refresh to a
 const createdOn = file =>
   Number.isFinite(file.created_at) ? new Date(file.created_at * 1000).toLocaleDateString() : '—';
 
-const FileList = ({ files, loading, onRemoveFile }) => {
+const FileList = ({ files, loading, error, onRemoveFile }) => {
   if (loading) {
     return (
       <div className="flex justify-center items-center py-8">
         <LoadingSpinner size="md" />
+      </div>
+    );
+  }
+
+  // The listing failed: the store may well hold files, so never "No files".
+  if (error) {
+    return (
+      <div className={emptyState.wrapper}>
+        <ExclamationTriangleIcon className={emptyState.icon} />
+        <p className={emptyState.title}>The files could not be listed</p>
+        <p className={emptyState.text}>{error}</p>
       </div>
     );
   }

@@ -19,6 +19,7 @@ from sqlmodel import col
 
 from app.core.cache import CacheInvalidator, cached
 from app.core.exceptions import NotFoundError
+from app.engine.errors import operation_message
 from app.engine.openai_client import OpenAIProcessor
 from app.models.base import stored_id
 from app.models.dd_types import DDType
@@ -63,9 +64,12 @@ def get_owned_store(db: Session, store_id: str, user: User) -> VectorStore:
     return store
 
 
-def _response(store: VectorStore, info: dict[str, Any] | None, status: str) -> VectorStoreResponse:
+def _response(
+    store: VectorStore, info: dict[str, Any] | None, status: str, problem: str | None = None
+) -> VectorStoreResponse:
     info = info or {}
     return VectorStoreResponse(
+        problem=problem,
         id=store.id,
         name=store.name,
         description=store.description,
@@ -88,7 +92,8 @@ def _describe(client: OpenAIProcessor, store: VectorStore) -> VectorStoreRespons
         if _gone(error):
             return _response(store, None, "missing")
         logger.warning("OpenAI could not describe vector store %s: %s", store.id, error)
-        return _response(store, None, "error")
+        # Why, for the user: a refused key is not a network failure.
+        return _response(store, None, "error", problem=operation_message(error))
     return _response(store, info, info.get("status", "unknown"))
 
 

@@ -1,13 +1,19 @@
 import { useCallback, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { vectorStoresAPI } from '@/entities/vector-store';
+import { errorMessage } from '@/shared/api';
 import { useConfirm } from '@/shared/lib/confirm';
 
-/** The files of the selected vector store, and their removal. */
+/**
+ * The files of the selected vector store, and their removal. `filesError`
+ * says why they could not be listed: the list then shows it, rather than an
+ * empty store.
+ */
 export const useFileManagement = (selectedStore, onFileChange) => {
   const confirm = useConfirm();
   const [files, setFiles] = useState([]);
   const [filesLoading, setFilesLoading] = useState(false);
+  const [filesError, setFilesError] = useState(null);
   const storeId = selectedStore?.id;
 
   const loadFiles = useCallback(async () => {
@@ -16,9 +22,10 @@ export const useFileManagement = (selectedStore, onFileChange) => {
     try {
       const response = await vectorStoresAPI.getFiles(storeId);
       setFiles(response.data.files || []);
-    } catch {
-      toast.error('Failed to load files');
+      setFilesError(null);
+    } catch (error) {
       setFiles([]);
+      setFilesError(errorMessage(error, 'The files could not be listed.'));
     } finally {
       setFilesLoading(false);
     }
@@ -26,6 +33,7 @@ export const useFileManagement = (selectedStore, onFileChange) => {
 
   useEffect(() => {
     setFiles([]);
+    setFilesError(null);
     loadFiles();
   }, [loadFiles]);
 
@@ -50,5 +58,5 @@ export const useFileManagement = (selectedStore, onFileChange) => {
     }
   };
 
-  return { files, filesLoading, loadFiles, removeFile };
+  return { files, filesLoading, filesError, loadFiles, removeFile };
 };

@@ -19,16 +19,17 @@ export const RunActions = ({
       Review Answers
     </Button>
   );
+  const synthesis = onSynthesis && (
+    <Button variant="ghost" size="sm" icon={SparklesIcon} onClick={() => onSynthesis(code)}>
+      Synthesis
+    </Button>
+  );
 
   // A finished run is read, not relaunched.
   if (FINISHED_STATUSES.includes(status)) {
     return (
       <div className="flex space-x-2">
-        {onSynthesis && (
-          <Button variant="ghost" size="sm" icon={SparklesIcon} onClick={() => onSynthesis(code)}>
-            Synthesis
-          </Button>
-        )}
+        {synthesis}
         {review}
       </div>
     );
@@ -49,17 +50,24 @@ export const RunActions = ({
       </div>
     );
   }
+  // Stopped half-way: the answers already written can be read, and summed up,
+  // without resuming (and paying for) the rest. Without any answer, the
+  // synthesis page says so.
   if (status === 'failed' || status === 'paused') {
     return (
-      <Button
-        variant="primary"
-        size="sm"
-        icon={PlayIcon}
-        onClick={() => onResume?.(code)}
-        disabled={disabled}
-      >
-        Resume
-      </Button>
+      <div className="flex flex-wrap justify-end gap-2">
+        {synthesis}
+        {review}
+        <Button
+          variant="primary"
+          size="sm"
+          icon={PlayIcon}
+          onClick={() => onResume?.(code)}
+          disabled={disabled}
+        >
+          Resume
+        </Button>
+      </div>
     );
   }
   // A deactivated type never run has nothing to offer: it is retired, and

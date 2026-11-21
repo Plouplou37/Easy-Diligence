@@ -443,3 +443,27 @@ def test_upload_tells_why_openai_failed(
     )
     assert response.status_code == 502
     assert response.json()["detail"] == "OpenAI rate limit reached. Try again in a few minutes."
+
+
+@pytest.mark.parametrize(
+    ("error", "problem"),
+    [
+        (
+            openai_error(openai.AuthenticationError, 401, "Incorrect API key provided: sk-EXAMPLE"),
+            "OpenAI refused the server's API key.",
+        ),
+        (openai.APIConnectionError(request=OPENAI_REQUEST), "OpenAI could not be reached."),
+    ],
+)
+def test_a_store_openai_could_not_describe_says_why(
+    client, analyst, make_store, auth_headers, fake_vector_stores, monkeypatch, error, problem
+):
+    """Found by hand: with a refused key, the page said "OpenAI could not be
+    reached", which was false and did not say what to do."""
+    make_store(analyst, "vs_1")
+    monkeypatch.setattr(fake_vector_stores, "get_vector_store_info", failing(error))
+
+    store = client.get("/api/vector-stores/", headers=auth_headers(analyst)).json()[0]
+    assert store["status"] == "error"
+    assert store["problem"].startswith(problem)
+    assert "sk-EXAMPLE" not in store["problem"]

@@ -5,12 +5,15 @@ OpenAI is replaced by FakeEngine. The background task runs inside the request
 """
 
 import re
+from datetime import UTC, datetime, timedelta
 
 import httpx
 import openai
 import pytest
 
 import app.engine.processor as processor_module
+from app.engine.answers import new_answer
+from app.engine.errors import KEY_REFUSED_IN_A_RUN
 from app.engine.processor import DDProcessor
 from app.models.answer import AnswerStatus, DDAnswer, ErrorType
 from app.models.execution import DDExecution, ExecutionStatus
@@ -336,7 +339,87 @@ def test_the_text_of_an_openai_error_never_reaches_the_browser(
     body = client.get(f"/api/session/{run.session.id}/status", headers=auth_headers(analyst))
     assert "sk-EXAMPLE-1234" not in body.text
     assert "Incorrect API key" not in body.text
-    assert "check the OpenAI key" in body.json()["progress"][0]["last_error"]
+    # Found by hand: the card read "api_error: OpenAI returned an error…",
+    # an internal code, and did not say the key was refused.
+    assert body.json()["progress"][0]["last_error"] == KEY_REFUSED_IN_A_RUN
+
+
+def test_the_error_shown_is_the_latest_one_still_current(db, client, analyst, auth_headers, run):
+    """An older failure, since retried, no longer explains why the run stopped."""
+    execution = DDExecution(
+        session_id=run.session.id, dd_type_id=run.dd_type.id, status=ExecutionStatus.FAILED
+    )
+    db.add(execution)
+    db.flush()
+    questions = sorted(
+        (q for s in run.dd_type.sections for q in s.questions), key=lambda q: q.order_index
+    )
+    for question, message, current in [
+        (questions[0], "An older failure, retried since.", False),
+        (questions[1], "The failure that stopped the run.", True),
+    ]:
+        db.add(
+            new_answer(
+                execution,
+                question,
+                status=AnswerStatus.FAILED,
+                is_current=current,
+                error_type=ErrorType.NETWORK_ERROR,
+                error_message=message,
+            )
+        )
+    db.commit()
+
+    body = client.get(f"/api/session/{run.session.id}/status", headers=auth_headers(analyst))
+    assert body.json()["progress"][0]["last_error"] == "The failure that stopped the run."
+
+
+# --- Run time ---------------------------------------------------------------------
+
+
+def test_the_run_time_leaves_the_pauses_out(
+    db, session_factory, client, analyst, auth_headers, run, engine_client
+):
+    """Found by hand: the card counted from the first answer, pauses included:
+    19 minutes shown for 2 minutes of work."""
+    engine_client.on_call = lambda n: _pause(session_factory) if n == 1 else None
+    run("start")
+    execution = _execution(db)
+    assert execution.status == ExecutionStatus.PAUSED
+    assert execution.running_since is None  # the clock stopped with the run
+
+    # An hour of work behind it, then a long pause: the pause adds nothing.
+    execution.run_seconds = 3600
+    db.commit()
+    status_url = f"/api/session/{run.session.id}/status"
+    assert (
+        client.get(status_url, headers=auth_headers(analyst)).json()["progress"][0]["time_elapsed"]
+        == 3600
+    )
+
+    # Running again for half a minute: the stretch going on counts.
+    execution.status = ExecutionStatus.IN_PROGRESS
+    execution.running_since = datetime.now(UTC) - timedelta(seconds=30)
+    db.commit()
+    elapsed = client.get(status_url, headers=auth_headers(analyst)).json()["progress"][0][
+        "time_elapsed"
+    ]
+    assert 3630 <= elapsed < 3640
+
+
+def test_a_resume_starts_the_clock_and_the_end_stops_it(db, session_factory, run, engine_client):
+    engine_client.on_call = lambda n: _pause(session_factory) if n == 1 else None
+    run("start")
+    _execution(db).run_seconds = 100
+    db.commit()
+    engine_client.on_call = None
+
+    run("resume")
+
+    execution = _execution(db)
+    assert execution.status == ExecutionStatus.GENERATED
+    assert execution.running_since is None
+    assert 100 <= execution.run_seconds < 110  # the earlier time kept, a few seconds added
 
 
 def test_a_run_that_cannot_go_on_ends_failed(

@@ -17,7 +17,7 @@ const toggled = key => previous => ({ ...previous, [key]: !previous[key] });
 /**
  * A DD type's answers to review, by section: the figures, the filters, and
  * each answer with its edit, versions and regeneration. `filters` comes from
- * useAnswerFilters (the page shares it with the CSV export); `reload` fetches
+ * useAnswerFilters, owned by the page; `reload` fetches
  * the answers again, without unmounting the board.
  */
 const AnswersBoard = ({ filters, updateAnswer, reload }) => {

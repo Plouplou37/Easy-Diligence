@@ -1,6 +1,9 @@
 import { Link } from 'react-router-dom';
 import { BookOpenIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
-import { isStale, storeState } from '@/entities/vector-store';
+import { isStale, isUnknown, storeState } from '@/entities/vector-store';
+
+/** "6 files", or "files unknown" when OpenAI could not describe the store. */
+const fileCount = store => (isUnknown(store) ? 'files unknown' : `${store.file_count} files`);
 import { getToneStyles } from '@/shared/lib/status';
 import { Badge } from '@/shared/ui';
 
@@ -27,9 +30,7 @@ export const AssignedDocuments = ({ code, vectorStores, assigned, locked, onAssi
             </Badge>
           ) : (
             <span className="text-xs text-content-muted">
-              {typeof assigned.file_count === 'number'
-                ? `${assigned.file_count} files`
-                : 'assigned'}
+              {typeof assigned.file_count === 'number' ? fileCount(assigned) : 'assigned'}
             </span>
           )}
         </div>
@@ -76,7 +77,7 @@ export const AssignedDocuments = ({ code, vectorStores, assigned, locked, onAssi
           <option value="">Select vector store...</option>
           {vectorStores.map(store => (
             <option key={store.id} value={store.id}>
-              {store.name} ({store.file_count} files)
+              {store.name} ({fileCount(store)})
             </option>
           ))}
         </select>

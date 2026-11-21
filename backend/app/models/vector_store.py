@@ -77,12 +77,14 @@ class VectorStoreUpdate(SQLModel):
 
 
 class VectorStoreResponse(VectorStoreBase):
-    """A store, with its state at OpenAI ("expired" or "missing" once gone there)."""
+    """A store, with its state at OpenAI ("expired" or "missing" once gone there,
+    "error" when OpenAI could not describe it, with `problem` saying why)."""
 
     id: str
     file_count: int
     total_bytes: int
     status: str
+    problem: str | None = None
     expires_after_days: int | None = None
     expires_at: datetime | None = None
     last_active_at: datetime | None = None

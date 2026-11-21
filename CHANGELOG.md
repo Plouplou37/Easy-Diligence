@@ -2,6 +2,29 @@
 
 ## Unreleased
 
+### Run card, error messages, PDF only
+
+- **Run time without the pauses.** The card counted from the first answer,
+  pauses included. A run now keeps the time it spends running
+  (`dd_executions.run_seconds`, `running_since`, migration `0004`); the
+  existing runs get an estimate from their answers, a gap of more than five
+  minutes counting as a pause.
+- **A paused or failed run** shows "Review Answers" and "Synthesis" next to
+  "Resume": the answers already written can be read and summed up without
+  resuming the rest.
+- **Why a run stopped**: the card shows the message alone, without the
+  internal error code in front ("api_error: …"), and the latest failure still
+  current, not an older one since retried. A refused key is named as such.
+- **A vector store OpenAI could not describe** says why ("OpenAI refused the
+  server's API key…", "OpenAI could not be reached…"), instead of always
+  "could not be reached". Its file list says it could not be listed, instead
+  of "No files in this vector store", and the run card shows "files unknown"
+  instead of "0 files".
+- A regeneration that fails gives a message without "Use Resume", which only
+  applies to a run.
+- **Export**: the CSV export of the answers is removed; the PDF report is the
+  only export.
+
 ### Answering engine: the earlier answers instead of a conversation chain
 
 - The questions of a run are no longer chained into one OpenAI conversation
