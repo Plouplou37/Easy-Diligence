@@ -4,6 +4,7 @@ With Docker: `docker compose exec backend python -m app.cli <command>`.
 """
 
 import re
+from typing import NoReturn
 
 import typer
 from pydantic import ValidationError
@@ -11,7 +12,8 @@ from sqlalchemy.exc import OperationalError, ProgrammingError
 
 import app.models  # noqa: F401  (registers every mapper before the first query)
 from app.core.database import SessionLocal
-from app.core.exceptions import ConflictError
+from app.core.exceptions import AppError, ConflictError
+from app.demo.seed import seed_demo
 from app.models.user import UserCreate
 from app.services.auth import create_user
 
@@ -21,6 +23,15 @@ cli = typer.Typer(help="Easy Diligence administration commands.", no_args_is_hel
 @cli.callback()
 def main() -> None:
     """Easy Diligence administration commands."""
+
+
+def _database_unreachable() -> NoReturn:
+    typer.echo(
+        "Error: the database cannot be reached, or its tables do not exist yet. "
+        "Create them with: uv run alembic upgrade head",
+        err=True,
+    )
+    raise typer.Exit(code=1) from None
 
 
 def _username_from_email(email: str) -> str:
@@ -63,16 +74,41 @@ def create_admin(
         typer.echo(f"Error: {exc.message}", err=True)
         raise typer.Exit(code=1) from None
     except (OperationalError, ProgrammingError):
-        typer.echo(
-            "Error: the database cannot be reached, or its tables do not exist yet. "
-            "Create them with: uv run alembic upgrade head",
-            err=True,
-        )
-        raise typer.Exit(code=1) from None
+        _database_unreachable()
     finally:
         db.close()
 
     typer.echo(f"Administrator created: {user.email} (username {user.username}, id {user.id})")
+
+
+@cli.command("seed-demo")
+def seed_demo_command(
+    owner: str | None = typer.Option(
+        None,
+        "--owner",
+        help="Email of the user who owns the demo. Default: the first active administrator.",
+    ),
+    reset: bool = typer.Option(
+        False,
+        "--reset",
+        help="Delete the demo loaded before (only what this command created), then load it again.",
+    ),
+) -> None:
+    """Load a made-up due diligence (a fund, a questionnaire, its answers and
+    summaries) to explore every screen, without any call to OpenAI."""
+    db = SessionLocal()
+    try:
+        result = seed_demo(db, owner_email=owner, reset=reset)
+    except AppError as exc:
+        typer.echo(f"Error: {exc.message}", err=True)
+        raise typer.Exit(code=1) from None
+    except (OperationalError, ProgrammingError):
+        _database_unreachable()
+    finally:
+        db.close()
+
+    for line in result.lines():
+        typer.echo(line)
 
 
 if __name__ == "__main__":

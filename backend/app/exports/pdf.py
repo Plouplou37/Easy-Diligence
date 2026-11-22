@@ -10,6 +10,7 @@ import io
 import logging
 import os
 import re
+import unicodedata
 from datetime import datetime
 from typing import Any
 
@@ -44,8 +45,17 @@ MEDIA_TYPE = "application/pdf"
 
 
 def report_filename(session: DDSession) -> str:
-    """The report's file name: the session's, spaces made underscores."""
-    name = (session.name or f"session-{session.id}").replace(" ", "_")
+    """The report's file name: the session's, in ASCII letters, digits, dots,
+    hyphens and underscores, everything else made an underscore.
+
+    It goes into the Content-Disposition header, which must be latin-1: a name
+    with a dash such as "—", or in a non-Latin script, made the export fail.
+    Accents are dropped ("Révision" gives "Revision").
+    """
+    fallback = f"session-{session.id}"
+    plain = unicodedata.normalize("NFKD", session.name or fallback)
+    plain = plain.encode("ascii", "ignore").decode("ascii")
+    name = re.sub(r"[^A-Za-z0-9.-]+", "_", plain).strip("_") or fallback
     return f"{name}_DD_Report.pdf"
 
 

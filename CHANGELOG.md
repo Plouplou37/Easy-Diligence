@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+### Demo data, and a README for visitors
+
+- `make demo` loads a complete made-up due diligence into the application:
+  the example questionnaire, the fund "Example Asia Fund" and its management
+  company, a finished run with 18 answers, their sources and versions, the
+  section summaries and the synthesis. No call to OpenAI: anyone can explore
+  every screen without a key. The data belongs to the first administrator,
+  or to `owner=<email>`; running it again changes nothing, `reset=1` loads
+  it afresh (`backend/app/demo/`).
+- The README opens with what the application does, a start in two minutes
+  with `make demo`, what is worth a look in its design, and a diagram of the
+  architecture.
+- **Fix**: the PDF export failed (error 500) when the name of a due
+  diligence held a character outside Latin-1, such as the dash "—": the file
+  name it gives the browser is now plain ASCII.
+
 ### English everywhere, and the questions of an inactive questionnaire
 
 - The browser's own form messages (a required field left empty, an e-mail
