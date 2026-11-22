@@ -34,6 +34,7 @@ const DDTypeSelector = ({ ddTypes, selectedCode, onChange, selectedDdType }) => 
               <option key={ddType.code} value={ddType.code}>
                 {ddType.name}
                 {ddType.is_validated ? ' — validated' : ' — draft'}
+                {ddType.is_active === false ? ', inactive' : ''}
               </option>
             ))}
           </select>
@@ -45,7 +46,7 @@ const DDTypeSelector = ({ ddTypes, selectedCode, onChange, selectedDdType }) => 
             <Figure label="Questions">{questions}</Figure>
             <div className="form-surface min-w-24 px-4 py-2.5">
               <dt className="text-xs text-content-muted">Status</dt>
-              <dd className="mt-1.5">
+              <dd className="mt-1.5 flex flex-wrap gap-1.5">
                 {validated ? (
                   <Badge variant="success" icon={CheckCircleIcon}>
                     Validated
@@ -53,6 +54,7 @@ const DDTypeSelector = ({ ddTypes, selectedCode, onChange, selectedDdType }) => 
                 ) : (
                   <Badge variant="neutral">Draft</Badge>
                 )}
+                {selectedDdType.is_active === false && <Badge variant="warning">Inactive</Badge>}
               </dd>
             </div>
           </dl>

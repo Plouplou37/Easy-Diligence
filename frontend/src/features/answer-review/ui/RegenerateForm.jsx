@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { useId, useRef, useState } from 'react';
 import { ArrowPathRoundedSquareIcon, PaperClipIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { AiBadge, Button, FieldLabel, Input, field } from '@/shared/ui';
 
@@ -21,12 +21,15 @@ const RegenerateForm = ({ onSubmit, onCancel, loading = false }) => {
   const [referenceUrl, setReferenceUrl] = useState('');
   const [file, setFile] = useState(null);
   const [error, setError] = useState('');
+  // The browser's own file field writes its button in the system's language:
+  // it stays hidden, behind a button of the application.
+  const fileInput = useRef(null);
 
   const handleFileChange = event => {
     const selected = event.target.files?.[0] || null;
+    event.target.value = ''; // the same file can be chosen again after a removal
     if (selected && selected.size > MAX_SIZE) {
       setError('The file is larger than 50 MB.');
-      event.target.value = '';
       return;
     }
     setError('');
@@ -108,15 +111,27 @@ const RegenerateForm = ({ onSubmit, onCancel, loading = false }) => {
             </button>
           </div>
         ) : (
-          <input
+          <Button
             id={`${id}-file`}
-            type="file"
-            accept={ACCEPTED}
-            onChange={handleFileChange}
+            type="button"
+            variant="secondary"
+            size="sm"
+            icon={PaperClipIcon}
+            onClick={() => fileInput.current?.click()}
             disabled={loading}
-            className="block w-full text-sm text-content-secondary file:mr-3 file:rounded-md file:border-0 file:bg-accent-blue/10 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-accent-blue hover:file:bg-accent-blue/20"
-          />
+          >
+            Choose a file
+          </Button>
         )}
+        <input
+          ref={fileInput}
+          type="file"
+          accept={ACCEPTED}
+          onChange={handleFileChange}
+          className="hidden"
+          tabIndex={-1}
+          aria-hidden="true"
+        />
         <p className={field.help}>
           Added to the session’s documents and to the answer’s sources (PDF, Word, Excel, CSV, TXT,
           up to 50 MB).

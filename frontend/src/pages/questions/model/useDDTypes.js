@@ -16,10 +16,12 @@ export const useDDTypes = initialCode => {
   // Derived, so that a reload shows the selected type's new questions.
   const selectedDdType = ddTypes.find(ddType => ddType.code === selectedDdTypeCode) || null;
 
+  // Inactive questionnaires too: their "Questions" button opened this page
+  // empty, their questions out of reach.
   const loadDdTypes = useCallback(async () => {
     setLoading(true);
     try {
-      setDdTypes(await fetchDdTypes({ withQuestions: true }));
+      setDdTypes(await fetchDdTypes({ withQuestions: true, activeOnly: false }));
     } catch {
       toast.error('The questionnaires could not be loaded');
     } finally {
@@ -35,7 +37,7 @@ export const useDDTypes = initialCode => {
   // the page: no spinner, the open sections stay open.
   const refreshSelectedDdType = useCallback(async () => {
     try {
-      setDdTypes(await fetchDdTypes({ withQuestions: true }));
+      setDdTypes(await fetchDdTypes({ withQuestions: true, activeOnly: false }));
     } catch {
       toast.error('Failed to reload the questionnaire');
     }
