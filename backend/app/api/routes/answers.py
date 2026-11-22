@@ -127,6 +127,13 @@ def get_session_answers(
     )
 
 
+@router.get("/{answer_id}", response_model=AnswerResponse)
+def get_answer(answer: DDAnswer = Depends(_answer), db: Session = Depends(get_db)):
+    """One answer, as the lists give it: the answer window of the session page
+    opens on it."""
+    return answers_service.to_response(db, answer)
+
+
 @router.put("/{answer_id}", response_model=AnswerResponse)
 def update_answer(
     data: AnswerUpdate,

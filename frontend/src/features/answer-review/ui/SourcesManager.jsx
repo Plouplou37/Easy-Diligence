@@ -5,16 +5,21 @@ import SourceContent from './SourceContent';
 
 const TYPE_LABELS = { file_search: 'Document', web: 'Web page', web_search: 'Web search' };
 
-/** The sources of an answer being edited: the user may add or remove their own. */
+/**
+ * The sources of an answer being edited: the user may add or remove their own.
+ * `title` (null for none) and `className` fit it in a panel that has its own.
+ */
 const SourcesManager = ({
   editingSources,
   newSource,
   setNewSource,
   onAddSource,
   onRemoveSource,
+  title = 'Sources',
+  className = 'border-t border-border pt-3',
 }) => (
-  <div className="border-t border-border pt-3">
-    <h4 className="text-sm font-medium text-content mb-2">Sources</h4>
+  <div className={className}>
+    {title && <h4 className="text-sm font-medium text-content mb-2">{title}</h4>}
 
     <div className="space-y-2 mb-3">
       {editingSources.map((source, index) =>

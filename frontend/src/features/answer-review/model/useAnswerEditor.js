@@ -1,104 +1,70 @@
 import { useState } from 'react';
-import { answersAPI } from '@/entities/answer';
 import toast from 'react-hot-toast';
+import { useAnswerDraft } from './useAnswerDraft';
 
 // The fields the server sent back, without those it left out: merged into the
 // answer on screen, an undefined value would wipe what was there.
 const defined = fields =>
   Object.fromEntries(Object.entries(fields).filter(([, value]) => value !== undefined));
 
+/**
+ * The answer edited in a list, one at a time (`editingAnswer`), with its
+ * draft. onAnswerUpdate(answerId, changes): the saved edit, to show;
+ * onAfterSave(answerId): called once it is saved.
+ */
 export const useAnswerEditor = (onAnswerUpdate, onAfterSave) => {
   const [editingAnswer, setEditingAnswer] = useState(null);
-  const [editText, setEditText] = useState('');
-  const [revisionNotes, setRevisionNotes] = useState('');
-  const [editingSources, setEditingSources] = useState([]);
-  const [newSource, setNewSource] = useState({ type: 'web', content: '' });
-  const [saving, setSaving] = useState(false);
+  const draft = useAnswerDraft();
 
   const startEdit = (answer, parsedSources) => {
     setEditingAnswer(answer.id);
-    setEditText(answer.text);
-    setRevisionNotes('');
-    setEditingSources(parsedSources);
-    setNewSource({ type: 'web', content: '' });
+    draft.reset(answer, parsedSources);
   };
 
   const cancelEdit = () => {
     setEditingAnswer(null);
-    setEditText('');
-    setRevisionNotes('');
-    setEditingSources([]);
-    setNewSource({ type: 'web', content: '' });
+    draft.reset(null, []);
   };
 
   const saveEdit = async answerId => {
-    setSaving(true);
     try {
-      const updatedSources = JSON.stringify(editingSources);
-
-      const response = await answersAPI.update(answerId, {
-        answer_text: editText,
-        edit_reason: revisionNotes,
-        sources: updatedSources,
-      });
+      const { text, sources, saved } = await draft.save(answerId);
 
       // An edit is a new version, back to review: the status changes too.
-      const updatedAnswer = response.data;
       onAnswerUpdate(answerId, {
-        text: editText,
-        answer_text: editText,
-        sources: updatedSources,
+        text,
+        answer_text: text,
+        sources,
         ...defined({
-          version: updatedAnswer.version || updatedAnswer.current_version,
-          status: updatedAnswer.status,
-          editor_name: updatedAnswer.editor_name,
-          edited_at: updatedAnswer.edited_at,
+          version: saved.version || saved.current_version,
+          status: saved.status,
+          editor_name: saved.editor_name,
+          edited_at: saved.edited_at,
         }),
       });
 
       cancelEdit();
       toast.success('Answer updated successfully');
-
-      if (onAfterSave) {
-        onAfterSave(answerId);
-      }
-    } catch (error) {
+      onAfterSave?.(answerId);
+    } catch {
       toast.error('Failed to update answer');
-    } finally {
-      setSaving(false);
     }
-  };
-
-  const addSource = () => {
-    if (newSource.content.trim()) {
-      const sourceToAdd = {
-        ...newSource,
-        id: Date.now(),
-        user_added: true,
-      };
-      setEditingSources([...editingSources, sourceToAdd]);
-      setNewSource({ type: 'web', content: '' });
-    }
-  };
-
-  const removeSource = sourceIndex => {
-    setEditingSources(editingSources.filter((_, index) => index !== sourceIndex));
   };
 
   return {
     editingAnswer,
-    editText,
-    setEditText,
-    revisionNotes,
-    setRevisionNotes,
-    editingSources,
-    newSource,
-    setNewSource,
-    saving,
+    editText: draft.text,
+    setEditText: draft.setText,
+    revisionNotes: draft.reason,
+    setRevisionNotes: draft.setReason,
+    editingSources: draft.sources,
+    newSource: draft.newSource,
+    setNewSource: draft.setNewSource,
+    saving: draft.saving,
     startEdit,
     cancelEdit,
     saveEdit,
-    addSource,
-    removeSource,
+    addSource: draft.addSource,
+    removeSource: draft.removeSource,
   };
 };

@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+### An answer in its own window
+
+- **"Open in a new window"** on the selected answer of the workspace opens
+  it in a window of its own (`/session/<id>/answer/<id>`; a middle click or
+  Ctrl-click opens a tab). The window has a slim bar of its own: the due
+  diligence, its fund and questionnaire, and a link back to it.
+- **Room to work**: the question with its status and version, Previous and
+  Next within the questionnaire, in the workspace's order; the answer in a
+  tall markdown editor with its preview beside it (Edit and Preview tabs on
+  a narrow window), the reason for the change, Save and Approve kept in
+  view (Ctrl+S saves). On the side: the sources, a regeneration on the page
+  rather than in a dialog (the window stays usable while it runs), and the
+  versions with their revert.
+- **The windows stay in step**: a change made in one (save, status, revert,
+  regeneration) reloads the answers in the others. A window with unsaved
+  edits keeps them and says the answer changed, with a Reload button; it
+  asks before leaving them, and the browser warns before it closes.
+- `GET /api/answers/{answer_id}`: one answer, with the fields of the lists.
+
 ### New look, step 2: every page
 
 - **Names that say what things are**: "Due diligences" (the dashboard),
