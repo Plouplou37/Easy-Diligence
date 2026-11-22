@@ -1,0 +1,312 @@
+{
+  "questionnaire": {
+    "code": "DEMO",
+    "name": "Example questionnaire (demo)",
+    "description": "A short due diligence questionnaire for an investment fund: identity, team, strategy, risk management, operations, fees and sustainability."
+  },
+  "fund": {
+    "name": "Example Asia Fund",
+    "website_url": "https://example.com/asia-fund",
+    "description": "Long-only equity fund investing in listed companies of Asia excluding Japan.",
+    "management_company_name": "Example Fund Management",
+    "management_company_website": "https://example.com"
+  },
+  "session": {
+    "code": "DEMO-ASIA",
+    "name": "Example Asia Fund — annual review (demo)",
+    "description": "Annual review of the fund, loaded by the seed-demo command.",
+    "run_seconds": 270
+  },
+  "documents": {
+    "Prospectus_2025.pdf": "file-demo-prospectus-2025",
+    "Factsheet_2026-09.pdf": "file-demo-factsheet-2026-09",
+    "Annual_report_2025.pdf": "file-demo-annual-report-2025",
+    "Key_information_document_A_USD.pdf": "file-demo-kid-a-usd",
+    "Manager_presentation_2026.pdf": "file-demo-manager-presentation-2026"
+  },
+  "web_pages": {
+    "https://example.com/asia-fund": "Example Asia Fund | Example Fund Management",
+    "https://example.com/asia-fund/documents": "Fund documents | Example Asia Fund",
+    "https://example.com/about": "About us | Example Fund Management",
+    "https://example.com/team": "Our team | Example Fund Management",
+    "https://example.com/news/2024-01-new-portfolio-manager": "Sofia Arden appointed portfolio manager of the Example Asia Fund",
+    "https://example.com/news/2025-10-asia-equity-analyst": "A new analyst joins the Asia equity team",
+    "https://example.com/responsible-investment": "Responsible investment | Example Fund Management"
+  },
+  "answers": [
+    {
+      "question": "A.01",
+      "status": "approved",
+      "versions": [
+        {
+          "text": "The fund's full name, as written in the 2025 prospectus, is **Example Funds SICAV – Example Asia Fund**: it is a sub-fund of Example Funds SICAV, an umbrella company with several sub-funds.\n\nFour share classes are offered to investors:\n\n| Share class | Currency | Income | Investors |\n|---|---|---|---|\n| A USD Acc | USD | Accumulating | All investors |\n| A EUR Hedged Acc | EUR, hedged against the USD | Accumulating | All investors |\n| I USD Acc | USD | Accumulating | Institutional investors |\n| I EUR Dist | EUR, unhedged | Distributing | Institutional investors |\n\nThe September 2026 factsheet lists the same four classes, and the fund page of the manager's website shows no other class open to subscription ([example.com](https://example.com/asia-fund)).",
+          "documents": [
+            "Prospectus_2025.pdf",
+            "Factsheet_2026-09.pdf"
+          ],
+          "tokens_used": 9412
+        }
+      ]
+    },
+    {
+      "question": "A.02",
+      "status": "approved",
+      "versions": [
+        {
+          "text": "The fund is domiciled in **Luxembourg**. According to the 2025 prospectus, Example Funds SICAV is a société d'investissement à capital variable (SICAV), an open-ended investment company incorporated under Luxembourg law, and the Example Asia Fund is one of its sub-funds.\n\nThe SICAV is authorised under Part I of the Luxembourg law of 17 December 2010 on undertakings for collective investment, which makes it a **UCITS**: the fund follows the UCITS rules on diversification, liquidity and the use of derivatives. The prospectus names Example Fund Management, a Luxembourg company, as its management company. The 2025 annual report gives the same legal form and regime.",
+          "documents": [
+            "Prospectus_2025.pdf",
+            "Annual_report_2025.pdf"
+          ],
+          "tokens_used": 9108
+        }
+      ]
+    },
+    {
+      "question": "A.03",
+      "status": "approved",
+      "versions": [
+        {
+          "text": "The fund started investing on **3 September 2018**, its launch date in the 2025 prospectus and in the September 2026 factsheet; the A USD Acc and I USD Acc classes were launched that day. The A EUR Hedged Acc class followed on 15 January 2019, and the I EUR Dist class on 1 July 2020.\n\nThe most recent figure is in the September 2026 factsheet: assets under management of **USD 412.6 million at 30 September 2026**. For comparison, the 2025 annual report gives net assets of USD 371.2 million at 31 December 2025. The fund page of the manager's website shows the same figure as the factsheet ([example.com](https://example.com/asia-fund)).",
+          "documents": [
+            "Factsheet_2026-09.pdf",
+            "Prospectus_2025.pdf",
+            "Annual_report_2025.pdf"
+          ],
+          "tokens_used": 10236
+        }
+      ]
+    },
+    {
+      "question": "B.01",
+      "status": "approved",
+      "versions": [
+        {
+          "text": "The fund is managed by **Example Fund Management**, a Luxembourg management company which also manages the portfolio, through its Asia equity team based in Singapore. The 2026 manager presentation says the firm was founded in 2011, employs about 45 people in Luxembourg and Singapore, and managed USD 3.1 billion at 30 June 2026.\n\nOn ownership, the same presentation states that the firm is **68% owned by its four founding partners** and 32% by Example Capital Partners, a private holding company. The individual stakes of the partners are not disclosed. The manager's website describes the firm as \"independent and partner-owned\", without further detail ([example.com](https://example.com/about)).",
+          "documents": [
+            "Manager_presentation_2026.pdf"
+          ],
+          "tokens_used": 11874
+        }
+      ]
+    },
+    {
+      "question": "B.02",
+      "status": "approved",
+      "versions": [
+        {
+          "text": "Investment decisions are taken by three portfolio managers, according to the 2026 manager presentation and the September 2026 factsheet:\n\n- **Elena Marsh**, lead portfolio manager since the fund's launch in 2018; at Example Fund Management since 2014; 22 years of experience in Asian equities.\n- **Victor Lam**, portfolio manager since the launch; at the firm since 2016; 17 years of experience.\n- **Sofia Arden**, portfolio manager since January 2024; at the firm since 2019, first as a senior analyst on the same team; 12 years of experience.\n\nElena Marsh and Victor Lam have worked together since 2016, and the three of them since 2019. They are supported by four analysts. The presentation states that decisions are taken by the three portfolio managers together, the lead portfolio manager having the final say. The team page of the manager's website gives the same roles ([example.com](https://example.com/team)).",
+          "documents": [
+            "Manager_presentation_2026.pdf",
+            "Factsheet_2026-09.pdf"
+          ],
+          "tokens_used": 12051
+        }
+      ]
+    },
+    {
+      "question": "B.03",
+      "status": "needs_review",
+      "versions": [
+        {
+          "text": "One change to the investment team is documented over the past three years: **Sofia Arden** was promoted from senior analyst to portfolio manager in January 2024, as the manager announced on its website ([example.com](https://example.com/news/2024-01-new-portfolio-manager)) and as the 2026 manager presentation shows.\n\nNo document provided lists the team before 2026, apart from the portfolio managers named in the 2025 annual report. Arrivals or departures among the analysts can therefore not be ruled out, and \"no change found\" cannot be concluded for the whole period.",
+          "documents": [
+            "Manager_presentation_2026.pdf",
+            "Annual_report_2025.pdf"
+          ],
+          "tokens_used": 10962
+        },
+        {
+          "text": "Two changes to the investment team are documented over the past three years:\n\n- **January 2024**: Sofia Arden, a senior analyst on the team since 2019, was promoted to portfolio manager ([example.com](https://example.com/news/2024-01-new-portfolio-manager)).\n- **June to October 2025**: one of the four analysts, who covered Korea and Taiwan, left the firm in June 2025; a new analyst joined in October 2025 and took over that coverage ([example.com](https://example.com/news/2025-10-asia-equity-analyst)).\n\nNo portfolio manager has left the team since the fund's launch: Elena Marsh and Victor Lam are named in every document, from the 2025 annual report to the 2026 manager presentation, and the team page of the manager's website lists the same three portfolio managers and four analysts today ([example.com](https://example.com/team)). The manager's news page has no other item on the team since 2023.",
+          "documents": [
+            "Manager_presentation_2026.pdf",
+            "Annual_report_2025.pdf"
+          ],
+          "tokens_used": 13487,
+          "instruction": "Check the manager's news page for any departure since 2023, analysts included."
+        }
+      ]
+    },
+    {
+      "question": "C.01",
+      "status": "approved",
+      "versions": [
+        {
+          "text": "The 2025 prospectus states the investment objective as follows: \"to achieve long-term capital growth by investing at least 80% of its net assets in equities of companies domiciled in, or deriving most of their revenue from, Asia excluding Japan.\"\n\nThe fund is measured against the **Example Asia ex Japan Equity Index (net total return, USD)**. The prospectus says the fund is actively managed: the index is used to compare performance and to calculate the performance fee of the I share classes, and the portfolio may differ significantly from it. The September 2026 factsheet and the fund page of the manager's website use the same index ([example.com](https://example.com/asia-fund)).",
+          "documents": [
+            "Prospectus_2025.pdf",
+            "Factsheet_2026-09.pdf"
+          ],
+          "tokens_used": 9733
+        }
+      ]
+    },
+    {
+      "question": "C.02",
+      "status": "approved",
+      "versions": [
+        {
+          "text": "The 2026 manager presentation describes the selection in five steps:\n\n1. **Universe**: about 1,800 listed companies in Asia excluding Japan, with a market capitalisation above USD 500 million and an average daily traded value above USD 2 million.\n2. **Screening**: the exclusion list is applied (see the answer on sustainability), then a quantitative screen on quality (return on equity, debt) and valuation narrows the list to about 350 companies.\n3. **Fundamental research**: the analysts meet the companies and build their own earnings forecasts and a three-year price target; about 120 companies make the watch list.\n4. **Portfolio construction**: the portfolio managers hold 40 to 60 stocks, sized by conviction and liquidity; the fund held 52 at 30 September 2026, according to the September 2026 factsheet.\n5. **Sell discipline**: a position is reviewed when it reaches its price target, when the investment case changes, or when it breaches an internal limit.\n\nThe 2025 prospectus describes the same approach in general terms, without these figures.",
+          "documents": [
+            "Manager_presentation_2026.pdf",
+            "Factsheet_2026-09.pdf",
+            "Prospectus_2025.pdf"
+          ],
+          "tokens_used": 12694
+        }
+      ]
+    },
+    {
+      "question": "C.03",
+      "status": "approved",
+      "versions": [
+        {
+          "text": "The 2025 prospectus sets the following limits, most of them those of the UCITS rules:\n\n- **Concentration**: at most 10% of net assets in one issuer, and the positions above 5% may not exceed 40% of net assets together.\n- **Other funds**: at most 10% of net assets.\n- **China A-shares**, through Stock Connect: at most 20% of net assets.\n- **Leverage**: derivatives are used only for hedging and efficient portfolio management; global exposure is measured with the commitment approach and may not exceed 100% of net assets. Borrowing is allowed only on a temporary basis, up to 10% of net assets.\n- **Currency**: the portfolio's currency exposure is not hedged; the A EUR Hedged Acc class is hedged against the USD with forward contracts, within a hedge ratio of 95% to 105%.\n\nThe 2026 manager presentation adds internal guidelines: at most 8% of net assets in one stock, at most 30% in one sector, cash between 0% and 10%, and, for **liquidity**, at least 80% of the portfolio saleable within five days at 30% of the average daily volume.",
+          "documents": [
+            "Prospectus_2025.pdf",
+            "Manager_presentation_2026.pdf"
+          ],
+          "tokens_used": 13215
+        }
+      ],
+      "retries": 1
+    },
+    {
+      "question": "D.01",
+      "status": "approved",
+      "versions": [
+        {
+          "text": "Risks are monitored by the **risk management function of Example Fund Management**, in Luxembourg, a team of four according to the 2026 manager presentation. Its head is one of the conducting officers of the management company and reports to its board of directors, not to the investment team.\n\nThe presentation and the 2025 prospectus describe the function as independent from portfolio management: separate reporting lines, no portfolio manager in the risk team, and a remuneration of the risk staff that does not depend on the fund's performance. Compliance is a separate function, which also reports to the board.",
+          "documents": [
+            "Manager_presentation_2026.pdf",
+            "Prospectus_2025.pdf"
+          ],
+          "tokens_used": 10418
+        }
+      ]
+    },
+    {
+      "question": "D.02",
+      "status": "approved",
+      "versions": [
+        {
+          "text": "The 2026 manager presentation lists the measures followed for the fund:\n\n- **Global exposure**, with the commitment approach, against the 100% limit;\n- **Concentration** by issuer (the 5/10/40 rule included), country and sector;\n- **Liquidity**: the share of the portfolio that can be sold within one, five and twenty days;\n- **Ex-ante tracking error** against the index, for information, with an indicative range of 3% to 8% (5.1% at 30 June 2026);\n- **Stress tests**, run each month on historical and hypothetical scenarios;\n- **Counterparty exposure** on the currency forwards of the hedged share class.\n\nHard limits are coded in the order management system and block a trade before it is placed; the risk team checks every limit again each day, after the trades.\n\nWhen a limit is breached, the procedure in the presentation is: the risk team informs the portfolio managers and compliance the same day; an active breach is corrected at once, and any loss is paid back to the fund by the management company; a passive breach is corrected in the best interest of investors, normally within five business days. Every breach is entered in a breach register and reported to the conducting officers, to the board at its next meeting and to the depositary, and, when material, to the Luxembourg regulator.",
+          "documents": [
+            "Manager_presentation_2026.pdf"
+          ],
+          "tokens_used": 13906
+        }
+      ]
+    },
+    {
+      "question": "D.03",
+      "status": "needs_review",
+      "versions": [
+        {
+          "text": "One limit breach is documented. According to the 2025 annual report, on **12 August 2025** the positions above 5% of net assets reached 41.3% of net assets together, against the UCITS limit of 40%, after a rise in the price of two Taiwanese semiconductor holdings. The breach was **passive**: caused by market moves, not by a trade. It was corrected on 15 August 2025, **within four days**, by selling part of the two positions; the annual report states that the fund suffered no loss and that the breach was reported to the board and to the depositary.\n\nThe 2025 annual report mentions no other breach and no error in the calculation of the net asset value in 2025. The 2026 manager presentation states that the fund has had \"no active breach since launch\"; this is the manager's own statement, which no auditor's document provided confirms.\n\nNo document covers 2023, 2024 or 2026 in full: no annual report or compliance report for those years was provided. It cannot be concluded that there were no other breaches over the whole three-year period.",
+          "documents": [
+            "Annual_report_2025.pdf",
+            "Manager_presentation_2026.pdf"
+          ],
+          "tokens_used": 12377
+        }
+      ]
+    },
+    {
+      "question": "E.01",
+      "status": "approved",
+      "versions": [
+        {
+          "text": "The 2025 prospectus and the 2025 annual report name the same three firms:\n\n- **Depositary**: Example Depositary Bank S.A., Luxembourg;\n- **Administrator** (central administration, registrar and transfer agent): Example Fund Administration S.A., Luxembourg;\n- **Auditor**: Example Audit S.à r.l., Luxembourg, approved statutory auditor, which signed an unqualified audit report on the 2025 accounts.",
+          "documents": [
+            "Prospectus_2025.pdf",
+            "Annual_report_2025.pdf"
+          ],
+          "tokens_used": 9264
+        }
+      ]
+    },
+    {
+      "question": "E.02",
+      "status": "approved",
+      "versions": [
+        {
+          "text": "The net asset value is calculated **every business day** in Luxembourg, by the administrator, Example Fund Administration S.A., under the supervision of the management company (2025 prospectus).\n\nListed equities are valued at their last closing price on their main market. For hard-to-value assets, the valuation policy described in the prospectus applies: a security that is suspended, unlisted or without a reliable price for more than five days is valued at **fair value** by the valuation committee of the management company, made up of the risk, compliance and operations functions; the portfolio managers attend without a vote. A fair-value adjustment may also be applied when Asian markets closed before the valuation point and prices moved significantly since.\n\nThe fund applies **partial swing pricing**: when the net subscriptions or redemptions of a day exceed a threshold set by the board, the net asset value is adjusted by up to 2%, to protect the investors who stay. According to the 2025 annual report, one holding, suspended from trading and worth 0.4% of net assets, was valued at fair value at 31 December 2025.",
+          "documents": [
+            "Prospectus_2025.pdf",
+            "Annual_report_2025.pdf"
+          ],
+          "tokens_used": 11532
+        }
+      ]
+    },
+    {
+      "question": "E.03",
+      "status": "approved",
+      "versions": [
+        {
+          "text": "According to the 2025 prospectus, the terms are the same for all share classes, except the minimum investment:\n\n- **Frequency**: daily, on every business day in Luxembourg.\n- **Cut-off**: 13:00 Luxembourg time on the dealing day, at that day's net asset value; settlement three business days later.\n- **Notice period**: none.\n- **Lock-up**: none.\n- **Gate**: redemptions above 10% of net assets on one dealing day may be deferred, pro rata, to the following dealing days.\n- **Minimum initial investment**: USD 1,000 (or EUR 1,000) for the A classes; USD 1 million (or EUR 1 million) for the I classes, which are reserved for institutional investors.\n\nThe September 2026 factsheet and the fund documents page of the manager's website give the same dealing terms ([example.com](https://example.com/asia-fund/documents)).",
+          "documents": [
+            "Prospectus_2025.pdf",
+            "Factsheet_2026-09.pdf"
+          ],
+          "tokens_used": 10881
+        }
+      ]
+    },
+    {
+      "question": "F.01",
+      "status": "approved",
+      "versions": [
+        {
+          "text": "The fees charged to investors, according to the 2025 prospectus and the key information document of the A USD Acc class:\n\n| Share class | Management fee | Performance fee | Entry fee (max.) | Exit fee |\n|---|---|---|---|---|\n| A USD Acc | 1.50% | None | 5.00% | None |\n| A EUR Hedged Acc | 1.50% | None | 5.00% | None |\n| I USD Acc | 0.85% | 15% | None | None |\n| I EUR Dist | 0.85% | 15% | None | None |\n\nThe **performance fee** applies to the I classes only: 15% of the outperformance of the net asset value per share, after all costs, over the Example Asia ex Japan Equity Index (net total return), which serves as the hurdle. It is calculated on each valuation day and paid once a year, at 31 December. A **high-water mark** applies over the whole life of the class: any underperformance must be made up before a performance fee is paid again. A conversion between classes may cost up to 1%.",
+          "documents": [
+            "Prospectus_2025.pdf",
+            "Key_information_document_A_USD.pdf"
+          ],
+          "tokens_used": 12763
+        }
+      ]
+    },
+    {
+      "question": "F.02",
+      "status": "approved",
+      "versions": [
+        {
+          "text": "The **ongoing charges** at 31 December 2025 are **1.74% for the A USD Acc class**, according to its key information document, and **1.07% for the I USD Acc class**, according to the 2025 annual report. They include the management fee and the fund's operating costs, but neither the performance fee nor the transaction costs. The documents provided give no figure for the A EUR Hedged Acc and I EUR Dist classes.\n\nThe statement of expenses in the 2025 annual report gives the main items paid by the fund in 2025:\n\n- management fees: USD 4.32 million;\n- performance fees (I classes): USD 0.41 million;\n- central administration: USD 0.26 million;\n- depositary and custody: USD 0.21 million;\n- professional fees, audit and other costs: USD 0.17 million;\n- Luxembourg subscription tax: USD 0.14 million.\n\nTransaction costs, mainly brokerage commissions, came to USD 0.58 million in 2025. **Research** is paid by the management company out of its own resources, not by the fund (2025 prospectus).",
+          "documents": [
+            "Key_information_document_A_USD.pdf",
+            "Annual_report_2025.pdf",
+            "Prospectus_2025.pdf"
+          ],
+          "tokens_used": 13628
+        }
+      ]
+    },
+    {
+      "question": "F.03",
+      "status": "needs_review",
+      "versions": [
+        {
+          "text": "The fund applies **exclusions**, set out in the 2025 prospectus and in the manager's responsible investment policy ([example.com](https://example.com/responsible-investment)): companies involved in controversial weapons; companies earning more than 10% of their revenue from thermal coal mining or coal power; tobacco producers (more than 5% of revenue); and companies in severe breach of the UN Global Compact principles. Environmental, social and governance criteria are also part of the research, through an internal score; the team engages with about 20 companies a year and votes at all general meetings.\n\n**Monitoring**: the exclusions are coded as restrictions in the order management system and checked before each trade; compliance reviews the portfolio each quarter against the list of an external data provider, and the manager publishes an annual responsible investment report.\n\nNo document provided states a **sustainability classification** for the fund under the EU disclosure rules: the prospectus annex describes the exclusions without claiming one. No classification is therefore given here.",
+          "documents": [
+            "Prospectus_2025.pdf",
+            "Manager_presentation_2026.pdf"
+          ],
+          "tokens_used": 11945
+        }
+      ]
+    }
+  ],
+  "summaries": {
+    "sections": {
+      "A": "Example Funds SICAV – Example Asia Fund is a sub-fund of a Luxembourg SICAV authorised as a **UCITS** under Part I of the law of 17 December 2010. It started investing on **3 September 2018** and had **USD 412.6 million** under management at 30 September 2026, up from USD 371.2 million at the end of 2025.\n\nFour share classes are offered: A USD Acc and A EUR Hedged Acc to all investors, I USD Acc and I EUR Dist to institutional investors. The prospectus, the annual report, the factsheet and the manager's website agree on the name, the legal form and the classes.\n\n**Points of attention**: none on the fund's identity. Its size is comfortable for a strategy holding 40 to 60 stocks.",
+      "B": "The fund is managed by **Example Fund Management**, a Luxembourg management company founded in 2011, with USD 3.1 billion under management and an Asia equity team in Singapore. It is 68% owned by its four founding partners and 32% by Example Capital Partners; the partners' individual stakes are not disclosed.\n\nDecisions are taken by three portfolio managers: **Elena Marsh** (lead, at the firm since 2014), **Victor Lam** (since 2016) and **Sofia Arden** (portfolio manager since January 2024, on the team since 2019), supported by four analysts. The two senior managers have run the fund since its launch.\n\n**Points of attention**: one analyst left in June 2025 and was replaced in October 2025; no portfolio manager has left. The lead portfolio manager has the final say on decisions, a key-person risk, and the partners' individual stakes are not known.",
+      "C": "The fund seeks **long-term capital growth** from the equities of companies in Asia excluding Japan. It is measured against the Example Asia ex Japan Equity Index (net total return, USD), which it does not track.\n\nThe process goes from a universe of about 1,800 companies, through exclusions and a screen on quality and valuation, to fundamental research and a portfolio of **40 to 60 stocks** (52 at 30 September 2026), with a stated sell discipline.\n\nThe limits are those of the UCITS rules (10% per issuer, the 5/10/40 rule, no leverage, the commitment approach), tightened by internal guidelines: 8% per stock, 30% per sector, at most 10% in cash, and 80% of the portfolio saleable within five days. The portfolio's currency exposure is not hedged, except in the A EUR Hedged Acc class.\n\n**Points of attention**: the internal guidelines come from the manager's presentation, not from the prospectus; they can change without notice to investors.",
+      "D": "Risks are monitored by a **risk team of four in Luxembourg**, independent from portfolio management: its head is a conducting officer who reports to the board of the management company. Limits are checked in the order management system before each trade, and again every day after; the measures cover global exposure, concentration, liquidity, tracking error and monthly stress tests, with a written escalation procedure and a breach register.\n\nOne **passive breach** is documented: on 12 August 2025, the positions above 5% reached 41.3% of net assets, against the 40% limit. It was corrected within four days, without loss to the fund, and reported to the board and to the depositary.\n\n**Points of attention**: the breach record rests on the 2025 annual report only. No document covers 2023, 2024 or 2026, and the manager's statement of \"no active breach since launch\" is not confirmed by an independent document.",
+      "E": "The service providers are Luxembourg firms: **Example Depositary Bank S.A.** (depositary), **Example Fund Administration S.A.** (administrator, registrar and transfer agent) and **Example Audit S.à r.l.** (auditor, with an unqualified opinion on the 2025 accounts).\n\nThe net asset value is calculated **daily** by the administrator. Hard-to-value securities are priced at fair value by a valuation committee on which the portfolio managers have no vote, and partial swing pricing, up to 2%, protects the investors who stay. At the end of 2025, one suspended holding (0.4% of net assets) was valued at fair value.\n\nInvestors deal **daily**, with a 13:00 cut-off and settlement in three days, without notice period or lock-up; a 10% gate may defer large redemptions.\n\n**Points of attention**: none significant; the holding valued at fair value is small.",
+      "F": "The management fee is **1.50%** for the A classes and **0.85%** for the I classes. The I classes also pay a **performance fee of 15%** of the outperformance over the index, with a high-water mark over the life of the class; the A classes carry an entry fee of up to 5%. The ongoing charges at the end of 2025 are **1.74%** (A USD Acc) and **1.07%** (I USD Acc). Research is paid by the manager, and transaction costs came to USD 0.58 million in 2025.\n\nOn sustainability, the fund applies **exclusions** (controversial weapons, thermal coal, tobacco, severe breaches of the UN Global Compact), integrates ESG criteria in its research, engages with companies and votes at all general meetings. The exclusions are checked before each trade and reviewed each quarter by compliance.\n\n**Points of attention**: no ongoing charges figure was found for the A EUR Hedged Acc and I EUR Dist classes, and no document states a sustainability classification for the fund."
+    },
+    "synthesis": "## Introduction\n\nThis synthesis covers the annual review of **Example Asia Fund**, a long-only equity sub-fund of Example Funds SICAV invested in Asia excluding Japan and managed by **Example Fund Management**. It rests on the 18 answers of the questionnaire, drawn from the 2025 prospectus, the 2025 annual report, the September 2026 factsheet, the key information document of the A USD Acc class, the 2026 manager presentation and the manager's website.\n\n## Key Points\n\n### Fund and structure\n- A sub-fund of a Luxembourg SICAV, authorised as a **UCITS**, launched on **3 September 2018**.\n- **USD 412.6 million** under management at 30 September 2026 (USD 371.2 million at the end of 2025).\n- Four share classes: A USD Acc, A EUR Hedged Acc, I USD Acc and I EUR Dist.\n\n### Manager and team\n- Example Fund Management: founded in 2011, USD 3.1 billion under management, **68% owned by its founding partners**.\n- Three portfolio managers, **Elena Marsh** (lead), **Victor Lam** and **Sofia Arden**, with four analysts; the two senior managers have run the fund since its launch.\n\n### Strategy and limits\n- Active stock picking: a universe of about 1,800 companies narrowed down to **40 to 60 holdings** (52 at 30 September 2026).\n- The UCITS limits, no leverage, and internal guidelines on stocks, sectors, cash and liquidity.\n\n### Risk, operations and costs\n- An **independent risk function**, controls before each trade and every day after, and a written escalation procedure.\n- Daily valuation and dealing, Luxembourg service providers, an unqualified audit opinion on 2025.\n- Ongoing charges of **1.74%** (A USD Acc) and **1.07%** (I USD Acc); a **15% performance fee** with a high-water mark on the I classes.\n\n## Strengths\n\n- **A stable, experienced team**: no portfolio manager has left since launch, and the third one was promoted from within.\n- **A clear, documented process**, with a sell discipline and hard limits enforced before each trade.\n- **Sound governance of risk and valuation**: the risk team reports to the board, and the portfolio managers have no vote on fair values.\n- **Terms that suit investors**: daily liquidity, no lock-up, and swing pricing to protect those who stay.\n- **Transparent costs**: research paid by the manager, and every fee disclosed per share class.\n\n## Risks and Points of Attention\n\n### Breach record\n- One **passive breach** of the 5/10/40 rule in August 2025, corrected within four days without loss.\n- The record for 2023, 2024 and 2026 is **not documented**: the manager's statement of \"no active breach since launch\" should be confirmed by the compliance reports or by the auditor.\n\n### Key people and ownership\n- A **key-person risk** on the lead portfolio manager, who has the final say on decisions.\n- The founding partners' individual stakes are not disclosed.\n\n### Costs and sustainability\n- No ongoing charges figure for the **A EUR Hedged Acc** and **I EUR Dist** classes.\n- **No sustainability classification** is stated: the fund applies exclusions, but should not be presented as having one.\n\n### Concentration\n- About 50 stocks with positions of up to 8% of net assets, and a recent breach caused by two semiconductor holdings: the exposure to that sector deserves monitoring.\n\n## Conclusion and Recommendation\n\nThe review raises **no blocking issue**. The fund is a well-structured UCITS, run by a stable team with a clear process and sound controls, on terms that suit investors. The recommendation is to **keep the fund on the approved list**, subject to three follow-ups before the next review:\n\n- obtain the compliance reports for 2023, 2024 and 2026, to confirm the breach record;\n- obtain the key information documents of the A EUR Hedged Acc and I EUR Dist classes;\n- ask the manager how the team would cope with the departure of its lead portfolio manager."
+  }
+}

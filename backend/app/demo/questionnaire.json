@@ -1,0 +1,128 @@
+[
+  {
+    "section": "Fund identity",
+    "description": "Who the fund is, legally: its name, its form, its size.",
+    "questions": [
+      {
+        "ref": "A.01",
+        "text": "What is the fund's full name, and which share classes are offered to investors?",
+        "context_prompt": "Start with the legal documents (prospectus, offering memorandum, articles). Quote the name exactly as written there, and list each share class with its currency."
+      },
+      {
+        "ref": "A.02",
+        "text": "Where is the fund domiciled, and under which legal form and regulatory regime does it operate?",
+        "context_prompt": "Prospectus or offering memorandum. Give the country, the legal form and the regulatory framework, each with the document it comes from."
+      },
+      {
+        "ref": "A.03",
+        "text": "When did the fund start investing, and how large is it today?",
+        "context_prompt": "Latest factsheet or annual report. Give the launch date, then the most recent assets under management with their date and currency."
+      }
+    ]
+  },
+  {
+    "section": "Manager and team",
+    "description": "The management company and the people who take the investment decisions.",
+    "questions": [
+      {
+        "ref": "B.01",
+        "text": "Which company manages the fund, and who owns it?",
+        "context_prompt": "Company presentation, the manager's website, the regulator's public register. Name the shareholders and their stakes when disclosed; say plainly when they are not."
+      },
+      {
+        "ref": "B.02",
+        "text": "Who makes the investment decisions, and how long have these people worked together?",
+        "context_prompt": "Team biographies in the presentation or the factsheet. For each decision-maker: role, years at the firm, years of experience."
+      },
+      {
+        "ref": "B.03",
+        "text": "Has anyone joined or left the investment team over the past three years?",
+        "context_prompt": "Compare the team lists of documents from different years (presentations, annual reports, press releases). Answer \"no change found\" only if the documents cover the whole period."
+      }
+    ]
+  },
+  {
+    "section": "Investment strategy",
+    "description": "What the fund tries to achieve, and how it builds its portfolio.",
+    "questions": [
+      {
+        "ref": "C.01",
+        "text": "What is the fund's investment objective, and against which benchmark is it measured, if any?",
+        "context_prompt": "Investment objective section of the prospectus, and the factsheet. Quote the objective; name the benchmark, or state that the fund has none."
+      },
+      {
+        "ref": "C.02",
+        "text": "How are investments selected, from the starting universe to the final portfolio?",
+        "context_prompt": "Presentation, description of the investment process, due diligence questionnaire. Describe the steps in order, with the criteria applied at each one."
+      },
+      {
+        "ref": "C.03",
+        "text": "Which limits apply to the portfolio (concentration, leverage, liquidity, currency exposure)?",
+        "context_prompt": "Investment restrictions and risk sections of the prospectus. List each limit with its figure."
+      }
+    ]
+  },
+  {
+    "section": "Risk management",
+    "description": "Who watches the risks, with which measures, and what happens when a limit is crossed.",
+    "questions": [
+      {
+        "ref": "D.01",
+        "text": "Who monitors the fund's risks, and is that function independent from portfolio management?",
+        "context_prompt": "Risk management policy, organisation chart, due diligence questionnaire. Say who the risk team reports to."
+      },
+      {
+        "ref": "D.02",
+        "text": "Which risk measures are followed, and what happens when a limit is breached?",
+        "context_prompt": "Risk management policy, risk reports. List the measures and their limits, then the escalation procedure step by step."
+      },
+      {
+        "ref": "D.03",
+        "text": "Have any limit breaches or significant errors occurred over the past three years?",
+        "context_prompt": "Annual reports, auditor's letters, compliance reports. Give dates, causes and corrective actions; if no document covers the question, say so rather than conclude there were none."
+      }
+    ]
+  },
+  {
+    "section": "Operations and service providers",
+    "description": "The firms around the fund, its valuation and its dealing terms.",
+    "questions": [
+      {
+        "ref": "E.01",
+        "text": "Who are the fund's depositary, administrator and auditor?",
+        "context_prompt": "Directory or service providers page of the prospectus, annual report. Give each firm's full name and country."
+      },
+      {
+        "ref": "E.02",
+        "text": "How often is the portfolio valued, by whom, and how are hard-to-value assets priced?",
+        "context_prompt": "Valuation policy, prospectus. Give the frequency, the party responsible and the method for illiquid assets."
+      },
+      {
+        "ref": "E.03",
+        "text": "On which terms can investors subscribe and redeem (frequency, notice period, gates, lock-up)?",
+        "context_prompt": "Dealing section of the prospectus, factsheet. Give each term with its figure, and say which share classes it applies to when they differ."
+      }
+    ]
+  },
+  {
+    "section": "Fees and sustainability",
+    "description": "What investing costs, and what the fund commits to on sustainability.",
+    "questions": [
+      {
+        "ref": "F.01",
+        "text": "Which fees are charged to investors (management, performance, entry, exit), and how is the performance fee calculated?",
+        "context_prompt": "Fees section of the prospectus, key information document. Give each fee per share class; for the performance fee, its rate, its hurdle and its high-water mark."
+      },
+      {
+        "ref": "F.02",
+        "text": "Which other costs are paid by the fund itself (transactions, research, service providers), and what are its total ongoing charges?",
+        "context_prompt": "Statement of expenses in the annual report, key information document. Give the latest ongoing charges figure with its date, then the main cost items."
+      },
+      {
+        "ref": "F.03",
+        "text": "Does the fund make sustainability commitments, and how are they monitored?",
+        "context_prompt": "Sustainability disclosures, responsible investment policy, prospectus annexes. State a classification only if a document states it, and quote the commitments with their source."
+      }
+    ]
+  }
+]

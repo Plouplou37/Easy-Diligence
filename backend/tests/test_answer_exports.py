@@ -64,6 +64,21 @@ def test_report(session):
     assert pdf.report_filename(session) == "Test_Session_DD_Report.pdf"
 
 
+@pytest.mark.parametrize(
+    ("name", "filename"),
+    [
+        ("Example Asia Fund — annual review (demo)", "Example_Asia_Fund_annual_review_demo"),
+        ("Révision 2026", "Revision_2026"),
+        ("示例基金", "session-1"),
+        ('Q3 "final"; v2.1', "Q3_final_v2.1"),
+    ],
+)
+def test_the_file_name_fits_in_a_header(session, name, filename):
+    """Content-Disposition is latin-1 and has its own separators."""
+    session.name = name
+    assert pdf.report_filename(session) == f"{filename}_DD_Report.pdf"
+
+
 def test_report_without_answers(session):
     assert pdf.build_report(session, []).startswith(b"%PDF")
 

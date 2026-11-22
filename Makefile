@@ -6,7 +6,7 @@
 
 .DEFAULT_GOAL := help
 
-.PHONY: help up down ps logs build build-backend build-frontend admin \
+.PHONY: help up down ps logs build build-backend build-frontend admin demo \
 	install dev-backend dev-frontend test lint format check migrate migration schema
 
 # $(info) is printed by make itself: the same output under sh and cmd. It strips
@@ -27,6 +27,9 @@ help:
 	$(info $(indent)make build-frontend  rebuild the frontend image and restart it)
 	$(info $(indent)make admin email=you@example.com name="Full Name")
 	$(info $(indent)                     create an administrator (asks for the password))
+	$(info $(indent)make demo            load a made-up due diligence to explore, without OpenAI)
+	$(info $(indent)                     owner=you@example.com: its owner (default: the first admin))
+	$(info $(indent)                     reset=1: delete the demo, then load it again)
 	$(info )
 	$(info By hand (development, see the README):)
 	$(info $(indent)make install         install the backend and frontend dependencies)
@@ -71,6 +74,12 @@ admin:
 	$(if $(email),,$(error Usage: make admin email=you@example.com name="Full Name"))
 	$(if $(name),,$(error Usage: make admin email=you@example.com name="Full Name"))
 	docker compose exec backend python -m app.cli create-admin $(email) "$(name)"
+
+# A made-up fund, questionnaire, answers and summaries (backend/app/demo/), to
+# explore every screen without any call to OpenAI. Loaded once: run again, it
+# says so and writes nothing.
+demo:
+	docker compose exec backend python -m app.cli seed-demo $(if $(owner),--owner $(owner)) $(if $(reset),--reset)
 
 # --- By hand (development) --------------------------------------------------------
 

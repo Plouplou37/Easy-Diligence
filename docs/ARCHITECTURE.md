@@ -773,8 +773,19 @@ Questionnaire files kept locally go in `questionnaires/`, which git ignores.
 
 ### Scripts
 
-The administration command runs from `backend/`:
-`uv run python -m app.cli --help`. For now it has only `create-admin`.
+The administration commands run from `backend/`:
+`uv run python -m app.cli --help`.
+
+- `create-admin`: creates an administrator (see above).
+- `seed-demo` (`make demo`): loads a made-up due diligence from
+  `app/demo/` (a questionnaire, a fund, a session with its run, answers,
+  history and summaries), stored as the engine and the summarizer store them,
+  without any call to OpenAI. It loads once: run again, it says so and writes
+  nothing. `--reset` deletes what it created (the session, then the
+  questionnaire and the fund unless another session uses them) and loads it
+  again; `--owner` names the owner, by default the first active administrator.
+  Its questionnaire is a copy of `examples/example_questionnaire.json`, as the
+  backend image holds `backend/` only; a test keeps the two equal.
 
 Scripts also run from `backend/`: `uv run python scripts/<script>.py`.
 

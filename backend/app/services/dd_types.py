@@ -26,7 +26,7 @@ from app.services.authz import (
     assert_dd_type_view,
     filter_dd_types_for_user,
 )
-from app.services.file_parser import DDTypeFileParser, FileParsingError
+from app.services.file_parser import DDTypeFileParser, FileParsingError, Section
 
 
 def get_dd_type_by_code(db: Session, code: str, user: User | None = None) -> DDType:
@@ -130,6 +130,15 @@ def import_dd_type(
     )
     db.add(dd_type)
     db.flush()
+    add_structure(db, dd_type, sections)
+    db.commit()
+    db.refresh(dd_type)
+    return dd_type
+
+
+def add_structure(db: Session, dd_type: DDType, sections: list[Section]) -> None:
+    """The sections and questions of a parsed questionnaire (DDTypeFileParser),
+    with their codes, added to a stored DD type. Flushed, not committed."""
     for section_data in sections:
         section = DDSection(
             dd_type_id=stored_id(dd_type),
@@ -152,9 +161,7 @@ def import_dd_type(
                     order_index=question_data["order_index"],
                 )
             )
-    db.commit()
-    db.refresh(dd_type)
-    return dd_type
+    db.flush()
 
 
 def update_dd_type(db: Session, dd_type: DDType, data: DDTypeUpdate) -> DDType:

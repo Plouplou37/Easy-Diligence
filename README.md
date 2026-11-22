@@ -1,14 +1,78 @@
 # Easy Diligence
 
-A web application that automates the due diligence of investment funds and of
-their management company.
+**Due diligence questionnaires on investment funds, answered by AI, reviewed by
+analysts.**
 
-You describe a due diligence questionnaire (a **DD type**), then open a
-**session** on a fund and attach its documents (prospectuses, presentations,
-DDQs…). The answering engine then answers the questions one by one with the
-OpenAI API: it searches the session's documents and the web, and cites its
-sources. Analysts review, correct or regenerate the answers, have a synthesis
-written for each DD type, then export a PDF report.
+You pick a fund and its management company, attach the fund's documents
+(prospectus, factsheets, annual reports, DDQ…) and choose a questionnaire. The
+answering engine then answers the questions one by one with the OpenAI API: it
+searches the documents and the web, and cites its sources. Analysts review,
+edit, approve or regenerate each answer, have a synthesis written, then export
+a PDF report.
+
+## Try it in two minutes
+
+With Docker and `make` (on Windows: `winget install ezwinports.make`):
+
+```bash
+git clone https://github.com/Plouplou37/Easy-Diligence.git && cd Easy-Diligence
+cp .env.template .env      # then fill in POSTGRES_PASSWORD, JWT_SECRET_KEY, OPENAI_API_KEY
+make up                    # builds and starts the four services
+make admin email=you@example.com name="Your Name"   # asks for a password
+make demo                  # loads a complete made-up due diligence
+```
+
+Then open **http://localhost:8080** and sign in. The demo (Example Asia Fund,
+18 questions, answers with their sources, versions and a synthesis) needs no
+OpenAI call: for a look around, any value works as `OPENAI_API_KEY`. A real key
+is needed only to run the engine on your own fund. `make demo reset=1` loads
+the demo afresh. The full guide is in
+[Running the application](#running-the-application).
+
+## What is worth a look
+
+- **An answering engine measured, not guessed.** Each question carries the
+  answers already written for the earlier ones, within a budget, instead of
+  one chained OpenAI conversation: measured on a real run, a question went
+  from 75,000–96,000 input tokens to about 11,000. Errors are classified by
+  type (retried with backoff, or stopping the run at once on a refused key),
+  one transaction per question, pause and resume without losing a question,
+  run time counted without the pauses.
+- **The AI's input is never hidden.** Every field the model reads carries a
+  "Sent to the AI" badge, and creating a due diligence shows the exact header
+  the model will receive. An OpenAI error never reaches the browser: the user
+  reads a message written for them.
+- **A database that enforces its own rules.** Constraints and partial unique
+  indexes in PostgreSQL, Alembic migrations tested in CI on a real PostgreSQL
+  (upgrade, downgrade, upgrade again, `alembic check`, the generated
+  `schema.sql` compared), and the test suite run twice: on SQLite, then on
+  PostgreSQL.
+- **A frontend held to its architecture.** React in Feature-Sliced Design,
+  its layer boundaries enforced by ESLint (zero warnings allowed), one set of
+  theme tokens for the dark and light themes, the system's accessibility
+  settings honoured (reduced motion, transparency, contrast). An answer can
+  be opened in its own window, kept in sync with the main one.
+- **Infrastructure as code, checked without an account.** Docker Compose with
+  nginx as the only entry point; Terraform for Azure (Container Apps,
+  PostgreSQL Flexible Server, Key Vault) and AWS (ECS Fargate, RDS, Secrets
+  Manager), formatted and validated in CI.
+- **A CI in five jobs**: backend (ruff, mypy, pytest on SQLite and PostgreSQL,
+  migrations, pip-audit), frontend (lint, formatting, build), Terraform for
+  each cloud, and the whole Docker stack started and tested through the proxy.
+
+```mermaid
+flowchart LR
+  browser([Browser]) --> proxy[nginx proxy]
+  proxy -- "/" --> frontend[React frontend]
+  proxy -- "/api" --> backend[FastAPI backend]
+  backend --> db[(PostgreSQL)]
+  backend -- "questions, syntheses" --> openai[OpenAI API]
+  openai -- "file search" --> stores[(Vector stores)]
+  openai -- "web search" --> web((Web))
+```
+
+The design, decision by decision, is in
+[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 ## Running the application
 
@@ -100,6 +164,10 @@ changes in their profile.
 
 ### 5. First due diligence
 
+To look around first, `make demo` loads a complete made-up due diligence, with
+no call to OpenAI (see [Try it in two minutes](#try-it-in-two-minutes)). For
+a due diligence of your own, with a real OpenAI key:
+
 1. **Questionnaires** > **New questionnaire** > **Import a file**: import the
    example questionnaire, `examples/example_questionnaire.json` (18 example
    questions, in 6 sections).
@@ -138,8 +206,8 @@ git pull && docker compose up -d --build   # update, migrations included
 
 The `Makefile` at the root gathers these commands and those of the
 development sections below: `make` alone lists them (`make up`, `make logs`,
-`make build-backend`, `make admin`, `make check`…). On Windows, install make
-once with `winget install ezwinports.make`.
+`make build-backend`, `make admin`, `make demo`, `make check`…). On Windows,
+install make once with `winget install ezwinports.make`.
 
 ### Backup
 
@@ -418,6 +486,7 @@ backend/              FastAPI API
     services/         business logic and database access
     exports/          PDF report
     models/           SQLModel tables, and what the API reads and returns
+    demo/             the made-up due diligence of `make demo`
   alembic/            database migrations (Alembic)
   db/schema.sql       full SQL script of the schema, generated
   scripts/            questionnaire import and update, database audit
