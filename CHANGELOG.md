@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### English everywhere, and the questions of an inactive questionnaire
+
+- The browser's own form messages (a required field left empty, an e-mail
+  address without "@", a number out of range) are in English, whatever the
+  system's language: one handler for every form (`shared/lib/validity`).
+- Attaching a file to a regeneration goes through a "Choose a file" button
+  of the application, no longer through the browser's file field, which
+  wrote its button in the system's language.
+- The questions page also loads the inactive questionnaires, marked
+  "Inactive": their "Questions" button used to open an empty page.
+
 ### An answer in its own window
 
 - **"Open in a new window"** on the selected answer of the workspace opens
