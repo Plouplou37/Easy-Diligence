@@ -1,10 +1,61 @@
 import { forwardRef, useState } from 'react';
-import { ArrowUpIcon, CursorArrowRaysIcon } from '@heroicons/react/24/outline';
+import toast from 'react-hot-toast';
+import {
+  ArrowTopRightOnSquareIcon,
+  ArrowUpIcon,
+  CursorArrowRaysIcon,
+} from '@heroicons/react/24/outline';
 import { AnswerPanel } from '@/features/answer-review';
 import { EmptyState } from '@/shared/ui';
 import { versionNote } from '../lib/questionnaire';
 import { FOCUS_RING } from '../lib/focus';
 import { StateChip } from './Chips';
+
+// The answer windows opened from this page, by window name. Clicking again
+// brings the window to the front rather than loading it again, which would
+// drop an edit under way.
+const answerWindows = new Map();
+
+const isPlainClick = event =>
+  event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey;
+
+/**
+ * Opens the answer in a window of its own. A link: a middle click or a
+ * modified click (Ctrl, Shift, ⌘) opens it in a tab, as the browser does.
+ */
+const OpenInWindow = ({ href, answerId }) => {
+  const open = event => {
+    if (!isPlainClick(event)) return;
+    event.preventDefault();
+    const name = `answer-${answerId}`;
+    const existing = answerWindows.get(name);
+    if (existing && !existing.closed && existing.location.pathname === href) {
+      existing.focus();
+      return;
+    }
+    const opened = window.open(href, name, 'popup,width=1280,height=900');
+    if (!opened) {
+      toast.error('The browser blocked the window: allow pop-ups for this site, or Ctrl-click.');
+      return;
+    }
+    answerWindows.set(name, opened);
+    opened.focus();
+  };
+
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      onClick={open}
+      aria-label="Open in a new window"
+      title="Open in a new window"
+      className={`-my-2 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-content-secondary transition-colors hover:bg-surface-hover hover:text-content ${FOCUS_RING}`}
+    >
+      <ArrowTopRightOnSquareIcon className="h-5 w-5" />
+    </a>
+  );
+};
 
 // The views of a question. One today; what was sent to the AI and an assistant
 // are to come, as tabs: the tab bar shows once there are two.
@@ -25,12 +76,14 @@ const NotAnswered = ({ status }) => {
 
 /**
  * The selected question: its text, where it stands, and its answer with what
- * can be done with it (`review`: useAnswerReview). `runStatus`: the status of
- * the questionnaire's run. `onBackToList`: on a narrow screen, where the list
- * sits above, goes back to it. `className`: the panel's place in the layout.
+ * can be done with it (`review`: useAnswerReview), which also opens in a
+ * window of its own. `sessionId`: the session of the page's address.
+ * `runStatus`: the status of the questionnaire's run. `onBackToList`: on a
+ * narrow screen, where the list sits above, goes back to it. `className`: the
+ * panel's place in the layout.
  */
 export const QuestionDetail = forwardRef(function QuestionDetail(
-  { row, review, runStatus, onBackToList, className = '' },
+  { row, review, sessionId, runStatus, onBackToList, className = '' },
   ref
 ) {
   const [view, setView] = useState(VIEWS[0].id);
@@ -77,14 +130,23 @@ export const QuestionDetail = forwardRef(function QuestionDetail(
                 </span>{' '}
                 · {row.sectionTitle}
               </p>
-              <button
-                type="button"
-                onClick={onBackToList}
-                className={`-my-2 inline-flex min-h-10 shrink-0 items-center gap-1 rounded text-xs text-link min-[1320px]:hidden ${FOCUS_RING}`}
-              >
-                <ArrowUpIcon className="h-3.5 w-3.5" />
-                Back to the list
-              </button>
+              <div className="flex shrink-0 items-center gap-2">
+                <button
+                  type="button"
+                  onClick={onBackToList}
+                  className={`-my-2 inline-flex min-h-10 shrink-0 items-center gap-1 rounded text-xs text-link min-[1320px]:hidden ${FOCUS_RING}`}
+                >
+                  <ArrowUpIcon className="h-3.5 w-3.5" />
+                  Back to the list
+                </button>
+                {/* Only an answered question has an answer to open. */}
+                {row.answer && (
+                  <OpenInWindow
+                    href={`/session/${sessionId}/answer/${row.answer.id}`}
+                    answerId={row.answer.id}
+                  />
+                )}
+              </div>
             </div>
             {/* whitespace-pre-line: imported questions carry their instructions
                 on their own lines (Level, Topic, Applies to...). */}

@@ -2,6 +2,8 @@ import { api, multipart } from '@/shared/api';
 
 export const answersAPI = {
   getBySession: (sessionId, params) => api.get(`/answers/session/${sessionId}`, { params }),
+  // One answer, with the same fields as in the lists.
+  get: answerId => api.get(`/answers/${answerId}`),
   update: (answerId, data) => api.put(`/answers/${answerId}`, data),
   updateStatus: (answerId, status) => api.patch(`/answers/${answerId}/status`, { status }),
   getHistory: answerId => api.get(`/answers/${answerId}/history`),

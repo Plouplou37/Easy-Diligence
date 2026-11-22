@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import toast from 'react-hot-toast';
 import { answersAPI } from '@/entities/answer';
 
@@ -7,14 +7,15 @@ export const useVersionHistory = () => {
   const [showVersionHistory, setShowVersionHistory] = useState({});
   const [versionHistory, setVersionHistory] = useState({});
 
-  const fetchVersionHistory = async answerId => {
+  // Stable: a page may load the versions from an effect.
+  const fetchVersionHistory = useCallback(async answerId => {
     try {
       const response = await answersAPI.getHistory(answerId);
       setVersionHistory(previous => ({ ...previous, [answerId]: response.data.versions || [] }));
     } catch {
       toast.error('Failed to load version history');
     }
-  };
+  }, []);
 
   const toggleVersionHistory = async answerId => {
     setShowVersionHistory(previous => ({ ...previous, [answerId]: !previous[answerId] }));

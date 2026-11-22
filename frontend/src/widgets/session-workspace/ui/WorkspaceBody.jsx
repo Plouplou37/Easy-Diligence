@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ArrowLeftIcon, ClipboardDocumentListIcon } from '@heroicons/react/24/outline';
 import { RegenerateModal, useAnswerReview } from '@/features/answer-review';
 import { SynthesisTab } from '@/features/summaries';
+import { useAnswerChanges } from '@/shared/lib/answer-sync';
 import { Button, EmptyState } from '@/shared/ui';
 import { useQuestionFilters } from '../model/useQuestionFilters';
 import { useQuestionnaireReview } from '../model/useQuestionnaireReview';
@@ -75,11 +76,23 @@ export const WorkspaceBody = ({
   });
   const filters = useQuestionFilters(review.rows);
   const answerReview = useAnswerReview({
+    sessionId: session.id,
     onChange: review.patchAnswer,
     setStatus: review.setStatus,
     reload: review.reload,
     onDocumentAdded: stores.load,
   });
+
+  // An answer of this due diligence changed in another window (its own answer
+  // window, most often): the list follows, behind the page, and so do the
+  // versions shown for it.
+  useAnswerChanges(change => {
+    if (String(change.sessionId) !== String(session.id)) return;
+    review.reload({ silent: true });
+    const { history } = answerReview;
+    if (history.versionHistory[change.answerId]) history.fetchVersionHistory(change.answerId);
+  });
+
   const [selectedKey, setSelectedKey] = useState(null);
   const listRef = useRef(null);
   const detailRef = useRef(null);
@@ -193,6 +206,7 @@ export const WorkspaceBody = ({
             ref={detailRef}
             row={selectedRow}
             review={answerReview}
+            sessionId={sessionId}
             runStatus={progress?.status || 'not_started'}
             onBackToList={backToList}
             className={RIGHT}

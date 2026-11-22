@@ -1,5 +1,6 @@
 import { Route, Routes } from 'react-router-dom';
 import { AdminUsersPage } from '@/pages/admin-users';
+import { AnswerWindowPage } from '@/pages/answer-window';
 import { DashboardPage } from '@/pages/dashboard';
 import { DdTypesPage } from '@/pages/dd-types';
 import { LoginPage } from '@/pages/login';
@@ -24,6 +25,8 @@ export const AppRouter = () => (
     <Route path="/reset-password" element={<ResetPasswordPage />} />
 
     <Route element={<RequireAuth />}>
+      {/* An answer in a window of its own: no application bar, the window has its own. */}
+      <Route path="/session/:sessionId/answer/:answerId" element={<AnswerWindowPage />} />
       <Route element={<AppLayout />}>
         <Route path="/" element={<DashboardPage />} />
         <Route path="/session/create" element={<SessionCreatePage />} />

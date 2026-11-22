@@ -58,6 +58,21 @@ def test_listing_carries_the_review_labels(client, analyst, answered, auth_heade
     assert first["openai_message_ids"] == ["msg_1"]
 
 
+def test_one_answer_reads_as_in_the_list(client, make_user, analyst, answered, auth_headers):
+    """The answer window opens on one answer: the same fields as the list."""
+    session, dd_type, answers = answered
+    url = f"/api/answers/{answers[1].id}"
+
+    body = client.get(url, headers=auth_headers(analyst)).json()
+    assert body["id"] == answers[1].id
+    assert body["answer_text"] == "Answer to A.02"
+    assert body["question_text"] == "Question 1.2?"
+    assert (body["dd_type_code"], body["session_name"]) == (dd_type.code, session.name)
+
+    assert client.get(url, headers=auth_headers(make_user())).status_code == 403
+    assert client.get("/api/answers/999", headers=auth_headers(analyst)).status_code == 404
+
+
 def test_an_edit_is_a_new_version_to_review(client, analyst, answered, auth_headers):
     _, _, answers = answered
     headers = auth_headers(analyst)
